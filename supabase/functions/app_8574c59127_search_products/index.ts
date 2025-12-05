@@ -717,7 +717,8 @@ Deno.serve(async (req) => {
           JSON.stringify({
             products: [],
             message: userMessage, // Custom message added here
-            category_name: categoryName,
+            // 🔥 CORRECTED KEY: Now using 'message_category_context' to match the frontend
+            message_category_context: categoryName,
           }),
           {
             status: 200,
