@@ -717,8 +717,7 @@ Deno.serve(async (req) => {
           JSON.stringify({
             products: [],
             message: userMessage, // Custom message added here
-            // 🔥 CORRECTED KEY: Now using 'message_category_context' to match the frontend
-            message_category_context: categoryName,
+            message_category_context: categoryName, // CORRECTED KEY
           }),
           {
             status: 200,
@@ -742,9 +741,11 @@ Deno.serve(async (req) => {
         is_top_pick: index === 0,
       }));
 
+      // 🔥 FIX FOR DUPLICATES: Use upsert to prevent re-inserting the same match keys (detected_item_id, product_id)
       const { error: matchError } = await supabase
         .from('item_product_matches')
-        .insert(matches);
+        .upsert(matches, { onConflict: 'detected_item_id, product_id' })
+        .select();
 
       if (matchError) {
         console.error(
