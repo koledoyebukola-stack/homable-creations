@@ -120,7 +120,7 @@ export default function ItemDetection() {
           for (const item of detectedItems) {
             try {
               // 1. First try to get existing products (returns Product[])
-              let productsFromCache = await getProductsForItem(item.id);
+              const productsFromCache = await getProductsForItem(item.id);
               let result: ItemProductResult = { products: productsFromCache, message: null, message_category_context: null };
               
               // 2. If no products exist, trigger search (returns SearchResponse object)
@@ -202,7 +202,7 @@ export default function ItemDetection() {
       for (const item of items) {
         try {
           // 1. First try to get existing products (returns Product[])
-          let productsFromCache = await getProductsForItem(item.id);
+          const productsFromCache = await getProductsForItem(item.id);
           let result: ItemProductResult = { products: productsFromCache, message: null, message_category_context: null };
 
           // 2. If no products exist, trigger search (returns SearchResponse object)
