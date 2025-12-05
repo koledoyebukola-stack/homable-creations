@@ -244,7 +244,27 @@ async function searchSeedProducts(
   // Fetch ALL seed products (no category filter)
   const { data: allSeedProducts, error } = await supabase
     .from('products')
-    .select('*')
+    .select('
+      id,
+      external_id,
+      merchant,
+      product_name,
+      category,
+      price,
+      currency,
+      product_url,
+      image_url,
+      description,
+      color,
+      style,
+      tags,
+      materials,
+      rating,
+      review_count,
+      shipping_info,
+      availability,
+      is_seed
+    `)
     .eq('is_seed', true)
     .limit(100);
 
@@ -260,6 +280,14 @@ async function searchSeedProducts(
 
   console.log(`[${requestId}] Found ${allSeedProducts.length} total seed products in database`);
   console.log(`[${requestId}] Seed product categories:`, [...new Set(allSeedProducts.map((p: any) => p.category))]);
+  
+  // ADD THIS RIGHT HERE ↓↓↓
+
+console.log(`[${requestId}] Example seed product:`, {
+  name: allSeedProducts[0]?.product_name,
+  price: allSeedProducts[0]?.price,
+  image_url: allSeedProducts[0]?.image_url,
+});
 
   // Filter products using RELAXED matching
   const matchingProducts = allSeedProducts.filter((product: any) => {
