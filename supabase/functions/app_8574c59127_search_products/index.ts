@@ -244,27 +244,7 @@ async function searchSeedProducts(
   // Fetch ALL seed products (no category filter)
   const { data: allSeedProducts, error } = await supabase
     .from('products')
-    .select('
-      id,
-      external_id,
-      merchant,
-      product_name,
-      category,
-      price,
-      currency,
-      product_url,
-      image_url,
-      description,
-      color,
-      style,
-      tags,
-      materials,
-      rating,
-      review_count,
-      shipping_info,
-      availability,
-      is_seed
-    `)
+    .select('*`)
     .eq('is_seed', true)
     .limit(100);
 
