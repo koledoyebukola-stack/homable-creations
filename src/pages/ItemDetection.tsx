@@ -14,6 +14,16 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { ExternalLink, Star, Share2, Upload } from 'lucide-react';
 
+// 1. Define the interface for the full Search Response object (assumed to be the return type of searchProducts)
+interface SearchResponse {
+  products: Product[];
+  message: string | null;
+  message_category_context: string | null;
+}
+
+// 2. Define the structure for the Product map value to unify product data or message
+type ItemProductResult = SearchResponse;
+
 // Helper function to validate product URL
 function isValidProductUrl(url: string | undefined): boolean {
   if (!url) return false;
@@ -44,7 +54,8 @@ export default function ItemDetection() {
   const { boardId } = useParams<{ boardId: string }>();
   const navigate = useNavigate();
   const [items, setItems] = useState<DetectedItem[]>([]);
-  const [products, setProducts] = useState<Record<string, Product[]>>({});
+  // 🎯 FIX 1: Update the state to hold the new ItemProductResult structure
+  const [products, setProducts] = useState<Record<string, ItemProductResult>>({});
   const [seedProducts, setSeedProducts] = useState<Product[]>([]);
   const [board, setBoard] = useState<Board | null>(null);
   const [loading, setLoading] = useState(true);
@@ -103,31 +114,41 @@ export default function ItemDetection() {
         // Load products for each detected item (only if authenticated)
         if (detectedItems.length > 0 && userIsAuthenticated) {
           setLoadingProducts(true);
-          const productsMap: Record<string, Product[]> = {};
+          // 🎯 FIX 2: Update the map type to ItemProductResult
+          const productsMap: Record<string, ItemProductResult> = {};
           
           for (const item of detectedItems) {
             try {
-              // First try to get existing products
-              let itemProducts = await getProductsForItem(item.id);
+              // 1. First try to get existing products (returns Product[])
+              let productsFromCache = await getProductsForItem(item.id);
+              let result: ItemProductResult = { products: productsFromCache, message: null, message_category_context: null };
               
-              // If no products exist, trigger search
-              if (itemProducts.length === 0) {
-                itemProducts = await searchProducts(item.id);
+              // 2. If no products exist, trigger search (returns SearchResponse object)
+              if (result.products.length === 0) {
+                const searchResult = await searchProducts(item.id);
+                
+                // Store the full SearchResponse object (contains products OR the message)
+                result = searchResult;
               }
               
-              // If still no products, try to get category-matched seed products
-              if (itemProducts.length === 0) {
+              // 3. If there is no message AND still no products, try to get category-matched seed products
+              if (!result.message && result.products.length === 0) {
                 const categorySeeds = await getRandomSeedProducts(item.item_name, item.category);
                 // Take up to 3 seed products
-                itemProducts = categorySeeds.slice(0, 3);
+                result.products = categorySeeds.slice(0, 3);
               }
               
-              // Filter out products with invalid URLs
-              const validProducts = itemProducts.filter(p => isValidProductUrl(p.product_url));
-              productsMap[item.id] = validProducts;
+              // 4. Filter products and store the final result
+              // Only filter products if there is no custom message
+              if (!result.message) {
+                result.products = result.products.filter(p => isValidProductUrl(p.product_url));
+              }
+
+              productsMap[item.id] = result;
             } catch (error) {
               console.error(`Failed to load products for item ${item.id}:`, error);
-              productsMap[item.id] = [];
+              // Store an empty result on error
+              productsMap[item.id] = { products: [], message: null, message_category_context: null };
             }
           }
           
@@ -136,13 +157,14 @@ export default function ItemDetection() {
 
           // Log analysis metrics
           const numberOfItemsDetected = detectedItems.length;
-          const numberOfItemsWithProducts = Object.values(productsMap).filter(prods => prods.length > 0).length;
-          const numberOfProductsShown = Object.values(productsMap).flat().length;
+          // Count items that have products AND no message
+          const numberOfItemsWithProducts = Object.values(productsMap).filter(r => !r.message && r.products.length > 0).length;
+          const numberOfProductsShown = Object.values(productsMap).filter(r => !r.message).flatMap(r => r.products).length;
           
           await logAnalysis(boardId, numberOfItemsDetected, numberOfItemsWithProducts, numberOfProductsShown);
 
-          // Check if any items have no products, then load additional seed products
-          const hasItemsWithoutProducts = Object.values(productsMap).some(prods => prods.length === 0);
+          // Check if any items have no products AND no message, then load additional seed products
+          const hasItemsWithoutProducts = Object.values(productsMap).some(r => !r.message && r.products.length === 0);
           if (hasItemsWithoutProducts) {
             setLoadingSeedProducts(true);
             try {
@@ -174,27 +196,36 @@ export default function ItemDetection() {
     // Reload products after authentication
     if (items.length > 0) {
       setLoadingProducts(true);
-      const productsMap: Record<string, Product[]> = {};
+      // 🎯 FIX 3: Update the map type to ItemProductResult
+      const productsMap: Record<string, ItemProductResult> = {};
       
       for (const item of items) {
         try {
-          let itemProducts = await getProductsForItem(item.id);
-          if (itemProducts.length === 0) {
-            itemProducts = await searchProducts(item.id);
+          // 1. First try to get existing products (returns Product[])
+          let productsFromCache = await getProductsForItem(item.id);
+          let result: ItemProductResult = { products: productsFromCache, message: null, message_category_context: null };
+
+          // 2. If no products exist, trigger search (returns SearchResponse object)
+          if (result.products.length === 0) {
+            const searchResult = await searchProducts(item.id);
+            result = searchResult;
           }
           
-          // If still no products, try to get category-matched seed products
-          if (itemProducts.length === 0) {
+          // 3. If there is no message AND still no products, try to get category-matched seed products
+          if (!result.message && result.products.length === 0) {
             const categorySeeds = await getRandomSeedProducts(item.item_name, item.category);
-            itemProducts = categorySeeds.slice(0, 3);
+            result.products = categorySeeds.slice(0, 3);
           }
           
-          // Filter out products with invalid URLs
-          const validProducts = itemProducts.filter(p => isValidProductUrl(p.product_url));
-          productsMap[item.id] = validProducts;
+          // 4. Filter products and store the final result
+          if (!result.message) {
+            result.products = result.products.filter(p => isValidProductUrl(p.product_url));
+          }
+          
+          productsMap[item.id] = result;
         } catch (error) {
           console.error(`Failed to load products for item ${item.id}:`, error);
-          productsMap[item.id] = [];
+          productsMap[item.id] = { products: [], message: null, message_category_context: null };
         }
       }
       
@@ -204,14 +235,14 @@ export default function ItemDetection() {
       // Log analysis metrics
       if (boardId) {
         const numberOfItemsDetected = items.length;
-        const numberOfItemsWithProducts = Object.values(productsMap).filter(prods => prods.length > 0).length;
-        const numberOfProductsShown = Object.values(productsMap).flat().length;
+        const numberOfItemsWithProducts = Object.values(productsMap).filter(r => !r.message && r.products.length > 0).length;
+        const numberOfProductsShown = Object.values(productsMap).filter(r => !r.message).flatMap(r => r.products).length;
         
         await logAnalysis(boardId, numberOfItemsDetected, numberOfItemsWithProducts, numberOfProductsShown);
       }
 
       // Load seed products if needed
-      const hasItemsWithoutProducts = Object.values(productsMap).some(prods => prods.length === 0);
+      const hasItemsWithoutProducts = Object.values(productsMap).some(r => !r.message && r.products.length === 0);
       if (hasItemsWithoutProducts) {
         setLoadingSeedProducts(true);
         try {
@@ -229,19 +260,23 @@ export default function ItemDetection() {
 
   // Calculate total look cost
   const calculateTotalCost = () => {
-    const allProducts = Object.values(products).flat();
+    // 🎯 Use the products array from the result object
+    const allProducts = Object.values(products).filter(r => !r.message).flatMap(r => r.products).flat();
     if (allProducts.length === 0) return null;
 
     // Group products by item, get cheapest and average per item
     const itemPrices: { min: number; avg: number }[] = [];
     
     items.forEach(item => {
-      const itemProducts = products[item.id] || [];
-      if (itemProducts.length > 0) {
-        const prices = itemProducts.map(p => p.price);
-        const minPrice = Math.min(...prices);
-        const avgPrice = prices.reduce((sum, p) => sum + p, 0) / prices.length;
-        itemPrices.push({ min: minPrice, avg: avgPrice });
+      const itemResult = products[item.id];
+      if (itemResult && !itemResult.message) {
+        const itemProducts = itemResult.products || [];
+        if (itemProducts.length > 0) {
+          const prices = itemProducts.map(p => p.price);
+          const minPrice = Math.min(...prices);
+          const avgPrice = prices.reduce((sum, p) => sum + p, 0) / prices.length;
+          itemPrices.push({ min: minPrice, avg: avgPrice });
+        }
       }
     });
 
@@ -258,10 +293,10 @@ export default function ItemDetection() {
 
   const totalCost = calculateTotalCost();
 
-  // Check if there are any items without products
+  // Check if there are any items without products AND no message
   const hasItemsWithoutProducts = items.some(item => {
-    const itemProducts = products[item.id] || [];
-    return itemProducts.length === 0;
+    const itemResult = products[item.id];
+    return itemResult && !itemResult.message && itemResult.products.length === 0;
   });
 
   if (loading) {
@@ -394,7 +429,7 @@ export default function ItemDetection() {
             <div className="space-y-12 md:space-y-16">
               {items.map((item) => (
                 <div key={item.id} className="space-y-6">
-                  {/* Item Section Header */}
+                  {/* Item Section Header - unchanged */}
                   <div className="text-center">
                     <h2 className="text-2xl md:text-3xl font-bold text-[#111111] mb-2">
                       {item.item_name}
@@ -404,7 +439,7 @@ export default function ItemDetection() {
                     )}
                   </div>
 
-                  {/* Skeleton Loaders for Products */}
+                  {/* Skeleton Loaders for Products - unchanged */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                     {[1, 2, 3].map((n) => (
                       <Card key={n} className="overflow-hidden rounded-3xl border-0 shadow-lg">
@@ -429,7 +464,11 @@ export default function ItemDetection() {
             <>
               <div className="space-y-12 md:space-y-16">
                 {items.map((item) => {
-                  const itemProducts = products[item.id] || [];
+                  // 🎯 FIX 4: Safely extract products, message, and context from the result object
+                  const itemResult = products[item.id];
+                  const itemProducts = itemResult?.products || [];
+                  const customMessage = itemResult?.message;
+                  const categoryContext = itemResult?.message_category_context;
 
                   return (
                     <div key={item.id} className="space-y-6">
@@ -454,8 +493,22 @@ export default function ItemDetection() {
                         </div>
                       </div>
 
-                      {/* Product Grid */}
-                      {itemProducts.length > 0 ? (
+                      {/* Product Grid / Custom Message Logic */}
+                      {customMessage ? (
+                        <div className="text-center py-8 px-4 border border-dashed border-gray-300 rounded-xl bg-white/50">
+                          <p className="text-base font-semibold text-[#111111] mb-2">
+                            {customMessage}
+                          </p>
+                          {categoryContext && (
+                            <p className="text-sm text-[#555555]">
+                              **Tip:** Use the category name "{categoryContext}" to easily find similar products online.
+                            </p>
+                          )}
+                          <p className="text-sm text-[#555555] mt-3">
+                            We are still stocking our catalogue. You can try a different photo or come back soon.
+                          </p>
+                        </div>
+                      ) : itemProducts.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                           {itemProducts.map((product) => (
                             <Card
@@ -629,7 +682,7 @@ export default function ItemDetection() {
                 </div>
               )}
 
-              {/* Share Section */}
+              {/* Share Section - unchanged */}
               <div className="mt-12 md:mt-16 text-center">
                 <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200">
                   <CardContent className="p-6 md:p-8">
@@ -653,7 +706,7 @@ export default function ItemDetection() {
             </>
           )}
 
-          {/* Footer Disclaimer */}
+          {/* Footer Disclaimer - unchanged */}
           <footer className="mt-16 text-center">
             <p className="text-xs text-[#888888] leading-relaxed">
               Homable Creations provides product recommendations but is not responsible for pricing changes, 
@@ -663,12 +716,12 @@ export default function ItemDetection() {
         </div>
       </main>
 
-      {/* Auth Modal Overlay - Only show if NOT authenticated */}
+      {/* Auth Modal Overlay - Only show if NOT authenticated - unchanged */}
       {showAuthModal && !isAuthenticated && (
         <Auth onSuccess={handleAuthSuccess} redirectPath={`/item-detection/${boardId}`} />
       )}
 
-      {/* Share Modal */}
+      {/* Share Modal - unchanged */}
       {board && (
         <ShareModal
           isOpen={showShareModal}
