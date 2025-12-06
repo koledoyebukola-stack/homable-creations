@@ -500,7 +500,7 @@ export default function ItemDetection() {
                             Oops! We're still stocking our catalogue, so this product is unavailable.
                           </p>
                           <p className="text-sm text-[#555555]">
-                            You can use the name **"{item.item_name}"** to easily find similar products online.
+                            You can use the above name to easily find similar products online.
                           </p>
                         </div>
                       ) : itemProducts.length > 0 ? (
