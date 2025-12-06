@@ -468,7 +468,6 @@ export default function ItemDetection() {
                   const itemResult = products[item.id];
                   const itemProducts = itemResult?.products || [];
                   const customMessage = itemResult?.message;
-                  const categoryContext = itemResult?.message_category_context;
 
                   return (
                     <div key={item.id} className="space-y-6">
@@ -496,7 +495,7 @@ export default function ItemDetection() {
                       {/* Product Grid / Custom Message Logic */}
                       {customMessage ? (
                         <div className="text-center py-8 px-4 border border-dashed border-gray-300 rounded-xl bg-white/50">
-                         <p className="text-base font-semibold text-[#111111] mb-2">
+                          <p className="text-base font-semibold text-[#111111] mb-2">
                             Oops! We're still stocking our catalogue, so this product is unavailable.
                           </p>
                           <p className="text-sm text-[#555555]">
@@ -578,16 +577,7 @@ export default function ItemDetection() {
                             </Card>
                           ))}
                         </div>
-                      ) : (
-                        <div className="text-center py-8 px-4">
-                          <p className="text-base font-semibold text-[#111111] mb-2">
-                            We could not find a shoppable match for this look yet
-                          </p>
-                          <p className="text-sm text-[#555555]">
-                            We are still stocking our catalogue. You can try a different photo or come back soon.
-                          </p>
-                        </div>
-                      )}
+                      ) : null}
                     </div>
                   );
                 })}
