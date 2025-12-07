@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Header from '@/components/Header';
 import HeroCarousel from '@/components/HeroCarousel';
+import PopularProducts from '@/components/PopularProducts';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -29,12 +30,11 @@ export default function HomePage() {
           {/* Hero Content */}
           <div className="text-center mb-12 md:mb-16 space-y-6">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#111111] leading-tight">
-              Finish Your Holiday Look for Less
+              Design Beautiful Spaces With Just a Photo
             </h1>
             
             <p className="text-lg md:text-xl text-[#555555] max-w-3xl mx-auto leading-relaxed">
-              Upload any Christmas decor photo, let AI find matching products from top retailers, 
-              then recreate the look in your home before the holidays.
+              From everyday home styling to holiday decorating, Homable finds affordable products and gives you a clear budget breakdown so you can recreate any look you love.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
@@ -62,8 +62,20 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Popular Products Section */}
+      <section className="bg-white py-16 md:py-20">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-12">
+              Explore Popular Decor Finds
+            </h2>
+            <PopularProducts />
+          </div>
+        </div>
+      </section>
+
       {/* How It Works Section */}
-      <section className="bg-white py-16 md:py-24">
+      <section className="bg-gradient-to-br from-gray-50 to-stone-50 py-16 md:py-24">
         <div className="container mx-auto px-4 md:px-6">
           <div className="max-w-5xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-12 md:mb-16">
@@ -80,7 +92,7 @@ export default function HomePage() {
                   Upload Your Photo
                 </h3>
                 <p className="text-[#555555]">
-                  Share any Christmas decor photo that inspires you - from Pinterest, Instagram, or your own collection.
+                  Share any home styling or holiday decor photo that inspires you — from Pinterest, Instagram, or your own collection.
                 </p>
               </div>
 
@@ -93,7 +105,7 @@ export default function HomePage() {
                   AI Identifies Items
                 </h3>
                 <p className="text-[#555555]">
-                  Our AI analyzes your photo and identifies every holiday decor item, from trees to ornaments to garland.
+                  Our AI analyzes your photo and identifies every decor item, from furniture to trees to ornaments to garland.
                 </p>
               </div>
 
@@ -128,10 +140,10 @@ export default function HomePage() {
       <section className="container mx-auto px-4 md:px-6 py-16 md:py-24">
         <div className="max-w-4xl mx-auto bg-gradient-to-br from-[#C89F7A]/10 to-[#C89F7A]/5 rounded-3xl p-8 md:p-12 text-center border border-[#C89F7A]/20">
           <h2 className="text-3xl md:text-4xl font-bold text-[#111111] mb-4">
-            Ready to Create Your Holiday Look?
+            Ready to Create Your Dream Space?
           </h2>
           <p className="text-lg text-[#555555] mb-8 max-w-2xl mx-auto">
-            Join thousands discovering affordable ways to bring their Christmas decor dreams to life.
+            Join thousands discovering affordable ways to bring their home decor dreams to life.
           </p>
           <Button
             onClick={() => navigate('/upload')}

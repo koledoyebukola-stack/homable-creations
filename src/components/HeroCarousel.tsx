@@ -3,20 +3,28 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const CAROUSEL_IMAGES = [
   {
-    url: '/assets/carousel-christmas-tree-1.jpg',
-    alt: 'Beautifully decorated Christmas living room with tree and festive decor',
+    url: '/assets/carousel-holiday-living-1.jpg',
+    alt: 'Beautifully decorated modern living room with Christmas tree and festive decor',
   },
   {
-    url: '/assets/carousel-christmas-dining-2.jpg',
-    alt: 'Elegant Christmas dining room table with festive centerpiece',
+    url: '/assets/carousel-holiday-dining-2.jpg',
+    alt: 'Elegant Christmas dining room with festive table setting',
   },
   {
-    url: '/assets/carousel-christmas-entryway-3.jpg',
-    alt: 'Cozy Christmas entryway console with holiday decorations',
+    url: '/assets/carousel-holiday-entryway-3.jpg',
+    alt: 'Cozy Christmas entryway with decorated console and holiday decor',
   },
   {
-    url: '/assets/carousel-christmas-mantel-4.jpg',
-    alt: 'Festive Christmas mantel with garland and stockings',
+    url: '/assets/carousel-everyday-living-4.jpg',
+    alt: 'Modern minimalist living room with neutral tones and clean aesthetic',
+  },
+  {
+    url: '/assets/carousel-everyday-bedroom-5.jpg',
+    alt: 'Stylish bedroom interior with cozy bed and modern home decor',
+  },
+  {
+    url: '/assets/carousel-everyday-kitchen-6.jpg',
+    alt: 'Contemporary kitchen and dining area with modern furniture',
   },
 ];
 
