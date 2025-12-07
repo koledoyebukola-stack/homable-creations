@@ -57,10 +57,12 @@ export default function ItemDetection() {
   // 🎯 FIX 1: Update the state to hold the new ItemProductResult structure
   const [products, setProducts] = useState<Record<string, ItemProductResult>>({});
   const [seedProducts, setSeedProducts] = useState<Product[]>([]);
+  const [additionalProducts, setAdditionalProducts] = useState<Product[]>([]);
   const [board, setBoard] = useState<Board | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [loadingSeedProducts, setLoadingSeedProducts] = useState(false);
+  const [loadingAdditionalProducts, setLoadingAdditionalProducts] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -120,7 +122,7 @@ export default function ItemDetection() {
           for (const item of detectedItems) {
             try {
               // 1. First try to get existing products (returns Product[])
-              let productsFromCache = await getProductsForItem(item.id);
+              const productsFromCache = await getProductsForItem(item.id);
               let result: ItemProductResult = { products: productsFromCache, message: null, message_category_context: null };
               
               // 2. If no products exist, trigger search (returns SearchResponse object)
@@ -177,6 +179,32 @@ export default function ItemDetection() {
             }
             setLoadingSeedProducts(false);
           }
+
+          // Load additional products for "More pieces you can shop today" section
+          setLoadingAdditionalProducts(true);
+          try {
+            // Get all matched product IDs to exclude them
+            const matchedProductIds = new Set(
+              Object.values(productsMap)
+                .filter(r => !r.message)
+                .flatMap(r => r.products)
+                .map(p => p.id)
+            );
+
+            // Fetch random seed products
+            const allSeedProducts = await getRandomSeedProducts();
+            
+            // Filter out already matched products and invalid URLs
+            const uniqueAdditionalProducts = allSeedProducts.filter(
+              p => !matchedProductIds.has(p.id) && isValidProductUrl(p.product_url)
+            );
+
+            // Take up to 10 products for the additional section
+            setAdditionalProducts(uniqueAdditionalProducts.slice(0, 10));
+          } catch (error) {
+            console.error('Failed to load additional products:', error);
+          }
+          setLoadingAdditionalProducts(false);
         }
       } catch (error) {
         console.error('Error loading data:', error);
@@ -202,7 +230,7 @@ export default function ItemDetection() {
       for (const item of items) {
         try {
           // 1. First try to get existing products (returns Product[])
-          let productsFromCache = await getProductsForItem(item.id);
+          const productsFromCache = await getProductsForItem(item.id);
           let result: ItemProductResult = { products: productsFromCache, message: null, message_category_context: null };
 
           // 2. If no products exist, trigger search (returns SearchResponse object)
@@ -255,10 +283,36 @@ export default function ItemDetection() {
         }
         setLoadingSeedProducts(false);
       }
+
+      // Load additional products for "More pieces you can shop today" section
+      setLoadingAdditionalProducts(true);
+      try {
+        // Get all matched product IDs to exclude them
+        const matchedProductIds = new Set(
+          Object.values(productsMap)
+            .filter(r => !r.message)
+            .flatMap(r => r.products)
+            .map(p => p.id)
+        );
+
+        // Fetch random seed products
+        const allSeedProducts = await getRandomSeedProducts();
+        
+        // Filter out already matched products and invalid URLs
+        const uniqueAdditionalProducts = allSeedProducts.filter(
+          p => !matchedProductIds.has(p.id) && isValidProductUrl(p.product_url)
+        );
+
+        // Take up to 10 products for the additional section
+        setAdditionalProducts(uniqueAdditionalProducts.slice(0, 10));
+      } catch (error) {
+        console.error('Failed to load additional products:', error);
+      }
+      setLoadingAdditionalProducts(false);
     }
   };
 
-  // Calculate total look cost
+  // Calculate total look cost - ONLY uses matched products, NOT additional products
   const calculateTotalCost = () => {
     // 🎯 Use the products array from the result object
     const allProducts = Object.values(products).filter(r => !r.message).flatMap(r => r.products).flat();
@@ -389,7 +443,7 @@ export default function ItemDetection() {
               </div>
             )}
 
-            {/* Total Look Cost Card */}
+            {/* Total Look Cost Card - ONLY uses matched products */}
             {totalCost && !loadingProducts && isAuthenticated && (
               <div className="flex justify-center mb-6 md:mb-8">
                 <Card className="w-full md:w-auto bg-gradient-to-br from-[#C89F7A]/10 to-[#C89F7A]/5 border-[#C89F7A]/30">
@@ -468,7 +522,6 @@ export default function ItemDetection() {
                   const itemResult = products[item.id];
                   const itemProducts = itemResult?.products || [];
                   const customMessage = itemResult?.message;
-                  const categoryContext = itemResult?.message_category_context;
 
                   return (
                     <div key={item.id} className="space-y-6">
@@ -497,15 +550,10 @@ export default function ItemDetection() {
                       {customMessage ? (
                         <div className="text-center py-8 px-4 border border-dashed border-gray-300 rounded-xl bg-white/50">
                           <p className="text-base font-semibold text-[#111111] mb-2">
-                            {customMessage}
+                            Oops! We're still stocking our catalogue, so this product is unavailable.
                           </p>
-                          {categoryContext && (
-                            <p className="text-sm text-[#555555]">
-                              **Tip:** Use the category name "{categoryContext}" to easily find similar products online.
-                            </p>
-                          )}
-                          <p className="text-sm text-[#555555] mt-3">
-                            We are still stocking our catalogue. You can try a different photo or come back soon.
+                          <p className="text-sm text-[#555555]">
+                            You can use the above name to easily find similar products online.
                           </p>
                         </div>
                       ) : itemProducts.length > 0 ? (
@@ -583,16 +631,7 @@ export default function ItemDetection() {
                             </Card>
                           ))}
                         </div>
-                      ) : (
-                        <div className="text-center py-8 px-4">
-                          <p className="text-base font-semibold text-[#111111] mb-2">
-                            We could not find a shoppable match for this look yet
-                          </p>
-                          <p className="text-sm text-[#555555]">
-                            We are still stocking our catalogue. You can try a different photo or come back soon.
-                          </p>
-                        </div>
-                      )}
+                      ) : null}
                     </div>
                   );
                 })}
@@ -662,6 +701,87 @@ export default function ItemDetection() {
                   <div className="text-center">
                     <h2 className="text-2xl md:text-3xl font-bold text-[#111111] mb-2">
                       See more products
+                    </h2>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                      <Card key={n} className="overflow-hidden rounded-3xl border-0 shadow-lg">
+                        <Skeleton className="aspect-square w-full" />
+                        <CardContent className="p-4 space-y-3">
+                          <Skeleton className="h-4 w-3/4" />
+                          <div className="flex justify-between items-center">
+                            <Skeleton className="h-4 w-16" />
+                            <Skeleton className="h-6 w-12" />
+                          </div>
+                          <Skeleton className="h-8 w-full rounded-full" />
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* NEW: "More pieces you can shop today" Section */}
+              {additionalProducts.length > 0 && !loadingAdditionalProducts && (
+                <div className="mt-20 space-y-6 border-t-2 border-gray-200 pt-12">
+                  <div className="text-center">
+                    <h2 className="text-2xl md:text-3xl font-bold text-[#111111] mb-2">
+                      More pieces you can shop today
+                    </h2>
+                    <p className="text-sm md:text-base text-[#555555]">
+                      Discover additional products to complete your space
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6">
+                    {additionalProducts.map((product) => (
+                      <Card
+                        key={product.id}
+                        className="overflow-hidden rounded-3xl border-0 shadow-lg hover:shadow-xl transition-all"
+                      >
+                        <div className="relative aspect-square overflow-hidden bg-gray-100">
+                          <img
+                            src={product.image_url}
+                            alt={product.product_name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+
+                        <CardContent className="p-4 space-y-3">
+                          <h3 className="text-sm font-semibold text-[#111111] line-clamp-2">
+                            {product.product_name}
+                          </h3>
+
+                          <div className="flex items-center justify-between">
+                            <Badge variant="outline" className="text-xs text-[#555555]">
+                              {product.merchant}
+                            </Badge>
+                            <span className="text-lg font-bold text-[#111111]">
+                              ${product.price}
+                            </span>
+                          </div>
+
+                          <Button
+                            className="w-full bg-[#111111] hover:bg-[#333333] text-white rounded-full text-sm"
+                            size="sm"
+                            onClick={() => window.open(product.product_url, '_blank')}
+                          >
+                            View Product
+                            <ExternalLink className="ml-2 h-3 w-3" />
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Loading state for additional products */}
+              {loadingAdditionalProducts && (
+                <div className="mt-20 space-y-6 border-t-2 border-gray-200 pt-12">
+                  <div className="text-center">
+                    <h2 className="text-2xl md:text-3xl font-bold text-[#111111] mb-2">
+                      More pieces you can shop today
                     </h2>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6">

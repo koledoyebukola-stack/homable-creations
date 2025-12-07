@@ -13,6 +13,7 @@ import ProductMatches from './pages/ProductMatches';
 import RoomBoard from './pages/RoomBoard';
 import MyBoards from './pages/MyBoards';
 import Auth from './pages/Auth';
+import ResetPassword from './pages/ResetPassword';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -56,6 +57,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           {/* Upload, Analyzing, and ItemDetection routes are PUBLIC - auth modal shows on results page */}
           <Route path="/upload" element={<Upload />} />
           <Route path="/analyzing/:boardId" element={<Analyzing />} />
