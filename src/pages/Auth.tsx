@@ -12,6 +12,7 @@ export default function Auth() {
   const [searchParams] = useSearchParams();
   const mode = searchParams.get('mode') || 'signup';
   const [isSignUp, setIsSignUp] = useState(mode === 'signup');
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -36,7 +37,18 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      if (isSignUp) {
+      if (isForgotPassword) {
+        // Send password reset email
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+
+        if (error) throw error;
+
+        toast.success('Password reset email sent! Check your inbox.');
+        setIsForgotPassword(false);
+        setEmail('');
+      } else if (isSignUp) {
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -92,10 +104,16 @@ export default function Auth() {
           {/* Header */}
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-[#111111] mb-2">
-              {isSignUp ? 'Create Your Free Account' : 'Welcome Back'}
+              {isForgotPassword 
+                ? 'Reset Your Password' 
+                : isSignUp 
+                ? 'Create Your Free Account' 
+                : 'Welcome Back'}
             </h2>
             <p className="text-[#555555]">
-              {isSignUp 
+              {isForgotPassword
+                ? 'Enter your email and we\'ll send you a reset link.'
+                : isSignUp 
                 ? 'Sign up to save your inspiration boards and get personalized results.'
                 : 'Sign in to access your saved boards and continue shopping.'}
             </p>
@@ -116,18 +134,32 @@ export default function Auth() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-[#111111]">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                className="h-12"
-              />
-            </div>
+            {!isForgotPassword && (
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-[#111111]">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="h-12"
+                />
+              </div>
+            )}
+
+            {!isSignUp && !isForgotPassword && (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => setIsForgotPassword(true)}
+                  className="text-sm text-[#555555] hover:text-[#111111] transition-colors"
+                >
+                  Forgot password?
+                </button>
+              </div>
+            )}
 
             <Button
               type="submit"
@@ -135,18 +167,37 @@ export default function Auth() {
               disabled={loading}
               className="w-full bg-[#111111] hover:bg-[#333333] text-white text-lg py-6 rounded-full"
             >
-              {loading ? 'Loading...' : isSignUp ? 'Create Free Account' : 'Sign In'}
+              {loading 
+                ? 'Loading...' 
+                : isForgotPassword 
+                ? 'Send Reset Link'
+                : isSignUp 
+                ? 'Create Free Account' 
+                : 'Sign In'}
             </Button>
 
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="w-full text-center text-sm text-[#555555] hover:text-[#111111] transition-colors"
-            >
-              {isSignUp
-                ? 'Already have an account? Sign in'
-                : "Don't have an account? Sign up"}
-            </button>
+            {isForgotPassword ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsForgotPassword(false);
+                  setEmail('');
+                }}
+                className="w-full text-center text-sm text-[#555555] hover:text-[#111111] transition-colors"
+              >
+                Back to sign in
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="w-full text-center text-sm text-[#555555] hover:text-[#111111] transition-colors"
+              >
+                {isSignUp
+                  ? 'Already have an account? Sign in'
+                  : "Don't have an account? Sign up"}
+              </button>
+            )}
           </form>
         </div>
       </div>
