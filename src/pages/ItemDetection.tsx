@@ -12,7 +12,7 @@ import { getDetectedItems, getBoards, searchProducts, getProductsForItem, getRan
 import { DetectedItem, Product, Board } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { ExternalLink, Star, Share2, Upload } from 'lucide-react';
+import { ExternalLink, Star, Share2, Upload, Search } from 'lucide-react';
 
 // 1. Define the interface for the full Search Response object (assumed to be the return type of searchProducts)
 interface SearchResponse {
@@ -353,6 +353,12 @@ export default function ItemDetection() {
     return itemResult && !itemResult.message && itemResult.products.length === 0;
   });
 
+  // Helper function to create Google search URL
+  const createGoogleSearchUrl = (productTitle: string) => {
+    const encodedTitle = encodeURIComponent(productTitle);
+    return `https://www.google.com/search?q=${encodedTitle}`;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
@@ -548,13 +554,20 @@ export default function ItemDetection() {
 
                       {/* Product Grid / Custom Message Logic */}
                       {customMessage ? (
-                        <div className="text-center py-8 px-4 border border-dashed border-gray-300 rounded-xl bg-white/50">
+                        <div className="text-center py-8 px-4 border border-dashed border-gray-300 rounded-xl bg-white/50 space-y-4">
                           <p className="text-base font-semibold text-[#111111] mb-2">
                             Oops! We're still stocking our catalogue, so this product is unavailable.
                           </p>
-                          <p className="text-sm text-[#555555]">
-                            You can use the above name to easily find similar products online.
+                          <p className="text-sm text-[#555555] mb-4">
+                            You can use the name above to search online, or click below to continue your search on Google.
                           </p>
+                          <Button
+                            onClick={() => window.open(createGoogleSearchUrl(item.item_name), '_blank')}
+                            className="bg-[#111111] hover:bg-[#333333] text-white rounded-full px-6 py-2"
+                          >
+                            <Search className="mr-2 h-4 w-4" />
+                            Search on Google
+                          </Button>
                         </div>
                       ) : itemProducts.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
