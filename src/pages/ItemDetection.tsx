@@ -826,11 +826,14 @@ export default function ItemDetection() {
             </>
           )}
 
-          {/* Footer Disclaimer - unchanged */}
-          <footer className="mt-16 text-center">
+          {/* Footer Disclaimer */}
+          <footer className="mt-16 text-center space-y-2">
             <p className="text-xs text-[#888888] leading-relaxed">
               Homable Creations provides product recommendations but is not responsible for pricing changes, 
               product availability, or fulfillment by third-party retailers.
+            </p>
+            <p className="text-xs text-[#888888]">
+              Some links may be affiliate links, which help support Homable at no extra cost to you.
             </p>
           </footer>
         </div>

@@ -120,6 +120,13 @@ export default function Home() {
               Explore Popular Decor Finds
             </h2>
             <PopularProducts />
+            
+            {/* Affiliate Disclosure */}
+            <div className="mt-6 text-center">
+              <p className="text-xs text-[#888888]">
+                Some links may be affiliate links, which help support Homable at no extra cost to you.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -148,7 +155,7 @@ export default function Home() {
       <footer className="bg-white border-t border-gray-200 py-8">
         <div className="container mx-auto px-4 md:px-6">
           <div className="text-center text-sm text-[#888888]">
-            <p>© 2024 Homable Creations. Find your perfect home decor matches.</p>
+            <p>© 2025 Homable Creations. Find your perfect home decor matches.</p>
           </div>
         </div>
       </footer>
