@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -50,20 +51,21 @@ export default function MyBoards() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
         <Header />
-        <main className="container mx-auto px-4 py-16">
+        <main className="flex-1 container mx-auto px-4 py-16">
           <LoadingSpinner message="Loading your history..." />
         </main>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
       <Header />
 
-      <main className="container mx-auto px-4 py-16">
+      <main className="flex-1 container mx-auto px-4 py-16">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-12">
             <h1 className="text-4xl font-bold text-[#111111]">My History</h1>
@@ -155,15 +157,9 @@ export default function MyBoards() {
             </div>
           )}
         </div>
-
-        {/* Footer Disclaimer */}
-        <footer className="max-w-7xl mx-auto mt-16 text-center">
-          <p className="text-xs text-[#888888] leading-relaxed">
-            Homable Creations provides product recommendations but is not responsible for pricing changes, 
-            product availability, or fulfillment by third-party retailers.
-          </p>
-        </footer>
       </main>
+
+      <Footer />
     </div>
   );
 }
