@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Auth from '@/components/AuthModal';
 import ShareModal from '@/components/ShareModal';
@@ -54,7 +55,6 @@ export default function ItemDetection() {
   const { boardId } = useParams<{ boardId: string }>();
   const navigate = useNavigate();
   const [items, setItems] = useState<DetectedItem[]>([]);
-  // 🎯 FIX 1: Update the state to hold the new ItemProductResult structure
   const [products, setProducts] = useState<Record<string, ItemProductResult>>({});
   const [seedProducts, setSeedProducts] = useState<Product[]>([]);
   const [additionalProducts, setAdditionalProducts] = useState<Product[]>([]);
@@ -116,7 +116,6 @@ export default function ItemDetection() {
         // Load products for each detected item (only if authenticated)
         if (detectedItems.length > 0 && userIsAuthenticated) {
           setLoadingProducts(true);
-          // 🎯 FIX 2: Update the map type to ItemProductResult
           const productsMap: Record<string, ItemProductResult> = {};
           
           for (const item of detectedItems) {
@@ -128,20 +127,16 @@ export default function ItemDetection() {
               // 2. If no products exist, trigger search (returns SearchResponse object)
               if (result.products.length === 0) {
                 const searchResult = await searchProducts(item.id);
-                
-                // Store the full SearchResponse object (contains products OR the message)
                 result = searchResult;
               }
               
               // 3. If there is no message AND still no products, try to get category-matched seed products
               if (!result.message && result.products.length === 0) {
                 const categorySeeds = await getRandomSeedProducts(item.item_name, item.category);
-                // Take up to 3 seed products
                 result.products = categorySeeds.slice(0, 3);
               }
               
               // 4. Filter products and store the final result
-              // Only filter products if there is no custom message
               if (!result.message) {
                 result.products = result.products.filter(p => isValidProductUrl(p.product_url));
               }
@@ -149,7 +144,6 @@ export default function ItemDetection() {
               productsMap[item.id] = result;
             } catch (error) {
               console.error(`Failed to load products for item ${item.id}:`, error);
-              // Store an empty result on error
               productsMap[item.id] = { products: [], message: null, message_category_context: null };
             }
           }
@@ -159,7 +153,6 @@ export default function ItemDetection() {
 
           // Log analysis metrics
           const numberOfItemsDetected = detectedItems.length;
-          // Count items that have products AND no message
           const numberOfItemsWithProducts = Object.values(productsMap).filter(r => !r.message && r.products.length > 0).length;
           const numberOfProductsShown = Object.values(productsMap).filter(r => !r.message).flatMap(r => r.products).length;
           
@@ -171,7 +164,6 @@ export default function ItemDetection() {
             setLoadingSeedProducts(true);
             try {
               const randomSeeds = await getRandomSeedProducts();
-              // Filter seed products to only include those with valid URLs
               const validSeedProducts = randomSeeds.filter(p => isValidProductUrl(p.product_url));
               setSeedProducts(validSeedProducts);
             } catch (error) {
@@ -183,7 +175,6 @@ export default function ItemDetection() {
           // Load additional products for "More pieces you can shop today" section
           setLoadingAdditionalProducts(true);
           try {
-            // Get all matched product IDs to exclude them
             const matchedProductIds = new Set(
               Object.values(productsMap)
                 .filter(r => !r.message)
@@ -191,15 +182,11 @@ export default function ItemDetection() {
                 .map(p => p.id)
             );
 
-            // Fetch random seed products
             const allSeedProducts = await getRandomSeedProducts();
-            
-            // Filter out already matched products and invalid URLs
             const uniqueAdditionalProducts = allSeedProducts.filter(
               p => !matchedProductIds.has(p.id) && isValidProductUrl(p.product_url)
             );
 
-            // Take up to 10 products for the additional section
             setAdditionalProducts(uniqueAdditionalProducts.slice(0, 10));
           } catch (error) {
             console.error('Failed to load additional products:', error);
@@ -224,28 +211,23 @@ export default function ItemDetection() {
     // Reload products after authentication
     if (items.length > 0) {
       setLoadingProducts(true);
-      // 🎯 FIX 3: Update the map type to ItemProductResult
       const productsMap: Record<string, ItemProductResult> = {};
       
       for (const item of items) {
         try {
-          // 1. First try to get existing products (returns Product[])
           const productsFromCache = await getProductsForItem(item.id);
           let result: ItemProductResult = { products: productsFromCache, message: null, message_category_context: null };
 
-          // 2. If no products exist, trigger search (returns SearchResponse object)
           if (result.products.length === 0) {
             const searchResult = await searchProducts(item.id);
             result = searchResult;
           }
           
-          // 3. If there is no message AND still no products, try to get category-matched seed products
           if (!result.message && result.products.length === 0) {
             const categorySeeds = await getRandomSeedProducts(item.item_name, item.category);
             result.products = categorySeeds.slice(0, 3);
           }
           
-          // 4. Filter products and store the final result
           if (!result.message) {
             result.products = result.products.filter(p => isValidProductUrl(p.product_url));
           }
@@ -260,7 +242,6 @@ export default function ItemDetection() {
       setProducts(productsMap);
       setLoadingProducts(false);
 
-      // Log analysis metrics
       if (boardId) {
         const numberOfItemsDetected = items.length;
         const numberOfItemsWithProducts = Object.values(productsMap).filter(r => !r.message && r.products.length > 0).length;
@@ -269,13 +250,11 @@ export default function ItemDetection() {
         await logAnalysis(boardId, numberOfItemsDetected, numberOfItemsWithProducts, numberOfProductsShown);
       }
 
-      // Load seed products if needed
       const hasItemsWithoutProducts = Object.values(productsMap).some(r => !r.message && r.products.length === 0);
       if (hasItemsWithoutProducts) {
         setLoadingSeedProducts(true);
         try {
           const randomSeeds = await getRandomSeedProducts();
-          // Filter seed products to only include those with valid URLs
           const validSeedProducts = randomSeeds.filter(p => isValidProductUrl(p.product_url));
           setSeedProducts(validSeedProducts);
         } catch (error) {
@@ -284,10 +263,8 @@ export default function ItemDetection() {
         setLoadingSeedProducts(false);
       }
 
-      // Load additional products for "More pieces you can shop today" section
       setLoadingAdditionalProducts(true);
       try {
-        // Get all matched product IDs to exclude them
         const matchedProductIds = new Set(
           Object.values(productsMap)
             .filter(r => !r.message)
@@ -295,15 +272,11 @@ export default function ItemDetection() {
             .map(p => p.id)
         );
 
-        // Fetch random seed products
         const allSeedProducts = await getRandomSeedProducts();
-        
-        // Filter out already matched products and invalid URLs
         const uniqueAdditionalProducts = allSeedProducts.filter(
           p => !matchedProductIds.has(p.id) && isValidProductUrl(p.product_url)
         );
 
-        // Take up to 10 products for the additional section
         setAdditionalProducts(uniqueAdditionalProducts.slice(0, 10));
       } catch (error) {
         console.error('Failed to load additional products:', error);
@@ -312,13 +285,10 @@ export default function ItemDetection() {
     }
   };
 
-  // Calculate total look cost - ONLY uses matched products, NOT additional products
   const calculateTotalCost = () => {
-    // 🎯 Use the products array from the result object
     const allProducts = Object.values(products).filter(r => !r.message).flatMap(r => r.products).flat();
     if (allProducts.length === 0) return null;
 
-    // Group products by item, get cheapest and average per item
     const itemPrices: { min: number; avg: number }[] = [];
     
     items.forEach(item => {
@@ -347,13 +317,11 @@ export default function ItemDetection() {
 
   const totalCost = calculateTotalCost();
 
-  // Check if there are any items without products AND no message
   const hasItemsWithoutProducts = items.some(item => {
     const itemResult = products[item.id];
     return itemResult && !itemResult.message && itemResult.products.length === 0;
   });
 
-  // Helper function to create Google search URL
   const createGoogleSearchUrl = (productTitle: string) => {
     const encodedTitle = encodeURIComponent(productTitle);
     return `https://www.google.com/search?q=${encodedTitle}`;
@@ -361,24 +329,25 @@ export default function ItemDetection() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
         <Header />
-        <main className="container mx-auto px-4 py-16">
+        <main className="flex-1 container mx-auto px-4 py-16">
           <LoadingSpinner message="Analyzing your inspiration..." />
         </main>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
       <Header />
 
-      <main className="container mx-auto px-4 md:px-6 py-8 md:py-16">
+      <main className="flex-1 container mx-auto px-4 md:px-6 py-8 md:py-16">
         <div className="max-w-5xl mx-auto">
           {/* Header Section with Preview Image and Share Button */}
           <div className="mb-8">
-            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 lg:gap-6 mb-6">
+            <div className="flex flex-col lg:flex-row lg:items-start lg:items-between gap-4 lg:gap-6 mb-6">
               <div className="flex-1 text-center lg:text-left">
                 <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2 md:mb-4 text-[#111111]">
                   We Found {items.length} Items in "{board?.name || 'Your Board'}"
@@ -389,7 +358,6 @@ export default function ItemDetection() {
               </div>
               
               <div className="flex items-center justify-center lg:justify-end gap-4 shrink-0">
-                {/* Share Button - Top Right */}
                 <Button
                   onClick={() => setShowShareModal(true)}
                   variant="outline"
@@ -400,7 +368,6 @@ export default function ItemDetection() {
                   Share
                 </Button>
 
-                {/* Preview Thumbnail */}
                 {board?.source_image_url && (
                   <img
                     src={board.source_image_url}
@@ -411,7 +378,6 @@ export default function ItemDetection() {
               </div>
             </div>
 
-            {/* Single Primary CTA - Always visible */}
             <div className="flex justify-center mb-6">
               <Button
                 onClick={() => navigate('/upload')}
@@ -423,7 +389,6 @@ export default function ItemDetection() {
               </Button>
             </div>
 
-            {/* Summary Strip - Detected Items Pills */}
             {items.length > 0 && (
               <div className="flex flex-col md:flex-row md:flex-wrap md:justify-center gap-3 mb-6 md:mb-8">
                 {items.map((item) => (
@@ -449,7 +414,6 @@ export default function ItemDetection() {
               </div>
             )}
 
-            {/* Total Look Cost Card - ONLY uses matched products */}
             {totalCost && !loadingProducts && isAuthenticated && (
               <div className="flex justify-center mb-6 md:mb-8">
                 <Card className="w-full md:w-auto bg-gradient-to-br from-[#C89F7A]/10 to-[#C89F7A]/5 border-[#C89F7A]/30">
@@ -489,7 +453,6 @@ export default function ItemDetection() {
             <div className="space-y-12 md:space-y-16">
               {items.map((item) => (
                 <div key={item.id} className="space-y-6">
-                  {/* Item Section Header - unchanged */}
                   <div className="text-center">
                     <h2 className="text-2xl md:text-3xl font-bold text-[#111111] mb-2">
                       {item.item_name}
@@ -499,7 +462,6 @@ export default function ItemDetection() {
                     )}
                   </div>
 
-                  {/* Skeleton Loaders for Products - unchanged */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                     {[1, 2, 3].map((n) => (
                       <Card key={n} className="overflow-hidden rounded-3xl border-0 shadow-lg">
@@ -524,14 +486,12 @@ export default function ItemDetection() {
             <>
               <div className="space-y-12 md:space-y-16">
                 {items.map((item) => {
-                  // 🎯 FIX 4: Safely extract products, message, and context from the result object
                   const itemResult = products[item.id];
                   const itemProducts = itemResult?.products || [];
                   const customMessage = itemResult?.message;
 
                   return (
                     <div key={item.id} className="space-y-6">
-                      {/* Item Section Header */}
                       <div className="text-center">
                         <h2 className="text-2xl md:text-3xl font-bold text-[#111111] mb-2">
                           {item.item_name}
@@ -552,7 +512,6 @@ export default function ItemDetection() {
                         </div>
                       </div>
 
-                      {/* Product Grid / Custom Message Logic */}
                       {customMessage ? (
                         <div className="text-center py-8 px-4 border border-dashed border-gray-300 rounded-xl bg-white/50 space-y-4">
                           <p className="text-base font-semibold text-[#111111] mb-2">
@@ -650,7 +609,6 @@ export default function ItemDetection() {
                 })}
               </div>
 
-              {/* See More Products Section - Only show if there are items without products AND we have valid seed products */}
               {hasItemsWithoutProducts && seedProducts.length > 0 && (
                 <div className="mt-16 space-y-6">
                   <div className="text-center">
@@ -708,7 +666,6 @@ export default function ItemDetection() {
                 </div>
               )}
 
-              {/* Loading state for seed products */}
               {hasItemsWithoutProducts && loadingSeedProducts && (
                 <div className="mt-16 space-y-6">
                   <div className="text-center">
@@ -734,7 +691,6 @@ export default function ItemDetection() {
                 </div>
               )}
 
-              {/* NEW: "More pieces you can shop today" Section */}
               {additionalProducts.length > 0 && !loadingAdditionalProducts && (
                 <div className="mt-20 space-y-6 border-t-2 border-gray-200 pt-12">
                   <div className="text-center">
@@ -789,7 +745,6 @@ export default function ItemDetection() {
                 </div>
               )}
 
-              {/* Loading state for additional products */}
               {loadingAdditionalProducts && (
                 <div className="mt-20 space-y-6 border-t-2 border-gray-200 pt-12">
                   <div className="text-center">
@@ -815,7 +770,6 @@ export default function ItemDetection() {
                 </div>
               )}
 
-              {/* Share Section - unchanged */}
               <div className="mt-12 md:mt-16 text-center">
                 <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200">
                   <CardContent className="p-6 md:p-8">
@@ -838,26 +792,13 @@ export default function ItemDetection() {
               </div>
             </>
           )}
-
-          {/* Footer Disclaimer */}
-          <footer className="mt-16 text-center space-y-2">
-            <p className="text-xs text-[#888888] leading-relaxed">
-              Homable Creations provides product recommendations but is not responsible for pricing changes, 
-              product availability, or fulfillment by third-party retailers.
-            </p>
-            <p className="text-xs text-[#888888]">
-              Some links may be affiliate links, which help support Homable at no extra cost to you.
-            </p>
-          </footer>
         </div>
       </main>
 
-      {/* Auth Modal Overlay - Only show if NOT authenticated - unchanged */}
       {showAuthModal && !isAuthenticated && (
         <Auth onSuccess={handleAuthSuccess} redirectPath={`/item-detection/${boardId}`} />
       )}
 
-      {/* Share Modal - unchanged */}
       {board && (
         <ShareModal
           isOpen={showShareModal}
@@ -866,6 +807,8 @@ export default function ItemDetection() {
           boardName={board.name}
         />
       )}
+
+      <Footer />
     </div>
   );
 }

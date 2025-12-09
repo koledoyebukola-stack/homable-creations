@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Upload, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 import HeroCarousel from '@/components/HeroCarousel';
 import PopularProducts from '@/components/PopularProducts';
 
@@ -121,7 +122,7 @@ export default function Home() {
             </h2>
             <PopularProducts />
             
-            {/* Affiliate Disclosure */}
+            {/* Affiliate Disclosure - Keep this section-specific disclosure */}
             <div className="mt-6 text-center">
               <p className="text-xs text-[#888888]">
                 Some links may be affiliate links, which help support Homable at no extra cost to you.
@@ -151,14 +152,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 py-8">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="text-center text-sm text-[#888888]">
-            <p>© 2025 Homable Creations. Find your perfect home decor matches.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

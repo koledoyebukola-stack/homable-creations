@@ -14,6 +14,7 @@ import RoomBoard from './pages/RoomBoard';
 import MyBoards from './pages/MyBoards';
 import Auth from './pages/Auth';
 import ResetPassword from './pages/ResetPassword';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ const App = () => (
           <Route path="/" element={<Home />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           {/* Upload, Analyzing, and ItemDetection routes are PUBLIC - auth modal shows on results page */}
           <Route path="/upload" element={<Upload />} />
           <Route path="/analyzing/:boardId" element={<Analyzing />} />

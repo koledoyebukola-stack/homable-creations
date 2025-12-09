@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 import ImageUploader from '@/components/ImageUploader';
 import { Button } from '@/components/ui/button';
 import { uploadImage, createBoard, validateDecorImage } from '@/lib/api';
@@ -100,10 +101,10 @@ export default function Upload() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
       <Header />
 
-      <main className="container mx-auto px-4 py-16">
+      <main className="flex-1 container mx-auto px-4 py-16">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold mb-4 text-[#111111]">
@@ -159,6 +160,8 @@ export default function Upload() {
           </div>
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 }
