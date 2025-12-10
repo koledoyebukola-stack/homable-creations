@@ -18,7 +18,7 @@ export default function PrivacyPolicy() {
           
           <div className="space-y-8 text-[#555555]">
             <p>
-              Homable Creations ("we", "our") respects your privacy. This policy explains what information we collect and how we use it.
+              Homable Creations Technologies ("we", "our") respects your privacy. This policy explains what information we collect and how we use it.
             </p>
             
             <section>

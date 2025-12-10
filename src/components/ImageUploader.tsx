@@ -59,12 +59,12 @@ export default function ImageUploader({
         />
         {onClear && (
           <Button
-            variant="destructive"
+            variant="outline"
             size="icon"
-            className="absolute top-4 right-4"
+            className="absolute top-4 right-4 bg-white hover:bg-gray-100 border-gray-300"
             onClick={onClear}
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4 text-gray-700" />
           </Button>
         )}
       </div>

@@ -4,9 +4,44 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ImageUploader from '@/components/ImageUploader';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { uploadImage, createBoard, validateDecorImage } from '@/lib/api';
 import { toast } from 'sonner';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Info } from 'lucide-react';
+
+// Sample images organized by category
+const SAMPLE_CATEGORIES = [
+  {
+    id: 'afro-modern',
+    title: 'Afro-Modern Style',
+    description: 'African-inspired modern interiors',
+    images: [
+      { url: '/assets/sample-afro-modern-living-1.jpg', alt: 'Afro-modern living room' },
+      { url: '/assets/sample-afro-modern-bedroom-2.jpg', alt: 'Afro-modern bedroom' },
+      { url: '/assets/sample-afro-modern-dining-3.jpg', alt: 'Afro-modern dining room' },
+    ]
+  },
+  {
+    id: 'everyday-home',
+    title: 'Everyday Home Styling',
+    description: 'Living rooms, bedrooms, and more',
+    images: [
+      { url: '/assets/carousel-everyday-living-4.jpg', alt: 'Everyday living room' },
+      { url: '/assets/carousel-everyday-bedroom-5.jpg', alt: 'Everyday bedroom' },
+      { url: '/assets/carousel-everyday-kitchen-6.jpg', alt: 'Everyday kitchen' },
+    ]
+  },
+  {
+    id: 'holiday-looks',
+    title: 'Holiday Looks',
+    description: 'Christmas decor and seasonal styling',
+    images: [
+      { url: '/assets/carousel-holiday-living-1.jpg', alt: 'Holiday living room' },
+      { url: '/assets/carousel-holiday-dining-2.jpg', alt: 'Holiday dining room' },
+      { url: '/assets/carousel-holiday-entryway-3.jpg', alt: 'Holiday entryway' },
+    ]
+  }
+];
 
 export default function Upload() {
   const navigate = useNavigate();
@@ -14,11 +49,14 @@ export default function Upload() {
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [uploading, setUploading] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [isSampleImage, setIsSampleImage] = useState(false);
+  const [sampleImageAlt, setSampleImageAlt] = useState<string>('');
 
   const handleImageSelect = (file: File) => {
     console.log('Image selected:', file.name, file.type, file.size);
     setSelectedFile(file);
     setValidationError(null);
+    setIsSampleImage(false);
     
     // Create preview URL
     const url = URL.createObjectURL(file);
@@ -28,6 +66,8 @@ export default function Upload() {
   const handleClear = () => {
     setSelectedFile(null);
     setValidationError(null);
+    setIsSampleImage(false);
+    setSampleImageAlt('');
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
       setPreviewUrl('');
@@ -77,9 +117,10 @@ export default function Upload() {
         return;
       }
       
-      // Create board with default name "Untitled inspiration"
+      // Create board with appropriate name
+      const boardName = isSampleImage ? sampleImageAlt : 'Untitled inspiration';
       console.log('Creating board...');
-      const board = await createBoard('Untitled inspiration', imageUrl);
+      const board = await createBoard(boardName, imageUrl);
       console.log('Board created successfully:', board.id);
       
       // Clean up preview URL
@@ -100,6 +141,38 @@ export default function Upload() {
     }
   };
 
+  const handleSampleImageClick = async (imageUrl: string, altText: string) => {
+    console.log('Sample image clicked:', imageUrl);
+    
+    try {
+      // Fetch the sample image and convert to blob
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error('Failed to load sample image');
+      }
+      const blob = await response.blob();
+      
+      // Create a File object from the blob
+      const file = new File([blob], `sample-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      
+      // Set as selected file and show in preview box
+      setSelectedFile(file);
+      setIsSampleImage(true);
+      setSampleImageAlt(altText);
+      setPreviewUrl(imageUrl); // Use the sample image URL directly for preview
+      setValidationError(null);
+      
+      // Scroll to the preview box
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      console.log('Sample image loaded into preview box');
+    } catch (error) {
+      console.error('Sample image error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load sample image';
+      toast.error(errorMessage);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
       <Header />
@@ -116,6 +189,16 @@ export default function Upload() {
           </div>
 
           <div className="bg-white rounded-3xl p-8 shadow-lg">
+            {/* Info Banner - Positioned above the upload box */}
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+              <div className="flex items-start gap-3">
+                <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-blue-900">
+                  <span className="font-medium">Homable works best with home decor photos.</span> Non-decor images may not be analyzed.
+                </p>
+              </div>
+            </div>
+
             <ImageUploader 
               onImageSelect={handleImageSelect}
               previewUrl={previewUrl}
@@ -157,6 +240,54 @@ export default function Upload() {
                 </Button>
               </div>
             )}
+          </div>
+
+          {/* Sample Images Section */}
+          <div className="mt-16">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold mb-3 text-[#111111]">
+                Don't Have a Photo? Try One of Our Favourites!
+              </h2>
+              <p className="text-base text-[#555555]">
+                Choose one of these looks to see how Homable works.
+              </p>
+            </div>
+
+            {/* Categories */}
+            <div className="space-y-12">
+              {SAMPLE_CATEGORIES.map((category) => (
+                <div key={category.id}>
+                  <div className="mb-4">
+                    <h3 className="text-xl font-semibold text-[#111111] mb-1">
+                      {category.title}
+                    </h3>
+                    <p className="text-sm text-[#555555]">
+                      {category.description}
+                    </p>
+                  </div>
+                  
+                  {/* Responsive Grid: 2 cols mobile, 3 cols tablet/desktop */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {category.images.map((image, index) => (
+                      <Card
+                        key={index}
+                        className="overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105 rounded-2xl border-0"
+                        onClick={() => !uploading && handleSampleImageClick(image.url, image.alt)}
+                      >
+                        <div className="aspect-[4/3] overflow-hidden">
+                          <img
+                            src={image.url}
+                            alt={image.alt}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </main>

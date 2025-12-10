@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
 import { analyzeImage, updateBoardName, generateBoardName } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 
@@ -10,6 +9,7 @@ export default function Analyzing() {
   const [error, setError] = useState<string | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [progressMessage, setProgressMessage] = useState('Our AI is identifying decor items and styles...');
+  const [boardImageUrl, setBoardImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     // Timer to track elapsed time and update progress messages
@@ -57,10 +57,14 @@ export default function Analyzing() {
         }
 
         console.log('Board fetched:', board);
+        
+        // Set the board image URL for preview
+        const imageUrl = board.source_image_url || board.cover_image_url;
+        setBoardImageUrl(imageUrl);
 
         // Run AI analysis
         console.log('Calling analyzeImage...');
-        const detectedItems = await analyzeImage(boardId, board.source_image_url || board.cover_image_url);
+        const detectedItems = await analyzeImage(boardId, imageUrl);
         console.log('Analysis completed successfully, detected items:', detectedItems);
 
         // Generate smart board name based on detected items
@@ -123,9 +127,6 @@ export default function Analyzing() {
               Redirecting you to continue...
             </p>
           </div>
-          <div className="flex justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-          </div>
         </div>
       </div>
     );
@@ -133,17 +134,33 @@ export default function Analyzing() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-stone-50">
-      <div className="text-center space-y-6 max-w-md px-4">
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="h-32 w-32 rounded-full bg-blue-100 animate-pulse"></div>
+      <div className="text-center space-y-8 max-w-md px-4">
+        {/* Preview Image */}
+        {boardImageUrl && (
+          <div className="flex justify-center">
+            <div className="relative">
+              <img
+                src={boardImageUrl}
+                alt="Your inspiration"
+                className="w-56 h-56 md:w-72 md:h-72 object-cover rounded-3xl shadow-2xl border-4 border-white"
+              />
+            </div>
           </div>
-          <div className="relative flex items-center justify-center h-32">
-            <Loader2 className="h-16 w-16 animate-spin text-blue-600" />
+        )}
+
+        {/* Minimal Bar Loader */}
+        <div className="w-full max-w-xs mx-auto">
+          <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-gray-800 to-gray-600 rounded-full animate-[slide_1.5s_ease-in-out_infinite]"
+              style={{
+                width: '40%',
+              }}
+            ></div>
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           <h2 className="text-3xl font-bold text-gray-900">
             Analyzing Your Inspiration
           </h2>
@@ -157,24 +174,23 @@ export default function Analyzing() {
           )}
         </div>
 
-        <div className="flex items-center justify-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-blue-600 animate-bounce"></div>
-          <div
-            className="h-2 w-2 rounded-full bg-blue-600 animate-bounce"
-            style={{ animationDelay: '0.1s' }}
-          ></div>
-          <div
-            className="h-2 w-2 rounded-full bg-blue-600 animate-bounce"
-            style={{ animationDelay: '0.2s' }}
-          ></div>
-        </div>
-
         {elapsedTime > 0 && (
           <p className="text-xs text-gray-400">
             {elapsedTime}s elapsed
           </p>
         )}
       </div>
+
+      <style>{`
+        @keyframes slide {
+          0% {
+            transform: translateX(-100%);
+          }
+          100% {
+            transform: translateX(350%);
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -155,6 +155,7 @@ export async function createBoard(name: string, sourceImageUrl: string): Promise
       user_id: userId,
       name,
       source_image_url: sourceImageUrl,
+      cover_image_url: sourceImageUrl, // Set cover_image_url to the same as source_image_url
     })
     .select()
     .single();
@@ -177,6 +178,12 @@ export async function analyzeImage(boardId: string, imageUrl: string): Promise<D
 
   if (error) {
     console.error('Analysis error:', error);
+    
+    // Check if this is a "not_decor" error from the edge function
+    if (error.message && error.message.includes('not_decor')) {
+      throw new Error("We couldn't detect any furniture or decor in this image. Please upload a photo that clearly shows interior decor, furniture, or home styling.");
+    }
+    
     throw error;
   }
 

@@ -7,7 +7,7 @@ export default function Footer() {
       <div className="container mx-auto px-4 md:px-6">
         <div className="text-center space-y-2">
           <p className="text-sm text-white">
-            © 2025 Homable Creations · All rights reserved
+            © 2025 Homable Creations Technologies · All rights reserved
           </p>
           <p className="text-sm text-white flex items-center justify-center gap-2 flex-wrap">
             <span className="flex items-center gap-1">

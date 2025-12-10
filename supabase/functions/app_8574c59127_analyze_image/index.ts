@@ -3,7 +3,7 @@ import OpenAI from 'npm:openai';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Credentials': 'true',
 };
@@ -73,8 +73,92 @@ Deno.serve(async (req) => {
 
     const openai = new OpenAI({ apiKey });
 
-    // Call OpenAI Vision API with enhanced prompt for specific, shoppable item names
-    console.log(`[${requestId}] Calling OpenAI Vision API...`);
+    // STEP 1: Lightweight decor/non-decor classification first
+    console.log(`[${requestId}] Step 1: Validating image contains decor...`);
+    const validationCompletion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `You are an image classifier. Analyze this image and determine if it contains interior decor, furniture, or home styling elements.
+
+Return ONLY a JSON object with this exact structure:
+{
+  "is_decor": true/false,
+  "reason": "brief explanation"
+}
+
+is_decor should be TRUE if the image shows:
+- Furniture (sofas, chairs, tables, beds, etc.)
+- Home decor items (vases, lamps, artwork, rugs, pillows, etc.)
+- Interior rooms or spaces with visible decor
+- Styled home environments
+
+is_decor should be FALSE if the image shows:
+- People, pets, or animals as the main subject
+- Outdoor landscapes without home elements
+- Food, vehicles, or other non-home items
+- Abstract art or patterns without furniture/decor context
+- Blank walls or empty spaces with no decor
+
+Be strict but reasonable. If there's ANY visible furniture or decor in a room setting, return true.`,
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: image_url,
+              },
+            },
+          ],
+        },
+      ],
+      max_tokens: 150,
+    });
+
+    const validationText = validationCompletion.choices[0]?.message?.content;
+    console.log(`[${requestId}] Validation response:`, validationText);
+
+    let validation;
+    try {
+      validation = JSON.parse(validationText || '{}');
+    } catch (e) {
+      console.error(`[${requestId}] Failed to parse validation response, treating as valid`);
+      validation = { is_decor: true, reason: 'Parse error, allowing by default' };
+    }
+
+    // If not decor, return friendly error and skip expensive item detection
+    if (validation.is_decor === false) {
+      console.log(`[${requestId}] Image rejected: not decor. Reason: ${validation.reason}`);
+      
+      // Update board status to indicate validation failure
+      await supabase
+        .from('boards')
+        .update({
+          status: 'validation_failed',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', board_id);
+
+      return new Response(
+        JSON.stringify({ 
+          error: 'not_decor',
+          message: "We couldn't detect any furniture or decor in this image. Please upload a photo that clearly shows interior decor, furniture, or home styling.",
+          reason: validation.reason
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    console.log(`[${requestId}] Image validated as decor. Proceeding with item detection...`);
+
+    // STEP 2: Call OpenAI Vision API for detailed item detection (only if validation passed)
+    console.log(`[${requestId}] Step 2: Calling OpenAI Vision API for item detection...`);
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
