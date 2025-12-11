@@ -34,7 +34,7 @@ export default function HomePage() {
             </h1>
             
             <p className="text-lg md:text-xl text-[#555555] max-w-3xl mx-auto leading-relaxed">
-              From everyday home styling to holiday decorating, Homable finds affordable products and gives you a clear budget breakdown so you can recreate any look you love.
+              Homable turns any inspiration photo into a clear list of decor items you can shop for, save, and track. It helps you bring your dream space to life piece by piece, in a way that feels easy and personal.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
@@ -92,7 +92,7 @@ export default function HomePage() {
                   Upload Your Photo
                 </h3>
                 <p className="text-[#555555]">
-                  Share any home styling or holiday decor photo that inspires you — from Pinterest, Instagram, or your own collection.
+                  Share any inspiration photo you love, whether it's from Pinterest, Instagram, or your own space.
                 </p>
               </div>
 
@@ -102,10 +102,10 @@ export default function HomePage() {
                   <span className="text-2xl font-bold text-white">2</span>
                 </div>
                 <h3 className="text-xl font-semibold text-[#111111]">
-                  AI Identifies Items
+                  AI Identifies the Decor
                 </h3>
                 <p className="text-[#555555]">
-                  Our AI analyzes your photo and identifies every decor item, from furniture to trees to ornaments to garland.
+                  Homable analyzes the photo and gives you a clear list of every decor item it finds, from furniture to textiles to seasonal pieces.
                 </p>
               </div>
 
@@ -115,10 +115,10 @@ export default function HomePage() {
                   <span className="text-2xl font-bold text-white">3</span>
                 </div>
                 <h3 className="text-xl font-semibold text-[#111111]">
-                  Get Matches
+                  Shop and Track Your List
                 </h3>
                 <p className="text-[#555555]">
-                  Instantly see affordable matches from Amazon, Wayfair, and other top retailers to recreate the look.
+                  Use the item names to search for products online and save them as a checklist so you can plan, shop, and decorate at your own pace.
                 </p>
               </div>
             </div>

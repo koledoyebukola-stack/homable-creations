@@ -57,7 +57,7 @@ export default function ChecklistDetail() {
       setError(null);
       const data = await getChecklistById(id);
       if (!data) {
-        setError('Checklist not found');
+        setError('Shopping list not found');
         return;
       }
       setChecklist(data);
@@ -72,8 +72,8 @@ export default function ChecklistDetail() {
         }
       }
     } catch (err: unknown) {
-      console.error('Failed to load checklist:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load checklist');
+      console.error('Failed to load shopping list:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load shopping list');
     } finally {
       setLoading(false);
     }
@@ -100,7 +100,7 @@ export default function ChecklistDetail() {
 
       // Show celebration if all items completed
       if (!currentStatus && checklist.completed_count + 1 === checklist.total_count) {
-        toast.success('🎉 Checklist completed! Great job!');
+        toast.success('🎉 Shopping list completed! Great job!');
       }
     } catch (err: unknown) {
       console.error('Failed to update item:', err);
@@ -116,7 +116,7 @@ export default function ChecklistDetail() {
       await updateChecklistName(checklist.id, newName.trim());
       setChecklist({ ...checklist, name: newName.trim() });
       setEditingName(false);
-      toast.success('Checklist name updated');
+      toast.success('Shopping list name updated');
     } catch (err: unknown) {
       console.error('Failed to update name:', err);
       toast.error('Failed to update name');
@@ -133,17 +133,17 @@ export default function ChecklistDetail() {
   const handleDelete = async () => {
     if (!checklist) return;
     
-    if (!confirm('Are you sure you want to delete this checklist? This action cannot be undone.')) {
+    if (!confirm('Are you sure you want to delete this shopping list? This action cannot be undone.')) {
       return;
     }
 
     try {
       await deleteChecklist(checklist.id);
-      toast.success('Checklist deleted');
+      toast.success('Shopping list deleted');
       navigate('/checklists');
     } catch (err: unknown) {
-      console.error('Failed to delete checklist:', err);
-      toast.error('Failed to delete checklist');
+      console.error('Failed to delete shopping list:', err);
+      toast.error('Failed to delete shopping list');
     }
   };
 
@@ -179,9 +179,9 @@ export default function ChecklistDetail() {
         <Header />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-red-600 mb-4">{error || 'Checklist not found'}</p>
+            <p className="text-red-600 mb-4">{error || 'Shopping list not found'}</p>
             <Button onClick={() => navigate('/checklists')}>
-              Back to Checklists
+              Back to Shopping Lists
             </Button>
           </div>
         </div>
@@ -209,7 +209,7 @@ export default function ChecklistDetail() {
           className="mb-6 -ml-2"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Checklists
+          Back to Shopping Lists
         </Button>
 
         {/* Inspiration Image (if available) */}

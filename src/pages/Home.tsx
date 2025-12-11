@@ -23,7 +23,7 @@ export default function Home() {
             </h1>
             
             <p className="text-lg md:text-xl text-[#555555] max-w-3xl mx-auto leading-relaxed">
-              From everyday home styling to holiday decorating, Homable finds affordable products and gives you a clear budget breakdown so you can recreate any look you love.
+              Homable turns any inspiration photo into a clear list of decor items you can shop for, save, and track. It helps you bring your dream space to life piece by piece, in a way that feels easy and personal.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
@@ -51,8 +51,20 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Popular Products Section */}
+      <section className="bg-white py-16 md:py-20">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-12">
+              Explore Popular Decor Finds
+            </h2>
+            <PopularProducts />
+          </div>
+        </div>
+      </section>
+
       {/* How It Works Section */}
-      <section className="bg-white py-16 md:py-24">
+      <section className="bg-gradient-to-br from-gray-50 to-stone-50 py-16 md:py-24">
         <div className="container mx-auto px-4 md:px-6">
           <div className="max-w-5xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-12 md:mb-16">
@@ -69,7 +81,7 @@ export default function Home() {
                   Upload Your Photo
                 </h3>
                 <p className="text-[#555555]">
-                  Share any home styling or holiday decor photo that inspires you — from Pinterest, Instagram, or your own collection.
+                  Share any inspiration photo you love, whether it's from Pinterest, Instagram, or your own space.
                 </p>
               </div>
 
@@ -79,10 +91,10 @@ export default function Home() {
                   <span className="text-2xl font-bold text-white">2</span>
                 </div>
                 <h3 className="text-xl font-semibold text-[#111111]">
-                  AI Identifies Items
+                  AI Identifies the Decor
                 </h3>
                 <p className="text-[#555555]">
-                  Our AI analyzes your photo and identifies every decor item, from furniture to trees to ornaments to garland.
+                  Homable analyzes the photo and gives you a clear list of every decor item it finds, from furniture to textiles to seasonal pieces.
                 </p>
               </div>
 
@@ -92,10 +104,10 @@ export default function Home() {
                   <span className="text-2xl font-bold text-white">3</span>
                 </div>
                 <h3 className="text-xl font-semibold text-[#111111]">
-                  Get Matches
+                  Shop and Track Your List
                 </h3>
                 <p className="text-[#555555]">
-                  Instantly see affordable matches from Amazon, Wayfair, and other top retailers to recreate the look.
+                  Use the item names to search for products online and save them as a checklist so you can plan, shop, and decorate at your own pace.
                 </p>
               </div>
             </div>
@@ -113,38 +125,19 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Popular Products Section */}
-      <section className="bg-gradient-to-br from-gray-50 to-stone-50 py-16 md:py-20">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="max-w-6xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-12">
-              Explore Popular Decor Finds
-            </h2>
-            <PopularProducts />
-            
-            {/* Affiliate Disclosure - Keep this section-specific disclosure */}
-            <div className="mt-6 text-center">
-              <p className="text-xs text-[#888888]">
-                Some links may be affiliate links, which help support Homable at no extra cost to you.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* CTA Section */}
       <section className="container mx-auto px-4 md:px-6 py-16 md:py-24">
-        <div className="max-w-4xl mx-auto bg-gradient-to-br from-gray-100 to-gray-50 rounded-3xl p-8 md:p-12 text-center border border-gray-200">
-          <h2 className="text-3xl md:text-4xl font-bold text-[#111111] mb-4">
+        <div className="max-w-4xl mx-auto bg-black rounded-3xl p-8 md:p-12 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
             Ready to Create Your Dream Space?
           </h2>
-          <p className="text-lg text-[#555555] mb-8 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">
             Join thousands discovering affordable ways to bring their home decor dreams to life.
           </p>
           <Button
             onClick={() => navigate('/upload')}
             size="lg"
-            className="bg-[#111111] hover:bg-[#333333] text-white px-8 py-6 text-lg rounded-full"
+            className="bg-white hover:bg-gray-100 text-black px-8 py-6 text-lg rounded-full"
           >
             <Upload className="mr-2 h-5 w-5" />
             Start Creating Your Look

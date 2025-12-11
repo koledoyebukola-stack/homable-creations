@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -67,6 +67,16 @@ export default function ItemDetection() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [savingChecklist, setSavingChecklist] = useState(false);
+  
+  // Refs for scrolling to item sections
+  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const scrollToItem = (itemId: string) => {
+    const element = itemRefs.current[itemId];
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -290,7 +300,7 @@ export default function ItemDetection() {
     if (!boardId || items.length === 0) return;
 
     if (!isAuthenticated) {
-      toast.error('Please sign in to save checklists');
+      toast.error('Please sign in to save shopping lists');
       setShowAuthModal(true);
       return;
     }
@@ -304,11 +314,11 @@ export default function ItemDetection() {
 
       const checklist = await createChecklist(checklistName, boardId, itemNames);
       
-      toast.success('Checklist created! 🎉');
+      toast.success('Shopping list created! 🎉');
       navigate(`/checklists/${checklist.id}`);
     } catch (error: unknown) {
-      console.error('Failed to create checklist:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to create checklist');
+      console.error('Failed to create shopping list:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create shopping list');
     } finally {
       setSavingChecklist(false);
     }
@@ -373,102 +383,160 @@ export default function ItemDetection() {
       <Header />
 
       <main className="flex-1 container mx-auto px-4 md:px-6 py-8 md:py-16">
-        <div className="max-w-5xl mx-auto">
-          {/* Header Section with Preview Image */}
-          <div className="mb-8">
-            <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-6 mb-6">
-              <div className="flex-1 text-center lg:text-left">
-                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2 md:mb-4 text-[#111111]">
-                  We Found {items.length} Items in "{board?.name || 'Your Board'}"
-                </h1>
-                <p className="text-base md:text-lg text-[#555555]">
-                  Here are affordable matches from top retailers
-                </p>
-              </div>
-              
-              <div className="flex items-center justify-center lg:justify-end gap-3 shrink-0">
-                {isAuthenticated && items.length > 0 && (
-                  <Button
-                    onClick={handleSaveAsChecklist}
-                    disabled={savingChecklist}
-                    className="bg-black hover:bg-black/90 text-white rounded-full gap-2 transition-all"
-                    size="sm"
-                  >
-                    <ListChecks className="h-4 w-4" />
-                    {savingChecklist ? 'Saving...' : 'Save as Checklist'}
-                  </Button>
-                )}
-
-                {board?.source_image_url && (
+        <div className="max-w-6xl mx-auto">
+          {/* SECTION 1: Inspiration Header (Hero) */}
+          <div className="mb-12">
+            <div className="flex flex-col lg:flex-row gap-8 items-start">
+              {/* Large Photo on the Left */}
+              {board?.source_image_url && (
+                <div className="w-full lg:w-2/5 shrink-0">
                   <img
                     src={board.source_image_url}
-                    alt="Inspiration"
-                    className="w-24 h-24 md:w-32 md:h-32 object-cover rounded-2xl shadow-lg border-2 border-white"
+                    alt="Your Inspiration"
+                    className="w-full h-auto rounded-3xl shadow-2xl border-4 border-white object-cover"
                   />
+                </div>
+              )}
+
+              {/* Right Side Copy & CTAs */}
+              <div className="flex-1 space-y-6">
+                <div>
+                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 text-[#111111]">
+                    We Found {items.length} Items in "{board?.name || 'Your Board'}"
+                  </h1>
+                  <p className="text-lg md:text-xl text-[#555555]">
+                    Here are the key decor pieces identified in your inspiration photo.
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  {isAuthenticated && items.length > 0 && (
+                    <Button
+                      onClick={handleSaveAsChecklist}
+                      disabled={savingChecklist}
+                      className="bg-black hover:bg-black/90 text-white font-bold rounded-full px-8 py-6 text-base shadow-lg hover:shadow-xl transition-all"
+                      size="lg"
+                    >
+                      <ListChecks className="h-5 w-5 mr-2" />
+                      {savingChecklist ? 'Saving...' : 'Save as Shopping List'}
+                    </Button>
+                  )}
+
+                  <Button
+                    onClick={() => navigate('/upload')}
+                    variant="outline"
+                    className="border-2 border-[#CACACA] text-[#555555] hover:bg-gray-50 hover:border-[#999999] rounded-full px-6 transition-all"
+                    size="lg"
+                  >
+                    <Upload className="h-5 w-5 mr-2" />
+                    Analyze Another Inspiration
+                  </Button>
+                </div>
+
+                {/* SECTION 2: Design Summary (Desktop Only - in white space) */}
+                {items.length > 0 && (
+                  <div className="hidden lg:block">
+                    <Card className="bg-gradient-to-br from-[#C89F7A]/5 to-white border-[#C89F7A]/20 shadow-md">
+                      <CardContent className="p-6">
+                        <h2 className="text-xl font-bold text-[#111111] mb-3">
+                          Your Space Summary
+                        </h2>
+                        <p className="text-sm text-[#555555] mb-3">
+                          We identified the main elements featured in your inspiration:
+                        </p>
+                        <ul className="grid grid-cols-1 gap-2">
+                          {items.map((item) => (
+                            <li key={item.id} className="flex items-center text-[#333333] text-sm">
+                              <span className="text-[#C89F7A] mr-2">•</span>
+                              <span className="capitalize">{item.item_name}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  </div>
                 )}
               </div>
             </div>
+          </div>
 
-            <div className="flex justify-center mb-6">
-              <Button
-                onClick={() => navigate('/upload')}
-                variant="outline"
-                className="border-2 border-[#CACACA] text-[#333333] hover:bg-gray-50 hover:border-[#999999] rounded-full px-6 md:px-8 text-sm md:text-base transition-all"
-                size="lg"
-              >
-                <Upload className="mr-2 h-4 w-4 md:h-5 md:w-5" />
-                Analyze Another Inspiration
-              </Button>
+          {/* SECTION 2: Design Summary (Mobile Only - full width) */}
+          {items.length > 0 && (
+            <div className="mb-12 lg:hidden">
+              <Card className="bg-gradient-to-br from-[#C89F7A]/5 to-white border-[#C89F7A]/20 shadow-md">
+                <CardContent className="p-6 md:p-8">
+                  <h2 className="text-2xl font-bold text-[#111111] mb-4">
+                    Your Space Summary
+                  </h2>
+                  <p className="text-[#555555] mb-4">
+                    We identified the main elements featured in your inspiration:
+                  </p>
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {items.map((item) => (
+                      <li key={item.id} className="flex items-center text-[#333333]">
+                        <span className="text-[#C89F7A] mr-2">•</span>
+                        <span className="capitalize">{item.item_name}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
             </div>
+          )}
 
-            {items.length > 0 && (
-              <div className="flex flex-col md:flex-row md:flex-wrap md:justify-center gap-3 mb-6 md:mb-8">
+          {/* SECTION 3: Item Chips with Subtitle - Now Clickable */}
+          {items.length > 0 && (
+            <div className="mb-8">
+              <p className="text-center text-sm text-[#666666] mb-4">
+                Tap an item to view details and find it online.
+              </p>
+              <div className="flex flex-wrap justify-center gap-3">
                 {items.map((item) => (
                   <div
                     key={item.id}
-                    className="bg-white rounded-full px-4 md:px-6 py-3 shadow-md border border-gray-200 flex items-center justify-between md:justify-start gap-3"
+                    onClick={() => scrollToItem(item.id)}
+                    className="bg-white rounded-full px-4 md:px-6 py-3 shadow-md border border-gray-200 flex items-center gap-3 hover:shadow-lg hover:border-[#C89F7A] transition-all cursor-pointer"
                   >
-                    <span className="font-semibold text-sm md:text-base text-[#111111] flex-1 md:flex-none">
+                    <span className="font-semibold text-sm md:text-base text-[#111111]">
                       {item.item_name}
                     </span>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <Badge className="bg-[#C89F7A] text-white text-xs">
-                        {item.category}
-                      </Badge>
-                      {item.confidence && (
-                        <span className="text-xs md:text-sm text-[#555555]">
-                          {Math.round(item.confidence * 100)}% match
-                        </span>
-                      )}
-                    </div>
+                    <Badge className="bg-[#C89F7A] text-white text-xs">
+                      {item.category}
+                    </Badge>
+                    {item.confidence && (
+                      <span className="text-xs md:text-sm text-[#555555]">
+                        {Math.round(item.confidence * 100)}% match
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
-            )}
+            </div>
+          )}
 
-            {totalCost && !loadingProducts && isAuthenticated && (
-              <div className="flex justify-center mb-6 md:mb-8">
-                <Card className="w-full md:w-auto bg-gradient-to-br from-[#C89F7A]/10 to-[#C89F7A]/5 border-[#C89F7A]/30">
-                  <CardContent className="p-4 md:p-6">
-                    <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8">
-                      <div className="text-center md:text-left w-full md:w-auto">
-                        <p className="text-xs md:text-sm text-[#555555] mb-1">Total Look Cost from:</p>
-                        <p className="text-2xl md:text-3xl font-bold text-[#111111]">${totalCost.min.toLocaleString()}</p>
-                      </div>
-                      <div className="hidden md:block h-12 w-px bg-[#C89F7A]/30"></div>
-                      <div className="w-full md:hidden h-px bg-[#C89F7A]/30"></div>
-                      <div className="text-center md:text-left w-full md:w-auto">
-                        <p className="text-xs md:text-sm text-[#555555] mb-1">Average Look Cost:</p>
-                        <p className="text-2xl md:text-3xl font-bold text-[#111111]">${totalCost.avg.toLocaleString()}</p>
-                      </div>
+          {/* Budget Overview */}
+          {totalCost && !loadingProducts && isAuthenticated && (
+            <div className="flex justify-center mb-12">
+              <Card className="w-full md:w-auto bg-gradient-to-br from-[#C89F7A]/10 to-[#C89F7A]/5 border-[#C89F7A]/30">
+                <CardContent className="p-4 md:p-6">
+                  <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8">
+                    <div className="text-center md:text-left w-full md:w-auto">
+                      <p className="text-xs md:text-sm text-[#555555] mb-1">Total Look Cost from:</p>
+                      <p className="text-2xl md:text-3xl font-bold text-[#111111]">${totalCost.min.toLocaleString()}</p>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-          </div>
+                    <div className="hidden md:block h-12 w-px bg-[#C89F7A]/30"></div>
+                    <div className="w-full md:hidden h-px bg-[#C89F7A]/30"></div>
+                    <div className="text-center md:text-left w-full md:w-auto">
+                      <p className="text-xs md:text-sm text-[#555555] mb-1">Average Look Cost:</p>
+                      <p className="text-2xl md:text-3xl font-bold text-[#111111]">${totalCost.avg.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
-          {/* Products Section */}
+          {/* SECTION 4: Item Detail Sections (Redesigned with Desktop-Only Compact Layout) */}
           {items.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-[#555555] mb-4">
@@ -482,164 +550,225 @@ export default function ItemDetection() {
               </p>
             </div>
           ) : loadingProducts ? (
-            <div className="space-y-12 md:space-y-16">
+            <div className="space-y-8 lg:space-y-8">
               {items.map((item) => (
-                <div key={item.id} className="space-y-6">
-                  <div className="text-center">
-                    <h2 className="text-2xl md:text-3xl font-bold text-[#111111] mb-2">
-                      {item.item_name}
-                    </h2>
-                    {item.description && (
-                      <p className="text-sm md:text-base text-[#555555] mb-2">{item.description}</p>
-                    )}
-                  </div>
+                <div key={item.id} className="lg:max-w-[720px] lg:mx-auto">
+                  <div className="space-y-6 lg:bg-[#fafafa] lg:rounded-xl lg:p-6">
+                    <div className="text-center">
+                      <h2 className="text-2xl md:text-3xl font-bold text-[#111111] mb-2">
+                        {item.item_name}
+                      </h2>
+                      {item.description && (
+                        <p className="text-sm md:text-base text-[#555555] mb-2">{item.description}</p>
+                      )}
+                    </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                    {[1, 2, 3].map((n) => (
-                      <Card key={n} className="overflow-hidden rounded-3xl border-0 shadow-lg">
-                        <Skeleton className="aspect-square w-full" />
-                        <CardContent className="p-4 md:p-6 space-y-3">
-                          <Skeleton className="h-6 w-3/4" />
-                          <Skeleton className="h-4 w-full" />
-                          <Skeleton className="h-4 w-2/3" />
-                          <div className="flex justify-between items-center">
-                            <Skeleton className="h-6 w-20" />
-                            <Skeleton className="h-8 w-16" />
-                          </div>
-                          <Skeleton className="h-10 w-full rounded-full" />
-                        </CardContent>
-                      </Card>
-                    ))}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                      {[1, 2, 3].map((n) => (
+                        <Card key={n} className="overflow-hidden rounded-3xl border-0 shadow-lg">
+                          <Skeleton className="aspect-square w-full" />
+                          <CardContent className="p-4 md:p-6 space-y-3">
+                            <Skeleton className="h-6 w-3/4" />
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-2/3" />
+                            <div className="flex justify-between items-center">
+                              <Skeleton className="h-6 w-20" />
+                              <Skeleton className="h-8 w-16" />
+                            </div>
+                            <Skeleton className="h-10 w-full rounded-full" />
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
             <>
-              <div className="space-y-12 md:space-y-16">
-                {items.map((item) => {
+              <div className="space-y-8 lg:space-y-8">
+                {items.map((item, index) => {
                   const itemResult = products[item.id];
                   const itemProducts = itemResult?.products || [];
                   const customMessage = itemResult?.message;
 
                   return (
-                    <div key={item.id} className="space-y-6">
-                      <div className="text-center">
-                        <h2 className="text-2xl md:text-3xl font-bold text-[#111111] mb-2">
-                          {item.item_name}
-                        </h2>
-                        {item.description && (
-                          <p className="text-sm md:text-base text-[#555555] mb-2">{item.description}</p>
-                        )}
-                        <div className="flex justify-center gap-2 flex-wrap">
-                          {item.style && (
-                            <Badge variant="outline" className="text-xs md:text-sm">{item.style}</Badge>
+                    <div 
+                      key={item.id}
+                      ref={(el) => { itemRefs.current[item.id] = el; }}
+                      className="scroll-mt-24 lg:max-w-[720px] lg:mx-auto"
+                    >
+                      <div className="space-y-6 lg:bg-[#fafafa] lg:rounded-xl lg:p-6">
+                        <div className="text-center">
+                          <h2 className="text-2xl md:text-3xl font-bold text-[#111111] mb-2">
+                            {item.item_name}
+                          </h2>
+                          {item.description && (
+                            <p className="text-sm md:text-base text-[#555555] mb-2">{item.description}</p>
                           )}
-                          {item.dominant_color && (
-                            <Badge variant="outline" className="text-xs md:text-sm">{item.dominant_color}</Badge>
-                          )}
-                          {item.materials && item.materials.length > 0 && (
-                            <Badge variant="outline" className="text-xs md:text-sm">{item.materials.join(', ')}</Badge>
-                          )}
+                          <div className="flex justify-center gap-2 flex-wrap">
+                            {item.style && (
+                              <Badge variant="outline" className="text-xs md:text-sm">{item.style}</Badge>
+                            )}
+                            {item.dominant_color && (
+                              <Badge variant="outline" className="text-xs md:text-sm">{item.dominant_color}</Badge>
+                            )}
+                            {item.materials && item.materials.length > 0 && (
+                              <Badge variant="outline" className="text-xs md:text-sm">{item.materials.join(', ')}</Badge>
+                            )}
+                          </div>
                         </div>
-                      </div>
 
-                      {customMessage ? (
-                        <div className="text-center py-8 px-4 border border-dashed border-gray-300 rounded-xl bg-white/50 space-y-4">
-                          <p className="text-base font-semibold text-[#111111] mb-2">
-                            Oops! We're still stocking our catalogue, so this product is unavailable.
-                          </p>
-                          <p className="text-sm text-[#555555] mb-4">
-                            You can use the name above to search online, or click below to continue your search on Google.
-                          </p>
-                          <Button
-                            onClick={() => window.open(createGoogleSearchUrl(item.item_name), '_blank')}
-                            className="bg-[#111111] hover:bg-[#333333] text-white rounded-full px-6 py-2"
-                          >
-                            <Search className="mr-2 h-4 w-4" />
-                            Search on Google
-                          </Button>
-                        </div>
-                      ) : itemProducts.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                          {itemProducts.map((product) => (
-                            <Card
-                              key={product.id}
-                              className={`overflow-hidden rounded-3xl border-0 shadow-lg hover:shadow-xl transition-all ${
-                                product.is_top_pick ? 'ring-2 ring-[#C89F7A]' : ''
-                              }`}
-                            >
-                              <div className="relative aspect-square overflow-hidden bg-gray-100">
-                                <img
-                                  src={product.image_url}
-                                  alt={product.product_name}
-                                  className="w-full h-full object-cover"
-                                />
-                                {product.is_top_pick && (
-                                  <div className="absolute top-4 right-4 bg-[#C89F7A] text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-                                    <Star className="h-3 w-3 fill-white" />
-                                    Top Pick
-                                  </div>
-                                )}
-                                {product.match_score && (
-                                  <div className="absolute top-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                                    {Math.round(product.match_score * 100)}% Match
-                                  </div>
-                                )}
-                                {product.is_seed && (
-                                  <div className="absolute bottom-4 left-4 bg-white/90 text-[#555555] px-3 py-1 rounded-full text-xs font-medium">
-                                    Similar to your inspiration
-                                  </div>
-                                )}
-                              </div>
-
-                              <CardContent className="p-4 md:p-6 space-y-3 md:space-y-4">
-                                <h3 className="text-base md:text-lg font-semibold text-[#111111] line-clamp-2">
-                                  {product.product_name}
-                                </h3>
-
-                                {product.description && (
-                                  <p className="text-xs md:text-sm text-[#555555] line-clamp-2">
-                                    {product.description}
-                                  </p>
-                                )}
-
-                                <div className="flex items-center justify-between">
-                                  <Badge variant="outline" className="text-xs text-[#555555]">
-                                    {product.merchant}
-                                  </Badge>
-                                  <span className="text-xl md:text-2xl font-bold text-[#111111]">
-                                    ${product.price}
-                                  </span>
-                                </div>
-
-                                {product.rating && (
-                                  <div className="flex items-center gap-2 text-xs md:text-sm text-[#555555]">
-                                    <span className="flex items-center">
-                                      ⭐ {product.rating}
-                                    </span>
-                                    {product.review_count && (
-                                      <span>({product.review_count} reviews)</span>
+                        {customMessage || itemProducts.length === 0 ? (
+                          <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200 shadow-sm">
+                            <CardContent className="p-6 md:p-8 text-center space-y-4">
+                              <p className="text-base font-medium text-[#555555]">
+                                Ready to shop this item?
+                              </p>
+                              <p className="text-sm text-[#666666]">
+                                Tap below to continue your search on Google.
+                              </p>
+                              <Button
+                                onClick={() => window.open(createGoogleSearchUrl(item.item_name), '_blank')}
+                                variant="outline"
+                                className="rounded-full border-2 border-[#333333] text-[#333333] hover:bg-[#333333] hover:text-white"
+                                size="sm"
+                              >
+                                <Search className="mr-2 h-4 w-4" />
+                                Search this item on Google
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        ) : (
+                          <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                              {itemProducts.map((product) => (
+                                <Card
+                                  key={product.id}
+                                  className={`overflow-hidden rounded-3xl border-0 shadow-lg hover:shadow-xl transition-all ${
+                                    product.is_top_pick ? 'ring-2 ring-[#C89F7A]' : ''
+                                  }`}
+                                >
+                                  <div className="relative aspect-square overflow-hidden bg-gray-100">
+                                    <img
+                                      src={product.image_url}
+                                      alt={product.product_name}
+                                      className="w-full h-full object-cover"
+                                    />
+                                    {product.is_top_pick && (
+                                      <div className="absolute top-4 right-4 bg-[#C89F7A] text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                                        <Star className="h-3 w-3 fill-white" />
+                                        Top Pick
+                                      </div>
+                                    )}
+                                    {product.match_score && (
+                                      <div className="absolute top-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                                        {Math.round(product.match_score * 100)}% Match
+                                      </div>
+                                    )}
+                                    {product.is_seed && (
+                                      <div className="absolute bottom-4 left-4 bg-white/90 text-[#555555] px-3 py-1 rounded-full text-xs font-medium">
+                                        Similar to your inspiration
+                                      </div>
                                     )}
                                   </div>
-                                )}
 
-                                <Button
-                                  className="w-full bg-[#111111] hover:bg-[#333333] text-white rounded-full text-sm md:text-base"
-                                  onClick={() => window.open(product.product_url, '_blank')}
-                                >
-                                  View Product
-                                  <ExternalLink className="ml-2 h-3 w-3 md:h-4 md:w-4" />
-                                </Button>
-                              </CardContent>
-                            </Card>
-                          ))}
+                                  <CardContent className="p-4 md:p-6 space-y-3 md:space-y-4">
+                                    <h3 className="text-base md:text-lg font-semibold text-[#111111] line-clamp-2">
+                                      {product.product_name}
+                                    </h3>
+
+                                    {product.description && (
+                                      <p className="text-xs md:text-sm text-[#555555] line-clamp-2">
+                                        {product.description}
+                                      </p>
+                                    )}
+
+                                    <div className="flex items-center justify-between">
+                                      <Badge variant="outline" className="text-xs text-[#555555]">
+                                        {product.merchant}
+                                      </Badge>
+                                      <span className="text-xl md:text-2xl font-bold text-[#111111]">
+                                        ${product.price}
+                                      </span>
+                                    </div>
+
+                                    {product.rating && (
+                                      <div className="flex items-center gap-2 text-xs md:text-sm text-[#555555]">
+                                        <span className="flex items-center">
+                                          ⭐ {product.rating}
+                                        </span>
+                                        {product.review_count && (
+                                          <span>({product.review_count} reviews)</span>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    <Button
+                                      className="w-full bg-[#111111] hover:bg-[#333333] text-white rounded-full text-sm md:text-base"
+                                      onClick={() => window.open(product.product_url, '_blank')}
+                                    >
+                                      View Product
+                                      <ExternalLink className="ml-2 h-3 w-3 md:h-4 md:w-4" />
+                                    </Button>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                            
+                            <div className="text-center pt-4">
+                              <p className="text-sm text-[#555555] mb-3">
+                                Need more? Find similar items on Google
+                              </p>
+                              <Button
+                                onClick={() => window.open(createGoogleSearchUrl(item.item_name), '_blank')}
+                                variant="outline"
+                                className="rounded-full"
+                                size="sm"
+                              >
+                                <Search className="mr-2 h-4 w-4" />
+                                Search on Google
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {/* SECTION 5: Divider Between Each Item */}
+                      {index < items.length - 1 && (
+                        <div className="my-8 lg:my-8">
+                          <div className="h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
                         </div>
-                      ) : null}
+                      )}
                     </div>
                   );
                 })}
               </div>
+
+              {/* SECTION 6: Shopping List CTA Reminder */}
+              {isAuthenticated && items.length > 0 && (
+                <div className="mt-16 mb-12">
+                  <Card className="bg-gradient-to-br from-[#C89F7A]/10 to-white border-[#C89F7A]/30 shadow-lg">
+                    <CardContent className="p-8 md:p-12 text-center">
+                      <h3 className="text-2xl md:text-3xl font-bold text-[#111111] mb-3">
+                        Want to track your progress?
+                      </h3>
+                      <p className="text-base md:text-lg text-[#555555] mb-6 max-w-2xl mx-auto">
+                        Save all items into one organized shopping list you can update anytime.
+                      </p>
+                      <Button
+                        onClick={handleSaveAsChecklist}
+                        disabled={savingChecklist}
+                        className="bg-black hover:bg-black/90 text-white font-bold rounded-full px-8 py-6 text-lg shadow-lg hover:shadow-xl transition-all"
+                        size="lg"
+                      >
+                        <ListChecks className="h-5 w-5 mr-2" />
+                        {savingChecklist ? 'Saving...' : 'Save as Shopping List'}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
 
               {hasItemsWithoutProducts && seedProducts.length > 0 && (
                 <div className="mt-16 space-y-6">

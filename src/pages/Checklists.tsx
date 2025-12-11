@@ -26,8 +26,8 @@ export default function Checklists() {
       const data = await getUserChecklists();
       setChecklists(data);
     } catch (err: unknown) {
-      console.error('Failed to load checklists:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load checklists');
+      console.error('Failed to load shopping lists:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load shopping lists');
     } finally {
       setLoading(false);
     }
@@ -77,7 +77,7 @@ export default function Checklists() {
         {/* Header Section */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-3xl font-bold text-[#111111]">My Checklists</h1>
+            <h1 className="text-3xl font-bold text-[#111111]">My Shopping Lists</h1>
             {checklists.length > 0 && (
               <Button
                 onClick={() => navigate('/my-boards')}
@@ -107,10 +107,10 @@ export default function Checklists() {
                 </div>
               </div>
               <h3 className="text-2xl font-semibold text-[#111111] mb-3">
-                Start your first decor checklist
+                Start your first decor shopping list
               </h3>
               <p className="text-gray-600 text-center mb-8 max-w-lg leading-relaxed">
-                After analyzing an image, save your results as a checklist so you always know what you've bought and what's still on your wish list.
+                After analyzing an image, save your results as a shopping list so you always know what you've bought and what's still on your wish list.
               </p>
               <Button
                 onClick={() => navigate('/upload')}

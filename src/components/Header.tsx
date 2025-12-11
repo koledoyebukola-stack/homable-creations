@@ -65,7 +65,7 @@ export default function Header() {
                     onClick={() => navigate('/checklists')}
                     className="text-white hover:text-white/80 hover:bg-white/10 relative"
                   >
-                    Checklists
+                    Shopping List
                     <Badge 
                       className="ml-2 bg-[#E0E0E0] text-[#333333] text-[10px] px-1.5 py-0.5 h-auto rounded-xl font-normal hover:bg-[#E0E0E0]"
                     >
@@ -108,7 +108,7 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Mobile Layout: Brand + Checklists (NO "New" pill) + Menu */}
+        {/* Mobile Layout: Brand + Shopping List (NO "New" pill) + Menu */}
         <div className="md:hidden flex items-center justify-between">
           <button
             onClick={() => navigate('/')}
@@ -126,7 +126,7 @@ export default function Header() {
                   onClick={() => navigate('/checklists')}
                   className="text-white hover:text-white/80 hover:bg-white/10 text-xs px-2"
                 >
-                  Checklists
+                  Shopping List
                 </Button>
                 
                 <DropdownMenu>
@@ -134,12 +134,12 @@ export default function Header() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-white hover:text-white/80 hover:bg-white/10 h-8 w-8 p-0"
+                      className="text-white hover:text-white/80 hover:bg-white/10 h-9 w-9 p-0"
                     >
                       <img 
-                        src="/assets/menu-icon_variant_4.png" 
+                        src="/assets/menu-icon.png" 
                         alt="Menu" 
-                        className="h-7 w-7"
+                        className="h-8 w-8"
                       />
                     </Button>
                   </DropdownMenuTrigger>
@@ -165,12 +165,12 @@ export default function Header() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-white hover:text-white/80 hover:bg-white/10 h-8 w-8 p-0"
+                    className="text-white hover:text-white/80 hover:bg-white/10 h-9 w-9 p-0"
                   >
                     <img 
-                      src="/assets/menu-icon_variant_5.png" 
+                      src="/assets/menu-icon_variant_1.png" 
                       alt="Menu" 
-                      className="h-7 w-7"
+                      className="h-8 w-8"
                     />
                   </Button>
                 </DropdownMenuTrigger>
