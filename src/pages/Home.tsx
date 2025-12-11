@@ -51,18 +51,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Popular Products Section */}
-      <section className="bg-white py-16 md:py-20">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="max-w-6xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-12">
-              Explore Popular Decor Finds
-            </h2>
-            <PopularProducts />
-          </div>
-        </div>
-      </section>
-
       {/* How It Works Section */}
       <section className="bg-gradient-to-br from-gray-50 to-stone-50 py-16 md:py-24">
         <div className="container mx-auto px-4 md:px-6">
@@ -121,6 +109,18 @@ export default function Home() {
                 Try It Now - It's Free
               </Button>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Popular Products Section */}
+      <section className="bg-white py-16 md:py-20">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-12">
+              Explore Popular Decor Finds
+            </h2>
+            <PopularProducts />
           </div>
         </div>
       </section>
