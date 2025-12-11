@@ -9,11 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getDetectedItems, getBoards, searchProducts, getProductsForItem, getRandomSeedProducts, logAnalysis } from '@/lib/api';
+import { getDetectedItems, getBoards, searchProducts, getProductsForItem, getRandomSeedProducts, logAnalysis, createChecklist } from '@/lib/api';
 import { DetectedItem, Product, Board } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { ExternalLink, Star, Share2, Upload, Search } from 'lucide-react';
+import { ExternalLink, Star, Share2, Upload, Search, ListChecks } from 'lucide-react';
 
 // 1. Define the interface for the full Search Response object (assumed to be the return type of searchProducts)
 interface SearchResponse {
@@ -66,6 +66,7 @@ export default function ItemDetection() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [savingChecklist, setSavingChecklist] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -285,6 +286,34 @@ export default function ItemDetection() {
     }
   };
 
+  const handleSaveAsChecklist = async () => {
+    if (!boardId || items.length === 0) return;
+
+    if (!isAuthenticated) {
+      toast.error('Please sign in to save checklists');
+      setShowAuthModal(true);
+      return;
+    }
+
+    try {
+      setSavingChecklist(true);
+      
+      // Create checklist with all detected items
+      const checklistName = `${board?.name || 'My Board'} – Shopping List`;
+      const itemNames = items.map(item => item.item_name);
+
+      const checklist = await createChecklist(checklistName, boardId, itemNames);
+      
+      toast.success('Checklist created! 🎉');
+      navigate(`/checklists/${checklist.id}`);
+    } catch (error: unknown) {
+      console.error('Failed to create checklist:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create checklist');
+    } finally {
+      setSavingChecklist(false);
+    }
+  };
+
   const calculateTotalCost = () => {
     const allProducts = Object.values(products).filter(r => !r.message).flatMap(r => r.products).flat();
     if (allProducts.length === 0) return null;
@@ -345,9 +374,9 @@ export default function ItemDetection() {
 
       <main className="flex-1 container mx-auto px-4 md:px-6 py-8 md:py-16">
         <div className="max-w-5xl mx-auto">
-          {/* Header Section with Preview Image and Share Button */}
+          {/* Header Section with Preview Image */}
           <div className="mb-8">
-            <div className="flex flex-col lg:flex-row lg:items-start lg:items-between gap-4 lg:gap-6 mb-6">
+            <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-6 mb-6">
               <div className="flex-1 text-center lg:text-left">
                 <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2 md:mb-4 text-[#111111]">
                   We Found {items.length} Items in "{board?.name || 'Your Board'}"
@@ -357,16 +386,18 @@ export default function ItemDetection() {
                 </p>
               </div>
               
-              <div className="flex items-center justify-center lg:justify-end gap-4 shrink-0">
-                <Button
-                  onClick={() => setShowShareModal(true)}
-                  variant="outline"
-                  size="sm"
-                  className="border-[#C89F7A] text-[#C89F7A] hover:bg-[#C89F7A] hover:text-white"
-                >
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Share
-                </Button>
+              <div className="flex items-center justify-center lg:justify-end gap-3 shrink-0">
+                {isAuthenticated && items.length > 0 && (
+                  <Button
+                    onClick={handleSaveAsChecklist}
+                    disabled={savingChecklist}
+                    className="bg-black hover:bg-black/90 text-white rounded-full gap-2 transition-all"
+                    size="sm"
+                  >
+                    <ListChecks className="h-4 w-4" />
+                    {savingChecklist ? 'Saving...' : 'Save as Checklist'}
+                  </Button>
+                )}
 
                 {board?.source_image_url && (
                   <img
@@ -381,7 +412,8 @@ export default function ItemDetection() {
             <div className="flex justify-center mb-6">
               <Button
                 onClick={() => navigate('/upload')}
-                className="bg-[#111111] hover:bg-[#333333] text-white rounded-full px-6 md:px-8 text-sm md:text-base"
+                variant="outline"
+                className="border-2 border-[#CACACA] text-[#333333] hover:bg-gray-50 hover:border-[#999999] rounded-full px-6 md:px-8 text-sm md:text-base transition-all"
                 size="lg"
               >
                 <Upload className="mr-2 h-4 w-4 md:h-5 md:w-5" />

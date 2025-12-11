@@ -5,10 +5,11 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { getProductsForItem, searchProducts, getDetectedItems } from '@/lib/api';
+import { getProductsForItem, searchProducts, getDetectedItems, createChecklist } from '@/lib/api';
 import { Product, DetectedItem } from '@/lib/types';
 import { toast } from 'sonner';
-import { ExternalLink, Star, Upload } from 'lucide-react';
+import { ExternalLink, Star, Upload, ListChecks } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export default function ProductMatches() {
   const { boardId, itemId } = useParams<{ boardId: string; itemId: string }>();
@@ -17,6 +18,15 @@ export default function ProductMatches() {
   const [item, setItem] = useState<DetectedItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
+  const [savingChecklist, setSavingChecklist] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    // Check authentication status
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsAuthenticated(!!user);
+    });
+  }, []);
 
   useEffect(() => {
     if (!boardId || !itemId) return;
@@ -38,12 +48,12 @@ export default function ProductMatches() {
         } else {
           // If no products exist, trigger search
           setSearching(true);
-          const newProducts = await searchProducts(itemId);
-          setProducts(newProducts);
+          const searchResult = await searchProducts(itemId);
+          setProducts(searchResult.products || []);
           setSearching(false);
           setLoading(false);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error loading products:', error);
         toast.error('Failed to load products');
         setLoading(false);
@@ -53,6 +63,36 @@ export default function ProductMatches() {
 
     loadData();
   }, [boardId, itemId]);
+
+  const handleSaveAsChecklist = async () => {
+    if (!item || !boardId) return;
+
+    if (!isAuthenticated) {
+      toast.error('Please sign in to save checklists');
+      navigate('/auth?mode=signin');
+      return;
+    }
+
+    try {
+      setSavingChecklist(true);
+      
+      // Create checklist with the item name as the default name
+      const checklistName = `${item.item_name} – Checklist`;
+      const items = products.length > 0 
+        ? products.map(p => p.product_name)
+        : [item.item_name];
+
+      const checklist = await createChecklist(checklistName, boardId, items);
+      
+      toast.success('Checklist created!');
+      navigate(`/checklists/${checklist.id}`);
+    } catch (error: unknown) {
+      console.error('Failed to create checklist:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create checklist');
+    } finally {
+      setSavingChecklist(false);
+    }
+  };
 
   if (loading || searching) {
     return (
@@ -75,7 +115,7 @@ export default function ProductMatches() {
 
       <main className="container mx-auto px-4 py-16">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-8">
+          <div className="mb-8 flex items-center justify-between">
             <Button
               variant="ghost"
               onClick={() => navigate(`/item-detection/${boardId}`)}
@@ -83,6 +123,17 @@ export default function ProductMatches() {
             >
               ← Back to Results
             </Button>
+            
+            {isAuthenticated && products.length > 0 && (
+              <Button
+                onClick={handleSaveAsChecklist}
+                disabled={savingChecklist}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full gap-2"
+              >
+                <ListChecks className="h-4 w-4" />
+                {savingChecklist ? 'Saving...' : 'Save as Checklist'}
+              </Button>
+            )}
           </div>
 
           {item && (

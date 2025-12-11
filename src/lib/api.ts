@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { DetectedItem, Product, Board } from './types';
+import { DetectedItem, Product, Board, Checklist, ChecklistItem, ChecklistWithItems } from './types';
 
 // Type definition for search response with optional error message
 type SearchResponse = {
@@ -429,5 +429,227 @@ export async function logAnalysis(
   if (error) {
     console.error('Failed to log analysis:', error);
     // Don't throw - logging should not break the user flow
+  }
+}
+
+// ============================================
+// CHECKLIST API FUNCTIONS
+// ============================================
+
+export async function createChecklist(
+  name: string,
+  boardId: string | undefined,
+  items: string[]
+): Promise<Checklist> {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User must be authenticated to create checklists');
+  }
+
+  // Create the checklist
+  const { data: checklist, error: checklistError } = await supabase
+    .from('app_8574c59127_checklists')
+    .insert({
+      user_id: user.id,
+      name,
+      board_id: boardId || null,
+    })
+    .select()
+    .single();
+
+  if (checklistError) {
+    console.error('Failed to create checklist:', checklistError);
+    throw new Error(`Failed to create checklist: ${checklistError.message}`);
+  }
+
+  // Create checklist items
+  if (items.length > 0) {
+    const checklistItems = items.map((itemName, index) => ({
+      checklist_id: checklist.id,
+      item_name: itemName,
+      is_completed: false,
+      sort_order: index,
+    }));
+
+    const { error: itemsError } = await supabase
+      .from('app_8574c59127_checklist_items')
+      .insert(checklistItems);
+
+    if (itemsError) {
+      console.error('Failed to create checklist items:', itemsError);
+      // Don't throw - checklist was created successfully
+    }
+  }
+
+  return checklist;
+}
+
+export async function getUserChecklists(): Promise<ChecklistWithItems[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return [];
+  }
+
+  // Get all checklists for the user
+  const { data: checklists, error: checklistsError } = await supabase
+    .from('app_8574c59127_checklists')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
+
+  if (checklistsError) {
+    console.error('Failed to fetch checklists:', checklistsError);
+    throw checklistsError;
+  }
+
+  if (!checklists || checklists.length === 0) {
+    return [];
+  }
+
+  // Get items for all checklists
+  const checklistIds = checklists.map(c => c.id);
+  const { data: items, error: itemsError } = await supabase
+    .from('app_8574c59127_checklist_items')
+    .select('*')
+    .in('checklist_id', checklistIds)
+    .order('sort_order', { ascending: true });
+
+  if (itemsError) {
+    console.error('Failed to fetch checklist items:', itemsError);
+    throw itemsError;
+  }
+
+  // Combine checklists with their items and calculate progress
+  const checklistsWithItems: ChecklistWithItems[] = checklists.map(checklist => {
+    const checklistItems = items?.filter(item => item.checklist_id === checklist.id) || [];
+    const completedCount = checklistItems.filter(item => item.is_completed).length;
+    
+    return {
+      ...checklist,
+      items: checklistItems,
+      completed_count: completedCount,
+      total_count: checklistItems.length,
+    };
+  });
+
+  return checklistsWithItems;
+}
+
+export async function getChecklistById(checklistId: string): Promise<ChecklistWithItems | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User must be authenticated');
+  }
+
+  // Get the checklist
+  const { data: checklist, error: checklistError } = await supabase
+    .from('app_8574c59127_checklists')
+    .select('*')
+    .eq('id', checklistId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (checklistError) {
+    console.error('Failed to fetch checklist:', checklistError);
+    return null;
+  }
+
+  // Get items for the checklist
+  const { data: items, error: itemsError } = await supabase
+    .from('app_8574c59127_checklist_items')
+    .select('*')
+    .eq('checklist_id', checklistId)
+    .order('sort_order', { ascending: true });
+
+  if (itemsError) {
+    console.error('Failed to fetch checklist items:', itemsError);
+    throw itemsError;
+  }
+
+  const completedCount = items?.filter(item => item.is_completed).length || 0;
+
+  return {
+    ...checklist,
+    items: items || [],
+    completed_count: completedCount,
+    total_count: items?.length || 0,
+  };
+}
+
+export async function updateChecklistItem(
+  itemId: string,
+  isCompleted: boolean
+): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User must be authenticated');
+  }
+
+  const updateData: Record<string, boolean | string | null> = {
+    is_completed: isCompleted,
+  };
+
+  if (isCompleted) {
+    updateData.completed_at = new Date().toISOString();
+  } else {
+    updateData.completed_at = null;
+  }
+
+  const { error } = await supabase
+    .from('app_8574c59127_checklist_items')
+    .update(updateData)
+    .eq('id', itemId);
+
+  if (error) {
+    console.error('Failed to update checklist item:', error);
+    throw new Error(`Failed to update item: ${error.message}`);
+  }
+}
+
+export async function updateChecklistName(
+  checklistId: string,
+  name: string
+): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User must be authenticated');
+  }
+
+  const { error } = await supabase
+    .from('app_8574c59127_checklists')
+    .update({
+      name,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', checklistId)
+    .eq('user_id', user.id);
+
+  if (error) {
+    console.error('Failed to update checklist name:', error);
+    throw new Error(`Failed to update checklist: ${error.message}`);
+  }
+}
+
+export async function deleteChecklist(checklistId: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User must be authenticated');
+  }
+
+  const { error } = await supabase
+    .from('app_8574c59127_checklists')
+    .delete()
+    .eq('id', checklistId)
+    .eq('user_id', user.id);
+
+  if (error) {
+    console.error('Failed to delete checklist:', error);
+    throw new Error(`Failed to delete checklist: ${error.message}`);
   }
 }

@@ -61,3 +61,28 @@ export interface ProductMatchData {
   is_top_pick: boolean;
   products: Product;
 }
+
+export interface Checklist {
+  id: string;
+  user_id: string;
+  name: string;
+  board_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChecklistItem {
+  id: string;
+  checklist_id: string;
+  item_name: string;
+  is_completed: boolean;
+  completed_at?: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface ChecklistWithItems extends Checklist {
+  items: ChecklistItem[];
+  completed_count: number;
+  total_count: number;
+}

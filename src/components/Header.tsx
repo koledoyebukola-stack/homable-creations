@@ -1,8 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { supabase } from '@/lib/supabase';
-import { User } from '@/lib/types';
+import { User } from '@supabase/supabase-js';
+import { Upload, History, LogOut, LogIn, UserPlus } from 'lucide-react';
 
 export default function Header() {
   const navigate = useNavigate();
@@ -54,6 +62,18 @@ export default function Header() {
                 <>
                   <Button
                     variant="ghost"
+                    onClick={() => navigate('/checklists')}
+                    className="text-white hover:text-white/80 hover:bg-white/10 relative"
+                  >
+                    Checklists
+                    <Badge 
+                      className="ml-2 bg-[#E0E0E0] text-[#333333] text-[10px] px-1.5 py-0.5 h-auto rounded-xl font-normal hover:bg-[#E0E0E0]"
+                    >
+                      New
+                    </Badge>
+                  </Button>
+                  <Button
+                    variant="ghost"
                     onClick={() => navigate('/my-boards')}
                     className="text-white hover:text-white/80 hover:bg-white/10"
                   >
@@ -88,11 +108,11 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Mobile Layout: Single row only - NO holiday badge */}
+        {/* Mobile Layout: Brand + Checklists (NO "New" pill) + Menu */}
         <div className="md:hidden flex items-center justify-between">
           <button
             onClick={() => navigate('/')}
-            className="text-xl font-bold text-white hover:text-white/80 transition-colors whitespace-nowrap"
+            className="text-lg font-bold text-white hover:text-white/80 transition-colors whitespace-nowrap"
           >
             Homable Creations
           </button>
@@ -103,38 +123,72 @@ export default function Header() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => navigate('/my-boards')}
-                  className="text-white hover:text-white/80 hover:bg-white/10 text-xs"
+                  onClick={() => navigate('/checklists')}
+                  className="text-white hover:text-white/80 hover:bg-white/10 text-xs px-2"
                 >
-                  My History
+                  Checklists
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSignOut}
-                  className="text-white hover:text-white/80 hover:bg-white/10 text-xs"
-                >
-                  Sign Out
-                </Button>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white hover:text-white/80 hover:bg-white/10 h-8 w-8 p-0"
+                    >
+                      <img 
+                        src="/assets/menu-icon_variant_4.png" 
+                        alt="Menu" 
+                        className="h-7 w-7"
+                      />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => navigate('/upload')}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Inspiration
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/my-boards')}>
+                      <History className="mr-2 h-4 w-4" />
+                      My History
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             ) : (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate('/auth?mode=signin')}
-                  className="text-white hover:text-white/80 hover:bg-white/10 text-xs"
-                >
-                  Sign In
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => navigate('/auth?mode=signup')}
-                  className="bg-transparent border-[1.5px] border-white text-white hover:bg-white hover:text-black transition-all text-xs whitespace-nowrap"
-                >
-                  Create Account
-                </Button>
-              </>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white hover:text-white/80 hover:bg-white/10 h-8 w-8 p-0"
+                  >
+                    <img 
+                      src="/assets/menu-icon_variant_5.png" 
+                      alt="Menu" 
+                      className="h-7 w-7"
+                    />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => navigate('/upload')}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload Inspiration
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/auth?mode=signin')}>
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Sign In
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/auth?mode=signup')}>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Create Free Account
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </nav>
         </div>

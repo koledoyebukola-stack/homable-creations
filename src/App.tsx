@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { User } from '@/lib/types';
+import { User } from '@supabase/supabase-js';
 import Home from './pages/Home';
 import Upload from './pages/Upload';
 import Analyzing from './pages/Analyzing';
@@ -12,6 +12,8 @@ import ItemDetection from './pages/ItemDetection';
 import ProductMatches from './pages/ProductMatches';
 import RoomBoard from './pages/RoomBoard';
 import MyBoards from './pages/MyBoards';
+import Checklists from './pages/Checklists';
+import ChecklistDetail from './pages/ChecklistDetail';
 import Auth from './pages/Auth';
 import ResetPassword from './pages/ResetPassword';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -86,6 +88,23 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <MyBoards />
+              </ProtectedRoute>
+            }
+          />
+          {/* Checklists routes - protected */}
+          <Route
+            path="/checklists"
+            element={
+              <ProtectedRoute>
+                <Checklists />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/checklists/:id"
+            element={
+              <ProtectedRoute>
+                <ChecklistDetail />
               </ProtectedRoute>
             }
           />
