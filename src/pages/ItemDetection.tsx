@@ -654,18 +654,18 @@ export default function ItemDetection() {
                                 Search this item on Google
                               </Button>
 
-                              {/* Helper Text */}
-                              <p className="text-xs text-[#666666] pt-2">
-                                Tip: Choosing Amazon or Temu will copy the item name for you and open the site. Just paste the name to continue your search.
-                              </p>
+                              {/* Helper Text - Two Lines */}
+                              <div className="text-xs text-[#666666] pt-2 space-y-0.5">
+                                <p>Also search on</p>
+                                <p>Amazon or Temu will open the site and copy the item name so you can paste it into search.</p>
+                              </div>
 
-                              {/* Secondary Affiliate Buttons with Brand Colors */}
+                              {/* Secondary Affiliate Buttons with Accurate Brand Colors */}
                               <div className="flex flex-wrap justify-center gap-2">
                                 <Button
                                   onClick={() => handleAffiliateClick(item.item_name, 'https://amzn.to/48O0yS5', 'Amazon')}
-                                  variant="outline"
                                   size="sm"
-                                  className="rounded-full text-xs border-[#FF9900] text-[#FF9900] hover:bg-[#FF9900]/10"
+                                  className="rounded-full bg-[#FF9900] hover:bg-[#FF9900]/90 text-[#111111] border-0"
                                 >
                                   <svg className="mr-1.5 h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M.045 18.02c.072-.116.187-.124.348-.022 3.636 2.11 7.594 3.166 11.87 3.166 2.852 0 5.668-.533 8.447-1.595l.315-.14c.138-.06.234-.1.293-.13.226-.088.39-.046.525.13.12.174.09.336-.12.48-.256.19-.6.41-1.006.654-1.244.743-2.64 1.316-4.185 1.726-1.53.406-3.045.61-4.516.61-2.265 0-4.463-.42-6.608-1.27-2.14-.85-4.018-1.995-5.624-3.44-.1-.094-.155-.2-.164-.315-.007-.09.03-.17.12-.232zm23.71-1.27c-.18-.232-.48-.26-.89-.08-.41.18-.89.44-1.44.78-.55.34-1.05.63-1.51.87-.46.24-.87.42-1.23.54-.36.12-.62.18-.78.18-.26 0-.39-.12-.39-.36 0-.14.04-.28.12-.42.08-.14.2-.28.36-.42.16-.14.34-.28.54-.42.2-.14.42-.28.66-.42.24-.14.48-.28.72-.42.24-.14.47-.28.69-.42.22-.14.42-.28.6-.42.18-.14.33-.28.45-.42.12-.14.18-.28.18-.42 0-.26-.12-.39-.36-.39-.14 0-.32.04-.54.12-.22.08-.46.2-.72.36-.26.16-.54.36-.84.6-.3.24-.6.52-.9.84-.3.32-.58.68-.84 1.08-.26.4-.48.84-.66 1.32-.18.48-.27.98-.27 1.5 0 .52.09.98.27 1.38.18.4.42.74.72 1.02.3.28.66.5 1.08.66.42.16.88.24 1.38.24.5 0 1.02-.08 1.56-.24.54-.16 1.08-.38 1.62-.66.54-.28 1.06-.6 1.56-.96.5-.36.96-.74 1.38-1.14.42-.4.78-.82 1.08-1.26.3-.44.54-.88.72-1.32.18-.44.27-.88.27-1.32 0-.44-.09-.82-.27-1.14z"/>
@@ -675,9 +675,8 @@ export default function ItemDetection() {
 
                                 <Button
                                   onClick={() => handleAffiliateClick(item.item_name, 'https://temu.to/k/gqp71mgrtku', 'Temu')}
-                                  variant="outline"
                                   size="sm"
-                                  className="rounded-full text-xs border-[#E02020] text-[#E02020] hover:bg-[#E02020]/10"
+                                  className="rounded-full bg-[#E62E04] hover:bg-[#E62E04]/90 text-white border-0"
                                 >
                                   <svg className="mr-1.5 h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
@@ -780,18 +779,18 @@ export default function ItemDetection() {
                                 Search on Google
                               </Button>
 
-                              {/* Helper Text */}
-                              <p className="text-xs text-[#666666]">
-                                Tip: Choosing Amazon or Temu will copy the item name for you and open the site. Just paste the name to continue your search.
-                              </p>
+                              {/* Helper Text - Two Lines */}
+                              <div className="text-xs text-[#666666] space-y-0.5">
+                                <p>Also search on</p>
+                                <p>Amazon or Temu will open the site and copy the item name so you can paste it into search.</p>
+                              </div>
 
-                              {/* Secondary Affiliate Buttons with Brand Colors */}
+                              {/* Secondary Affiliate Buttons with Accurate Brand Colors */}
                               <div className="flex flex-wrap justify-center gap-2">
                                 <Button
                                   onClick={() => handleAffiliateClick(item.item_name, 'https://amzn.to/48O0yS5', 'Amazon')}
-                                  variant="outline"
                                   size="sm"
-                                  className="rounded-full text-xs border-[#FF9900] text-[#FF9900] hover:bg-[#FF9900]/10"
+                                  className="rounded-full bg-[#FF9900] hover:bg-[#FF9900]/90 text-[#111111] border-0"
                                 >
                                   <svg className="mr-1.5 h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M.045 18.02c.072-.116.187-.124.348-.022 3.636 2.11 7.594 3.166 11.87 3.166 2.852 0 5.668-.533 8.447-1.595l.315-.14c.138-.06.234-.1.293-.13.226-.088.39-.046.525.13.12.174.09.336-.12.48-.256.19-.6.41-1.006.654-1.244.743-2.64 1.316-4.185 1.726-1.53.406-3.045.61-4.516.61-2.265 0-4.463-.42-6.608-1.27-2.14-.85-4.018-1.995-5.624-3.44-.1-.094-.155-.2-.164-.315-.007-.09.03-.17.12-.232zm23.71-1.27c-.18-.232-.48-.26-.89-.08-.41.18-.89.44-1.44.78-.55.34-1.05.63-1.51.87-.46.24-.87.42-1.23.54-.36.12-.62.18-.78.18-.26 0-.39-.12-.39-.36 0-.14.04-.28.12-.42.08-.14.2-.28.36-.42.16-.14.34-.28.54-.42.2-.14.42-.28.66-.42.24-.14.48-.28.72-.42.24-.14.47-.28.69-.42.22-.14.42-.28.6-.42.18-.14.33-.28.45-.42.12-.14.18-.28.18-.42 0-.26-.12-.39-.36-.39-.14 0-.32.04-.54.12-.22.08-.46.2-.72.36-.26.16-.54.36-.84.6-.3.24-.6.52-.9.84-.3.32-.58.68-.84 1.08-.26.4-.48.84-.66 1.32-.18.48-.27.98-.27 1.5 0 .52.09.98.27 1.38.18.4.42.74.72 1.02.3.28.66.5 1.08.66.42.16.88.24 1.38.24.5 0 1.02-.08 1.56-.24.54-.16 1.08-.38 1.62-.66.54-.28 1.06-.6 1.56-.96.5-.36.96-.74 1.38-1.14.42-.4.78-.82 1.08-1.26.3-.44.54-.88.72-1.32.18-.44.27-.88.27-1.32 0-.44-.09-.82-.27-1.14z"/>
@@ -801,9 +800,8 @@ export default function ItemDetection() {
 
                                 <Button
                                   onClick={() => handleAffiliateClick(item.item_name, 'https://temu.to/k/gqp71mgrtku', 'Temu')}
-                                  variant="outline"
                                   size="sm"
-                                  className="rounded-full text-xs border-[#E02020] text-[#E02020] hover:bg-[#E02020]/10"
+                                  className="rounded-full bg-[#E62E04] hover:bg-[#E62E04]/90 text-white border-0"
                                 >
                                   <svg className="mr-1.5 h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
