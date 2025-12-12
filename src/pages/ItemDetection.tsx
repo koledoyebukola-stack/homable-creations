@@ -659,10 +659,11 @@ export default function ItemDetection() {
                                 Search this item on Google
                               </Button>
 
-                              {/* Helper Text - Two Lines */}
+                              {/* Helper Text - Three Lines */}
                               <div className="text-xs text-[#666666] pt-2 space-y-0.5">
                                 <p>Also search on</p>
-                                <p>Amazon or Temu will open the site and copy the item name so you can paste it into search.</p>
+                                <p>Amazon or Temu will open the site and copy the item name to your clipboard.</p>
+                                <p>Paste it into the search bar to see results.</p>
                               </div>
 
                               {/* Secondary Affiliate Buttons with Toned Down Brand Colors */}
@@ -786,10 +787,11 @@ export default function ItemDetection() {
                                 Search on Google
                               </Button>
 
-                              {/* Helper Text - Two Lines */}
+                              {/* Helper Text - Three Lines */}
                               <div className="text-xs text-[#666666] space-y-0.5">
                                 <p>Also search on</p>
-                                <p>Amazon or Temu will open the site and copy the item name so you can paste it into search.</p>
+                                <p>Amazon or Temu will open the site and copy the item name to your clipboard.</p>
+                                <p>Paste it into the search bar to see results.</p>
                               </div>
 
                               {/* Secondary Affiliate Buttons with Toned Down Brand Colors */}
