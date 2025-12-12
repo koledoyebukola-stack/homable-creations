@@ -121,6 +121,13 @@ export default function Home() {
               Explore Popular Decor Finds
             </h2>
             <PopularProducts />
+            
+            {/* Affiliate Disclosure */}
+            <div className="mt-8 text-center">
+              <p className="text-sm text-[#666666]">
+                Some links may be affiliate links, which help support Homable at no extra cost to you.
+              </p>
+            </div>
           </div>
         </div>
       </section>
