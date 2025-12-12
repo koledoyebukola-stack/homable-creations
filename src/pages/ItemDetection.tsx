@@ -51,22 +51,93 @@ function isValidProductUrl(url: string | undefined): boolean {
   return true;
 }
 
+// Resilient clipboard copy function that works across embedded/sandboxed contexts
+const copyToClipboard = async (text: string): Promise<boolean> => {
+  // Method 1: Try modern Clipboard API first
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (err) {
+      console.warn('Clipboard API failed, trying fallback method:', err);
+    }
+  }
+
+  // Method 2: Fallback using execCommand (works in more contexts)
+  try {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    
+    // Make the textarea invisible but still selectable
+    textArea.style.position = 'fixed';
+    textArea.style.top = '0';
+    textArea.style.left = '0';
+    textArea.style.width = '2em';
+    textArea.style.height = '2em';
+    textArea.style.padding = '0';
+    textArea.style.border = 'none';
+    textArea.style.outline = 'none';
+    textArea.style.boxShadow = 'none';
+    textArea.style.background = 'transparent';
+    textArea.style.opacity = '0';
+    
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    // Try to copy using execCommand
+    const successful = document.execCommand('copy');
+    document.body.removeChild(textArea);
+    
+    if (successful) {
+      return true;
+    }
+  } catch (err) {
+    console.warn('execCommand fallback failed:', err);
+  }
+
+  // Method 3: Last resort - try to use parent window's clipboard (for iframes)
+  if (window.parent && window.parent !== window) {
+    try {
+      if (window.parent.navigator.clipboard && window.parent.navigator.clipboard.writeText) {
+        await window.parent.navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (err) {
+      console.warn('Parent window clipboard access failed:', err);
+    }
+  }
+
+  return false;
+};
+
 // Helper function to copy text and open affiliate link
 const handleAffiliateClick = async (itemName: string, affiliateUrl: string, platform: string) => {
+  // Always open the affiliate link first
+  window.open(affiliateUrl, '_blank', 'noopener,noreferrer');
+  
+  // Then attempt to copy
   try {
-    // Copy item name to clipboard
-    await navigator.clipboard.writeText(itemName);
+    const success = await copyToClipboard(itemName);
     
-    // Show success toast
-    toast.success('Copied! Paste into the search bar.', {
-      duration: 3000,
-    });
-    
-    // Open affiliate link in new tab
-    window.open(affiliateUrl, '_blank', 'noopener,noreferrer');
+    if (success) {
+      toast.success('Copied! Paste into the search bar.', {
+        duration: 3000,
+      });
+    } else {
+      // If copy failed, show a helpful message with the item name
+      toast.info(`Search for: ${itemName}`, {
+        duration: 5000,
+        description: 'Copy this text to search on the site',
+      });
+    }
   } catch (error) {
     console.error('Failed to copy to clipboard:', error);
-    toast.error('Failed to copy. Please try again.');
+    // Show the item name so user can manually copy it
+    toast.info(`Search for: ${itemName}`, {
+      duration: 5000,
+      description: 'Copy this text to search on the site',
+    });
   }
 };
 
