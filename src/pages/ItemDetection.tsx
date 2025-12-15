@@ -9,11 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getDetectedItems, getBoardById, getBoards, searchProducts, getProductsForItem, getRandomSeedProducts, logAnalysis, createChecklist } from '@/lib/api';
-import { DetectedItem, Product, Board } from '@/lib/types';
+import { getDetectedItems, getBoardById, getBoards, searchProducts, getProductsForItem, getRandomSeedProducts, logAnalysis, createChecklist, getChecklistByBoardId, seeMoreItems } from '@/lib/api';
+import { DetectedItem, Product, Board, Checklist } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { ExternalLink, Star, Share2, Upload, Search, ListChecks } from 'lucide-react';
+import { ExternalLink, Star, Share2, Upload, Search, ListChecks, Eye } from 'lucide-react';
 
 // 1. Define the interface for the full Search Response object (assumed to be the return type of searchProducts)
 interface SearchResponse {
@@ -59,6 +59,9 @@ export default function ItemDetection() {
   const [seedProducts, setSeedProducts] = useState<Product[]>([]);
   const [additionalProducts, setAdditionalProducts] = useState<Product[]>([]);
   const [board, setBoard] = useState<Board | null>(null);
+  const [existingChecklist, setExistingChecklist] = useState<Checklist | null>(null);
+  const [roomMaterials, setRoomMaterials] = useState<{ walls?: string; floors?: string } | null>(null);
+  const [showRoomMaterials, setShowRoomMaterials] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [loadingSeedProducts, setLoadingSeedProducts] = useState(false);
@@ -67,6 +70,7 @@ export default function ItemDetection() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [savingChecklist, setSavingChecklist] = useState(false);
+  const [loadingMoreItems, setLoadingMoreItems] = useState(false);
   
   // Refs for scrolling to item sections
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -107,6 +111,10 @@ export default function ItemDetection() {
         const currentBoard = await getBoardById(boardId);
         if (currentBoard) {
           setBoard(currentBoard);
+          // Set room materials if available
+          if (currentBoard.room_materials) {
+            setRoomMaterials(currentBoard.room_materials);
+          }
         }
 
         // Load detected items
@@ -117,6 +125,12 @@ export default function ItemDetection() {
         // Check authentication status
         const { data: { user } } = await supabase.auth.getUser();
         const userIsAuthenticated = !!user;
+        
+        // Check if board has existing checklist
+        if (userIsAuthenticated && boardId) {
+          const checklist = await getChecklistByBoardId(boardId);
+          setExistingChecklist(checklist);
+        }
         
         // Show auth modal after items are loaded ONLY if user is not authenticated
         if (detectedItems.length > 0 && !userIsAuthenticated) {
@@ -218,6 +232,12 @@ export default function ItemDetection() {
   const handleAuthSuccess = async () => {
     setShowAuthModal(false);
     setIsAuthenticated(true);
+    
+    // Check if board has existing checklist
+    if (boardId) {
+      const checklist = await getChecklistByBoardId(boardId);
+      setExistingChecklist(checklist);
+    }
     
     // Reload products after authentication
     if (items.length > 0) {
@@ -324,6 +344,71 @@ export default function ItemDetection() {
     }
   };
 
+  const handleSeeMoreItems = async () => {
+    if (!boardId) return;
+
+    try {
+      setLoadingMoreItems(true);
+      const result = await seeMoreItems(boardId);
+      
+      if (result.new_items_count === 0) {
+        toast.info('No additional items found in this image');
+        setLoadingMoreItems(false);
+        return;
+      }
+
+      // Update room materials if returned
+      if (result.room_materials) {
+        setRoomMaterials(result.room_materials);
+        setShowRoomMaterials(true);
+      }
+
+      // Reload all items
+      const allItems = await getDetectedItems(boardId);
+      setItems(allItems);
+      
+      toast.success(`Found ${result.new_items_count} more item${result.new_items_count > 1 ? 's' : ''}! 🎉`);
+      
+      // Reload products for new items
+      setLoadingProducts(true);
+      const productsMap: Record<string, ItemProductResult> = { ...products };
+      
+      for (const item of result.detected_items) {
+        try {
+          const productsFromCache = await getProductsForItem(item.id);
+          let itemResult: ItemProductResult = { products: productsFromCache, message: null, message_category_context: null };
+
+          if (itemResult.products.length === 0) {
+            const searchResult = await searchProducts(item.id);
+            itemResult = searchResult;
+          }
+          
+          if (!itemResult.message && itemResult.products.length === 0) {
+            const categorySeeds = await getRandomSeedProducts(item.item_name, item.category);
+            itemResult.products = categorySeeds.slice(0, 3);
+          }
+          
+          if (!itemResult.message) {
+            itemResult.products = itemResult.products.filter(p => isValidProductUrl(p.product_url));
+          }
+          
+          productsMap[item.id] = itemResult;
+        } catch (error) {
+          console.error(`Failed to load products for item ${item.id}:`, error);
+          productsMap[item.id] = { products: [], message: null, message_category_context: null };
+        }
+      }
+      
+      setProducts(productsMap);
+      setLoadingProducts(false);
+    } catch (error) {
+      console.error('Failed to see more items:', error);
+      toast.error('Failed to find more items');
+    } finally {
+      setLoadingMoreItems(false);
+    }
+  };
+
   const calculateTotalCost = () => {
     const allProducts = Object.values(products).filter(r => !r.message).flatMap(r => r.products).flat();
     if (allProducts.length === 0) return null;
@@ -411,15 +496,28 @@ export default function ItemDetection() {
 
                 <div className="flex flex-col sm:flex-row gap-3">
                   {isAuthenticated && items.length > 0 && (
-                    <Button
-                      onClick={handleSaveAsChecklist}
-                      disabled={savingChecklist}
-                      className="bg-black hover:bg-black/90 text-white font-bold rounded-full px-8 py-6 text-base shadow-lg hover:shadow-xl transition-all"
-                      size="lg"
-                    >
-                      <ListChecks className="h-5 w-5 mr-2" />
-                      {savingChecklist ? 'Saving...' : 'Save as Shopping List'}
-                    </Button>
+                    <>
+                      {existingChecklist ? (
+                        <Button
+                          onClick={() => navigate(`/checklists/${existingChecklist.id}`)}
+                          className="bg-[#2F9E44] hover:bg-[#2F9E44]/90 text-white font-bold rounded-full px-8 py-6 text-base shadow-lg hover:shadow-xl transition-all"
+                          size="lg"
+                        >
+                          <ListChecks className="h-5 w-5 mr-2" />
+                          View Shopping List
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={handleSaveAsChecklist}
+                          disabled={savingChecklist}
+                          className="bg-black hover:bg-black/90 text-white font-bold rounded-full px-8 py-6 text-base shadow-lg hover:shadow-xl transition-all"
+                          size="lg"
+                        >
+                          <ListChecks className="h-5 w-5 mr-2" />
+                          {savingChecklist ? 'Saving...' : 'Save as Shopping List'}
+                        </Button>
+                      )}
+                    </>
                   )}
 
                   <Button
@@ -438,9 +536,23 @@ export default function ItemDetection() {
                   <div className="hidden lg:block">
                     <Card className="bg-gradient-to-br from-[#C89F7A]/5 to-white border-[#C89F7A]/20 shadow-md">
                       <CardContent className="p-6">
-                        <h2 className="text-xl font-bold text-[#111111] mb-3">
-                          Your Space Summary
-                        </h2>
+                        <div className="flex items-start justify-between mb-3">
+                          <h2 className="text-xl font-bold text-[#111111]">
+                            Your Space Summary
+                          </h2>
+                          {isAuthenticated && (
+                            <Button
+                              onClick={handleSeeMoreItems}
+                              disabled={loadingMoreItems}
+                              variant="ghost"
+                              size="sm"
+                              className="text-[#C89F7A] hover:text-[#C89F7A] hover:bg-[#C89F7A]/10 -mt-1"
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              {loadingMoreItems ? 'Searching...' : 'See More Items'}
+                            </Button>
+                          )}
+                        </div>
                         <p className="text-sm text-[#555555] mb-3">
                           We identified the main elements featured in your inspiration:
                         </p>
@@ -454,6 +566,37 @@ export default function ItemDetection() {
                         </ul>
                       </CardContent>
                     </Card>
+
+                    {/* Room Materials Card (Desktop) */}
+                    {showRoomMaterials && roomMaterials && (roomMaterials.walls || roomMaterials.floors) && (
+                      <Card className="bg-gradient-to-br from-[#C89F7A]/5 to-white border-[#C89F7A]/20 shadow-md mt-4">
+                        <CardContent className="p-6">
+                          <h2 className="text-xl font-bold text-[#111111] mb-3">
+                            Room Materials
+                          </h2>
+                          <div className="space-y-2">
+                            {roomMaterials.walls && (
+                              <div className="flex items-start">
+                                <span className="text-[#C89F7A] mr-2 mt-1">•</span>
+                                <div>
+                                  <span className="font-semibold text-[#333333]">Walls: </span>
+                                  <span className="text-[#555555]">{roomMaterials.walls}</span>
+                                </div>
+                              </div>
+                            )}
+                            {roomMaterials.floors && (
+                              <div className="flex items-start">
+                                <span className="text-[#C89F7A] mr-2 mt-1">•</span>
+                                <div>
+                                  <span className="font-semibold text-[#333333]">Floors: </span>
+                                  <span className="text-[#555555]">{roomMaterials.floors}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
                 )}
               </div>
@@ -465,9 +608,23 @@ export default function ItemDetection() {
             <div className="mb-12 lg:hidden">
               <Card className="bg-gradient-to-br from-[#C89F7A]/5 to-white border-[#C89F7A]/20 shadow-md">
                 <CardContent className="p-6 md:p-8">
-                  <h2 className="text-2xl font-bold text-[#111111] mb-4">
-                    Your Space Summary
-                  </h2>
+                  <div className="flex items-start justify-between mb-4">
+                    <h2 className="text-2xl font-bold text-[#111111]">
+                      Your Space Summary
+                    </h2>
+                    {isAuthenticated && (
+                      <Button
+                        onClick={handleSeeMoreItems}
+                        disabled={loadingMoreItems}
+                        variant="ghost"
+                        size="sm"
+                        className="text-[#C89F7A] hover:text-[#C89F7A] hover:bg-[#C89F7A]/10 -mt-1"
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        {loadingMoreItems ? 'Searching...' : 'See More'}
+                      </Button>
+                    )}
+                  </div>
                   <p className="text-[#555555] mb-4">
                     We identified the main elements featured in your inspiration:
                   </p>
@@ -481,6 +638,37 @@ export default function ItemDetection() {
                   </ul>
                 </CardContent>
               </Card>
+
+              {/* Room Materials Card (Mobile) */}
+              {showRoomMaterials && roomMaterials && (roomMaterials.walls || roomMaterials.floors) && (
+                <Card className="bg-gradient-to-br from-[#C89F7A]/5 to-white border-[#C89F7A]/20 shadow-md mt-4">
+                  <CardContent className="p-6 md:p-8">
+                    <h2 className="text-2xl font-bold text-[#111111] mb-4">
+                      Room Materials
+                    </h2>
+                    <div className="space-y-3">
+                      {roomMaterials.walls && (
+                        <div className="flex items-start">
+                          <span className="text-[#C89F7A] mr-2 mt-1">•</span>
+                          <div>
+                            <span className="font-semibold text-[#333333]">Walls: </span>
+                            <span className="text-[#555555]">{roomMaterials.walls}</span>
+                          </div>
+                        </div>
+                      )}
+                      {roomMaterials.floors && (
+                        <div className="flex items-start">
+                          <span className="text-[#C89F7A] mr-2 mt-1">•</span>
+                          <div>
+                            <span className="font-semibold text-[#333333]">Floors: </span>
+                            <span className="text-[#555555]">{roomMaterials.floors}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
 
@@ -842,7 +1030,7 @@ export default function ItemDetection() {
                 })}
               </div>
 
-              {/* SECTION 6: Shopping List CTA Reminder */}
+              {/* SECTION 6: Shopping List CTA Reminder - ALWAYS SHOW */}
               {isAuthenticated && items.length > 0 && (
                 <div className="mt-16 mb-12">
                   <Card className="bg-gradient-to-br from-[#C89F7A]/10 to-white border-[#C89F7A]/30 shadow-lg">
@@ -853,15 +1041,26 @@ export default function ItemDetection() {
                       <p className="text-base md:text-lg text-[#555555] mb-6 max-w-2xl mx-auto">
                         Save all items into one organized shopping list you can update anytime.
                       </p>
-                      <Button
-                        onClick={handleSaveAsChecklist}
-                        disabled={savingChecklist}
-                        className="bg-black hover:bg-black/90 text-white font-bold rounded-full px-8 py-6 text-lg shadow-lg hover:shadow-xl transition-all"
-                        size="lg"
-                      >
-                        <ListChecks className="h-5 w-5 mr-2" />
-                        {savingChecklist ? 'Saving...' : 'Save as Shopping List'}
-                      </Button>
+                      {existingChecklist ? (
+                        <Button
+                          onClick={() => navigate(`/checklists/${existingChecklist.id}`)}
+                          className="bg-[#2F9E44] hover:bg-[#2F9E44]/90 text-white font-bold rounded-full px-8 py-6 text-lg shadow-lg hover:shadow-xl transition-all"
+                          size="lg"
+                        >
+                          <ListChecks className="h-5 w-5 mr-2" />
+                          View Shopping List
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={handleSaveAsChecklist}
+                          disabled={savingChecklist}
+                          className="bg-black hover:bg-black/90 text-white font-bold rounded-full px-8 py-6 text-lg shadow-lg hover:shadow-xl transition-all"
+                          size="lg"
+                        >
+                          <ListChecks className="h-5 w-5 mr-2" />
+                          {savingChecklist ? 'Saving...' : 'Save as Shopping List'}
+                        </Button>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -1062,6 +1261,7 @@ export default function ItemDetection() {
           isOpen={showShareModal}
           onClose={() => setShowShareModal(false)}
           boardId={board.id}
+          checklistId={existingChecklist?.id}
           boardName={board.name}
         />
       )}

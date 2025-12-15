@@ -458,6 +458,30 @@ export async function createChecklist(
   return checklist;
 }
 
+export async function getChecklistByBoardId(boardId: string): Promise<Checklist | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from('app_8574c59127_checklists')
+    .select('*')
+    .eq('board_id', boardId)
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Failed to fetch checklist by board ID:', error);
+    return null;
+  }
+
+  return data;
+}
+
 export async function getUserChecklists(): Promise<ChecklistWithItems[]> {
   const { data: { user } } = await supabase.auth.getUser();
   

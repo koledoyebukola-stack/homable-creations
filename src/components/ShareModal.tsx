@@ -8,15 +8,24 @@ import { toast } from 'sonner';
 interface ShareModalProps {
   isOpen: boolean;
   onClose: () => void;
-  boardId: string;
+  boardId?: string;
+  checklistId?: string;
   boardName: string;
 }
 
-export default function ShareModal({ isOpen, onClose, boardId, boardName }: ShareModalProps) {
+export default function ShareModal({ isOpen, onClose, boardId, checklistId, boardName }: ShareModalProps) {
   const [copied, setCopied] = useState(false);
   
-  const shareUrl = `${window.location.origin}/item-detection/${boardId}`;
-  const shareMessage = `Check out the look I'm recreating! ${boardName}`;
+  // Determine the share URL based on what's provided
+  const shareUrl = checklistId 
+    ? `${window.location.origin}/checklists/${checklistId}`
+    : boardId 
+    ? `${window.location.origin}/item-detection/${boardId}`
+    : window.location.href;
+    
+  const shareMessage = checklistId
+    ? `Check out the look I'm recreating! ${boardName} – Shopping List`
+    : `Check out the look I'm recreating! ${boardName}`;
 
   const handleCopy = async () => {
     try {

@@ -522,14 +522,12 @@ export default function ChecklistDetail() {
         )}
       </main>
 
-      {checklist.board_id && (
-        <ShareModal
-          isOpen={showShareModal}
-          onClose={() => setShowShareModal(false)}
-          boardId={checklist.board_id}
-          boardName={checklist.name}
-        />
-      )}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        checklistId={checklist.id}
+        boardName={checklist.name}
+      />
 
       <Footer />
     </div>
