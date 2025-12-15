@@ -12,11 +12,14 @@ import ItemDetection from './pages/ItemDetection';
 import ProductMatches from './pages/ProductMatches';
 import RoomBoard from './pages/RoomBoard';
 import MyBoards from './pages/MyBoards';
+import History from './pages/History';
 import Checklists from './pages/Checklists';
 import ChecklistDetail from './pages/ChecklistDetail';
 import Auth from './pages/Auth';
 import ResetPassword from './pages/ResetPassword';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import SpecsForm from './pages/SpecsForm';
+import SpecsResults from './pages/SpecsResults';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -66,12 +69,23 @@ const App = () => (
           <Route path="/upload" element={<Upload />} />
           <Route path="/analyzing/:boardId" element={<Analyzing />} />
           <Route path="/item-detection/:boardId" element={<ItemDetection />} />
+          {/* Specs flow routes - PUBLIC */}
+          <Route path="/specs/:categoryId" element={<SpecsForm />} />
+          <Route path="/specs-results" element={<SpecsResults />} />
           {/* Other results pages require authentication */}
           <Route
             path="/products/:boardId/:itemId"
             element={
               <ProtectedRoute>
                 <ProductMatches />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/product-matches/:boardId"
+            element={
+              <ProtectedRoute>
+                <ItemDetection />
               </ProtectedRoute>
             }
           />
@@ -88,6 +102,15 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <MyBoards />
+              </ProtectedRoute>
+            }
+          />
+          {/* History route - protected */}
+          <Route
+            path="/history"
+            element={
+              <ProtectedRoute>
+                <History />
               </ProtectedRoute>
             }
           />

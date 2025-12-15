@@ -74,7 +74,7 @@ export default function Header() {
                   </Button>
                   <Button
                     variant="ghost"
-                    onClick={() => navigate('/my-boards')}
+                    onClick={() => navigate('/history')}
                     className="text-white hover:text-white/80 hover:bg-white/10"
                   >
                     My History
@@ -148,7 +148,7 @@ export default function Header() {
                       <Upload className="mr-2 h-4 w-4" />
                       Upload Inspiration
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/my-boards')}>
+                    <DropdownMenuItem onClick={() => navigate('/history')}>
                       <History className="mr-2 h-4 w-4" />
                       My History
                     </DropdownMenuItem>

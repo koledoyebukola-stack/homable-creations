@@ -62,10 +62,14 @@ export default function Analyzing() {
         const imageUrl = board.source_image_url || board.cover_image_url;
         setBoardImageUrl(imageUrl);
 
-        // Run AI analysis
+        // Run AI analysis (no auth check here - let the edge function handle it)
         console.log('Calling analyzeImage...');
-        const detectedItems = await analyzeImage(boardId, imageUrl);
-        console.log('Analysis completed successfully, detected items:', detectedItems);
+        const result = await analyzeImage(boardId, imageUrl);
+        console.log('Analysis completed successfully, result:', result);
+
+        // Extract detected items from the result object
+        const detectedItems = result.detected_items || [];
+        console.log('Detected items:', detectedItems);
 
         // Generate smart board name based on detected items
         const smartName = generateBoardName(detectedItems);

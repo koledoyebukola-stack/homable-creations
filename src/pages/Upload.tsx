@@ -1,13 +1,15 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ImageUploader from '@/components/ImageUploader';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { uploadImage, createBoard, validateDecorImage } from '@/lib/api';
 import { toast } from 'sonner';
 import { AlertCircle, Info } from 'lucide-react';
+import SpecsCategorySelection from '@/components/specs/SpecsCategorySelection';
 
 // Sample images organized by category
 const SAMPLE_CATEGORIES = [
@@ -40,17 +42,37 @@ const SAMPLE_CATEGORIES = [
       { url: '/assets/carousel-holiday-dining-2.jpg', alt: 'Holiday dining room' },
       { url: '/assets/carousel-holiday-entryway-3.jpg', alt: 'Holiday entryway' },
     ]
+  },
+  {
+    id: 'events',
+    title: 'Events',
+    description: 'Special occasions and celebrations',
+    images: [
+      { url: '/assets/event-proposal.jpg', alt: 'Proposal event' },
+      { url: '/assets/event-first-birthday.jpg', alt: 'First birthday' },
+      { url: '/assets/event-vow-renewal.jpg', alt: 'Vow renewal' },
+    ]
   }
 ];
 
 export default function Upload() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [uploading, setUploading] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isSampleImage, setIsSampleImage] = useState(false);
   const [sampleImageAlt, setSampleImageAlt] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<string>('inspiration');
+
+  // Read tab from URL query parameter on mount
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'specs') {
+      setActiveTab('specs');
+    }
+  }, [searchParams]);
 
   const handleImageSelect = (file: File) => {
     console.log('Image selected:', file.name, file.type, file.size);
@@ -179,116 +201,133 @@ export default function Upload() {
 
       <main className="flex-1 container mx-auto px-4 py-16">
         <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-12">
+          {/* Static Header */}
+          <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-4 text-[#111111]">
-              Upload an Inspiration Photo
+              Bring Your Design Ideas to Life
             </h1>
             <p className="text-lg text-[#555555]">
-              Recreate any space you love from Pinterest, Instagram, or your camera.
+              Start from inspiration or from real-world constraints. Homable helps you turn ideas into an actionable plan.
             </p>
           </div>
 
-          <div className="bg-white rounded-3xl p-8 shadow-lg">
-            {/* Info Banner - Positioned above the upload box */}
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-              <div className="flex items-start gap-3">
-                <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-blue-900">
-                  <span className="font-medium">Homable works best with home decor photos.</span> Non-decor images may not be analyzed.
-                </p>
-              </div>
-            </div>
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-8">
+              <TabsTrigger value="inspiration">Start with Inspiration</TabsTrigger>
+              <TabsTrigger value="specs">Start with Specs</TabsTrigger>
+            </TabsList>
 
-            <ImageUploader 
-              onImageSelect={handleImageSelect}
-              previewUrl={previewUrl}
-              onClear={handleClear}
-            />
-
-            {validationError && (
-              <div className="mt-6 p-6 bg-amber-50 border border-amber-200 rounded-2xl">
-                <div className="flex items-start gap-3 mb-4">
-                  <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-amber-900 mb-2">
-                      {validationError}
-                    </p>
-                    <p className="text-xs text-amber-700">
-                      Try uploading a photo that shows furniture, a room, or home decor items.
+            {/* Start with Inspiration Tab */}
+            <TabsContent value="inspiration">
+              <div className="bg-white rounded-3xl p-8 shadow-lg">
+                {/* Info Banner - Positioned above the upload box */}
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-blue-900">
+                      <span className="font-medium">Homable works best with home decor photos.</span> Non-decor images may not be analyzed.
                     </p>
                   </div>
                 </div>
-                <Button
-                  onClick={handleTryAgain}
-                  variant="outline"
-                  className="w-full border-amber-300 text-amber-700 hover:bg-amber-100"
-                >
-                  Try Another Inspiration Photo
-                </Button>
-              </div>
-            )}
 
-            {selectedFile && !validationError && (
-              <div className="mt-8">
-                <Button
-                  size="lg"
-                  onClick={handleAnalyze}
-                  disabled={uploading}
-                  className="w-full bg-[#111111] hover:bg-[#333333] text-white text-lg py-6 rounded-full"
-                >
-                  {uploading ? 'Validating...' : 'Analyze My Inspiration'}
-                </Button>
-              </div>
-            )}
-          </div>
+                <ImageUploader 
+                  onImageSelect={handleImageSelect}
+                  previewUrl={previewUrl}
+                  onClear={handleClear}
+                />
 
-          {/* Sample Images Section */}
-          <div className="mt-16">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold mb-3 text-[#111111]">
-                Don't Have a Photo? Try One of Our Favourites!
-              </h2>
-              <p className="text-base text-[#555555]">
-                Choose one of these looks to see how Homable works.
-              </p>
-            </div>
-
-            {/* Categories */}
-            <div className="space-y-12">
-              {SAMPLE_CATEGORIES.map((category) => (
-                <div key={category.id}>
-                  <div className="mb-4">
-                    <h3 className="text-xl font-semibold text-[#111111] mb-1">
-                      {category.title}
-                    </h3>
-                    <p className="text-sm text-[#555555]">
-                      {category.description}
-                    </p>
+                {validationError && (
+                  <div className="mt-6 p-6 bg-amber-50 border border-amber-200 rounded-2xl">
+                    <div className="flex items-start gap-3 mb-4">
+                      <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-amber-900 mb-2">
+                          {validationError}
+                        </p>
+                        <p className="text-xs text-amber-700">
+                          Try uploading a photo that shows furniture, a room, or home decor items.
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={handleTryAgain}
+                      variant="outline"
+                      className="w-full border-amber-300 text-amber-700 hover:bg-amber-100"
+                    >
+                      Try Another Inspiration Photo
+                    </Button>
                   </div>
-                  
-                  {/* Responsive Grid: 2 cols mobile, 3 cols tablet/desktop */}
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {category.images.map((image, index) => (
-                      <Card
-                        key={index}
-                        className="overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105 rounded-2xl border-0"
-                        onClick={() => !uploading && handleSampleImageClick(image.url, image.alt)}
-                      >
-                        <div className="aspect-[4/3] overflow-hidden">
-                          <img
-                            src={image.url}
-                            alt={image.alt}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                        </div>
-                      </Card>
-                    ))}
+                )}
+
+                {selectedFile && !validationError && (
+                  <div className="mt-8">
+                    <Button
+                      size="lg"
+                      onClick={handleAnalyze}
+                      disabled={uploading}
+                      className="w-full bg-[#111111] hover:bg-[#333333] text-white text-lg py-6 rounded-full"
+                    >
+                      {uploading ? 'Validating...' : 'Analyze My Inspiration'}
+                    </Button>
                   </div>
+                )}
+              </div>
+
+              {/* Sample Images Section */}
+              <div className="mt-16">
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-bold mb-3 text-[#111111]">
+                    Don't Have a Photo? Try One of Our Favourites!
+                  </h2>
+                  <p className="text-base text-[#555555]">
+                    Choose one of these looks to see how Homable works.
+                  </p>
                 </div>
-              ))}
-            </div>
-          </div>
+
+                {/* Categories */}
+                <div className="space-y-12">
+                  {SAMPLE_CATEGORIES.map((category) => (
+                    <div key={category.id}>
+                      <div className="mb-4">
+                        <h3 className="text-xl font-semibold text-[#111111] mb-1">
+                          {category.title}
+                        </h3>
+                        <p className="text-sm text-[#555555]">
+                          {category.description}
+                        </p>
+                      </div>
+                      
+                      {/* Responsive Grid: 2 cols mobile, 3 cols tablet/desktop */}
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {category.images.map((image, index) => (
+                          <Card
+                            key={index}
+                            className="overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105 rounded-2xl border-0"
+                            onClick={() => !uploading && handleSampleImageClick(image.url, image.alt)}
+                          >
+                            <div className="aspect-[4/3] overflow-hidden">
+                              <img
+                                src={image.url}
+                                alt={image.alt}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Start with Specs Tab */}
+            <TabsContent value="specs">
+              <SpecsCategorySelection />
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
 

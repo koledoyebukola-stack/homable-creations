@@ -17,19 +17,49 @@ import {
 import { 
   Loader2, 
   ArrowLeft, 
-  ExternalLink, 
   Pencil, 
   Check, 
   X, 
   Trash2,
   PartyPopper,
   Share2,
-  MoreVertical
+  MoreVertical,
+  Search,
+  ExternalLink
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ShareModal from '@/components/ShareModal';
 import { toast } from 'sonner';
+
+// Detect user location and return appropriate retailer domains
+function getLocalizedRetailers() {
+  // Try to detect location from browser
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const isCanada = timezone.includes('America') && (
+    timezone.includes('Toronto') || 
+    timezone.includes('Vancouver') || 
+    timezone.includes('Montreal') ||
+    timezone.includes('Edmonton')
+  );
+
+  if (isCanada) {
+    return [
+      { name: 'Amazon', url: 'https://www.amazon.ca/s?k=', color: 'text-[#FF9900]' },
+      { name: 'Wayfair', url: 'https://www.wayfair.ca/keyword.php?keyword=', color: 'text-[#7B189F]' },
+      { name: 'Walmart', url: 'https://www.walmart.ca/search?q=', color: 'text-[#0071CE]' },
+      { name: 'Temu', url: 'https://www.temu.com/search_result.html?search_key=', color: 'text-[#FF7A00]' }
+    ];
+  }
+
+  // Default to US
+  return [
+    { name: 'Amazon', url: 'https://www.amazon.com/s?k=', color: 'text-[#FF9900]' },
+    { name: 'Wayfair', url: 'https://www.wayfair.com/keyword.php?keyword=', color: 'text-[#7B189F]' },
+    { name: 'Walmart', url: 'https://www.walmart.com/search?q=', color: 'text-[#0071CE]' },
+    { name: 'Temu', url: 'https://www.temu.com/search_result.html?search_key=', color: 'text-[#FF7A00]' }
+  ];
+}
 
 export default function ChecklistDetail() {
   const { id } = useParams<{ id: string }>();
@@ -42,6 +72,7 @@ export default function ChecklistDetail() {
   const [newName, setNewName] = useState('');
   const [savingName, setSavingName] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [retailers] = useState(getLocalizedRetailers());
 
   useEffect(() => {
     if (id) {
@@ -391,15 +422,33 @@ export default function ChecklistDetail() {
                           {item.item_name}
                         </label>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleGoogleSearch(item.item_name)}
-                        className="shrink-0"
-                      >
-                        <ExternalLink className="h-4 w-4 mr-1" />
-                        Search
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="shrink-0"
+                          >
+                            <Search className="h-4 w-4 mr-1" />
+                            Search
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onClick={() => handleGoogleSearch(item.item_name)}>
+                            <Search className="mr-2 h-4 w-4" />
+                            Google Search
+                          </DropdownMenuItem>
+                          {retailers.map((retailer) => (
+                            <DropdownMenuItem 
+                              key={retailer.name}
+                              onClick={() => window.open(`${retailer.url}${encodeURIComponent(item.item_name)}`, '_blank')}
+                            >
+                              <ExternalLink className={`mr-2 h-4 w-4 ${retailer.color}`} />
+                              {retailer.name}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 ))}
@@ -437,15 +486,33 @@ export default function ChecklistDetail() {
                           {item.item_name}
                         </label>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleGoogleSearch(item.item_name)}
-                        className="shrink-0"
-                      >
-                        <ExternalLink className="h-4 w-4 mr-1" />
-                        Search
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="shrink-0"
+                          >
+                            <Search className="h-4 w-4 mr-1" />
+                            Search
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onClick={() => handleGoogleSearch(item.item_name)}>
+                            <Search className="mr-2 h-4 w-4" />
+                            Google Search
+                          </DropdownMenuItem>
+                          {retailers.map((retailer) => (
+                            <DropdownMenuItem 
+                              key={retailer.name}
+                              onClick={() => window.open(`${retailer.url}${encodeURIComponent(item.item_name)}`, '_blank')}
+                            >
+                              <ExternalLink className={`mr-2 h-4 w-4 ${retailer.color}`} />
+                              {retailer.name}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 ))}

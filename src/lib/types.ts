@@ -6,6 +6,10 @@ export interface Board {
   source_image_url?: string;
   status: string;
   detected_items_count: number;
+  room_materials?: {
+    walls?: string;
+    floors?: string;
+  };
   created_at: string;
   updated_at: string;
 }
@@ -18,6 +22,12 @@ export interface DetectedItem {
   style?: string;
   dominant_color?: string;
   materials?: string[];
+  dimensions?: {
+    width?: string;
+    length?: string;
+    height?: string;
+    diameter?: string;
+  };
   tags?: string[];
   description?: string;
   confidence?: number;
@@ -85,4 +95,25 @@ export interface ChecklistWithItems extends Checklist {
   items: ChecklistItem[];
   completed_count: number;
   total_count: number;
+}
+
+export interface SpecsHistory {
+  id: string;
+  user_id: string;
+  category: string;
+  specifications: Record<string, string | boolean>;
+  search_queries: string[];
+  created_at: string;
+}
+
+export interface HistoryItem {
+  id: string;
+  type: 'inspiration' | 'specs';
+  title: string;
+  created_at: string;
+  image_url?: string;
+  category?: string;
+  specifications?: Record<string, string | boolean>;
+  search_queries?: string[];
+  board_id?: string;
 }
