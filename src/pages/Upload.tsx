@@ -226,7 +226,7 @@ export default function Upload() {
                   <div className="flex items-start gap-3">
                     <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-blue-900">
-                      <span className="font-medium">Homable works best with home decor photos.</span> Non-decor images may not be analyzed.
+                      <span className="font-medium">Homable works best with home and event decor photos.</span> Non-decor images may not be analyzed.
                     </p>
                   </div>
                 </div>
