@@ -66,6 +66,19 @@ const COLOR_WHITELIST = [
   'silver', 'clear', 'natural', 'wood'
 ];
 
+// Shape whitelist for tag extraction
+const SHAPE_WHITELIST = ['round', 'rectangular', 'square', 'oval'];
+
+// Categories that support shape in search queries
+const SHAPE_SUPPORTED_CATEGORIES = [
+  'coffee table',
+  'side table',
+  'dining table',
+  'chair',
+  'rug',
+  'mirror'
+];
+
 /**
  * Detect user's country code using IP-based geolocation
  * Uses multiple fallback services for reliability
@@ -179,46 +192,66 @@ async function getRetailerDomain(retailer: string): Promise<string> {
 
 /**
  * Build normalized retailer query for Inspiration flow
- * Ensures color is always included when available
+ * Constructs query with color, shape (for supported categories), and material
+ * Priority order: color → shape → material → base item name
  * 
  * @param item - DetectedItem from inspiration analysis
- * @returns Normalized query string with color included
+ * @returns Normalized query string with attributes included
  */
 export function buildRetailerQuery(item: DetectedItem): string {
   const itemName = item.item_name.trim().toLowerCase();
+  const queryParts: string[] = [];
   
-  // Check if color is already in item_name
+  // 1. Add color (if not already in item_name)
   const hasColorInName = COLOR_WHITELIST.some(color => 
     itemName.includes(color.toLowerCase())
   );
   
-  if (hasColorInName) {
-    // Color already present, use item_name as-is
-    return item.item_name;
-  }
-  
-  // Try to get color from dominant_color
-  if (item.dominant_color) {
-    const color = item.dominant_color.trim().toLowerCase();
-    // Only add if it's a valid color from whitelist
-    if (COLOR_WHITELIST.includes(color)) {
-      return `${color} ${item.item_name}`;
+  if (!hasColorInName) {
+    // Try dominant_color first
+    if (item.dominant_color) {
+      const color = item.dominant_color.trim().toLowerCase();
+      if (COLOR_WHITELIST.includes(color)) {
+        queryParts.push(color);
+      }
+    } else if (item.tags && Array.isArray(item.tags)) {
+      // Fall back to color from tags
+      const colorFromTags = item.tags.find(tag => 
+        COLOR_WHITELIST.includes(tag.toLowerCase())
+      );
+      if (colorFromTags) {
+        queryParts.push(colorFromTags.toLowerCase());
+      }
     }
   }
   
-  // Try to infer color from tags
-  if (item.tags && Array.isArray(item.tags)) {
-    const colorFromTags = item.tags.find(tag => 
-      COLOR_WHITELIST.includes(tag.toLowerCase())
+  // 2. Add shape (only for supported categories, only if found in tags)
+  const categoryLower = item.category?.toLowerCase() || '';
+  const isCategorySupportedForShape = SHAPE_SUPPORTED_CATEGORIES.some(
+    cat => categoryLower.includes(cat.toLowerCase())
+  );
+  
+  if (isCategorySupportedForShape && item.tags && Array.isArray(item.tags)) {
+    const shapeFromTags = item.tags.find(tag => 
+      SHAPE_WHITELIST.includes(tag.toLowerCase())
     );
-    
-    if (colorFromTags) {
-      return `${colorFromTags.toLowerCase()} ${item.item_name}`;
+    if (shapeFromTags) {
+      queryParts.push(shapeFromTags.toLowerCase());
     }
   }
   
-  // No color found, return item_name as-is
-  return item.item_name;
+  // 3. Add material (if present and not already in item_name)
+  if (item.materials && Array.isArray(item.materials) && item.materials.length > 0) {
+    const firstMaterial = item.materials[0].trim().toLowerCase();
+    if (!itemName.includes(firstMaterial)) {
+      queryParts.push(firstMaterial);
+    }
+  }
+  
+  // 4. Add base item name
+  queryParts.push(item.item_name);
+  
+  return queryParts.join(' ');
 }
 
 /**
