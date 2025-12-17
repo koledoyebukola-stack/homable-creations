@@ -81,29 +81,32 @@ function getRetailerDomain(retailer: string): string {
 
 /**
  * Create Amazon search URL with location-based routing
+ * Uses country-specific domain (e.g., amazon.ca for Canada)
  */
 export function getAmazonSearchUrl(query: string): string {
   const domain = getRetailerDomain('amazon');
   const encodedQuery = encodeURIComponent(query);
-  return `https://www.${domain}/s?k=${encodedQuery}`;
+  return `https://${domain}/s?k=${encodedQuery}`;
 }
 
 /**
  * Create Walmart search URL with location-based routing
+ * Uses country-specific domain (e.g., walmart.ca for Canada)
  */
 export function getWalmartSearchUrl(query: string): string {
   const domain = getRetailerDomain('walmart');
   const encodedQuery = encodeURIComponent(query);
-  return `https://www.${domain}/search?q=${encodedQuery}`;
+  return `https://${domain}/search?q=${encodedQuery}`;
 }
 
 /**
  * Create Wayfair search URL with location-based routing
+ * Uses country-specific domain (e.g., wayfair.ca for Canada)
  */
 export function getWayfairSearchUrl(query: string): string {
   const domain = getRetailerDomain('wayfair');
   const encodedQuery = encodeURIComponent(query);
-  return `https://www.${domain}/keyword.php?keyword=${encodedQuery}`;
+  return `https://${domain}/keyword.php?keyword=${encodedQuery}`;
 }
 
 /**
@@ -112,16 +115,18 @@ export function getWayfairSearchUrl(query: string): string {
 export function getTemuSearchUrl(query: string): string {
   const domain = getRetailerDomain('temu');
   const encodedQuery = encodeURIComponent(query);
-  return `https://www.${domain}/search_result.html?search_key=${encodedQuery}`;
+  return `https://${domain}/search_result.html?search_key=${encodedQuery}`;
 }
 
 /**
  * Create Shein search URL with location-based routing
+ * Uses /pdsearch/ format to avoid 404 errors
+ * Example: https://us.shein.com/pdsearch/light%20blue%20console%20table/
  */
 export function getSheinSearchUrl(query: string): string {
   const domain = getRetailerDomain('shein');
   const encodedQuery = encodeURIComponent(query);
-  return `https://${domain}/search?q=${encodedQuery}`;
+  return `https://${domain}/pdsearch/${encodedQuery}/`;
 }
 
 /**
