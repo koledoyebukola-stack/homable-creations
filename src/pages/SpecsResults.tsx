@@ -8,6 +8,14 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, ExternalLink, Search, Share2, CheckCircle2, TrendingDown, Maximize2, Edit } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { 
+  getAmazonSearchUrl, 
+  getWalmartSearchUrl, 
+  getWayfairSearchUrl, 
+  getTemuSearchUrl, 
+  getSheinSearchUrl,
+  getGoogleSearchUrl 
+} from '@/lib/retailer-utils';
 
 interface SpecsData {
   category: string;
@@ -45,35 +53,6 @@ const FIELD_LABELS: Record<string, string> = {
   easy_returns: 'Easy returns',
   lowest_price: 'Lowest price'
 };
-
-// Detect user location and return appropriate retailer domains
-function getLocalizedRetailers() {
-  // Try to detect location from browser
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const isCanada = timezone.includes('America') && (
-    timezone.includes('Toronto') || 
-    timezone.includes('Vancouver') || 
-    timezone.includes('Montreal') ||
-    timezone.includes('Edmonton')
-  );
-
-  if (isCanada) {
-    return [
-      { name: 'Amazon', url: 'https://www.amazon.ca/s?k=', color: 'border-[#FF9900] text-[#111111] hover:bg-[#FF9900]/10', priority: 'primary' },
-      { name: 'Wayfair', url: 'https://www.wayfair.ca/keyword.php?keyword=', color: 'border-[#7B189F] text-[#111111] hover:bg-[#7B189F]/10', priority: 'primary' },
-      { name: 'Walmart', url: 'https://www.walmart.ca/search?q=', color: 'border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10', priority: 'primary' },
-      { name: 'Temu', url: 'https://www.temu.com/search_result.html?search_key=', color: 'border-[#FF7A00] text-[#555555] hover:bg-[#FF7A00]/10', priority: 'secondary' }
-    ];
-  }
-
-  // Default to US
-  return [
-    { name: 'Amazon', url: 'https://www.amazon.com/s?k=', color: 'border-[#FF9900] text-[#111111] hover:bg-[#FF9900]/10', priority: 'primary' },
-    { name: 'Wayfair', url: 'https://www.wayfair.com/keyword.php?keyword=', color: 'border-[#7B189F] text-[#111111] hover:bg-[#7B189F]/10', priority: 'primary' },
-    { name: 'Walmart', url: 'https://www.walmart.com/search?q=', color: 'border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10', priority: 'primary' },
-    { name: 'Temu', url: 'https://www.temu.com/search_result.html?search_key=', color: 'border-[#FF7A00] text-[#555555] hover:bg-[#FF7A00]/10', priority: 'secondary' }
-  ];
-}
 
 function generateSearchOptions(category: string, data: Record<string, string | boolean>): SearchOption[] {
   const baseTerms: string[] = [];
@@ -200,7 +179,6 @@ export default function SpecsResults() {
   const navigate = useNavigate();
   const [specsData, setSpecsData] = useState<SpecsData | null>(null);
   const [searchOptions, setSearchOptions] = useState<SearchOption[]>([]);
-  const [retailers] = useState(getLocalizedRetailers());
 
   useEffect(() => {
     const category = searchParams.get('category');
@@ -248,9 +226,6 @@ export default function SpecsResults() {
   const handleEditSpecs = () => {
     navigate(`/specs/${specsData.category}?edit=true&data=${encodeURIComponent(JSON.stringify(specsData.data))}`);
   };
-
-  const primaryRetailers = retailers.filter(r => r.priority === 'primary');
-  const secondaryRetailers = retailers.filter(r => r.priority === 'secondary');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
@@ -359,46 +334,68 @@ export default function SpecsResults() {
                           Search on:
                         </p>
                         
-                        {/* Primary retailers */}
+                        {/* Primary retailers: Amazon, Wayfair, Walmart */}
                         <div className="grid grid-cols-3 gap-2">
-                          {primaryRetailers.map((retailer) => (
-                            <Button
-                              key={retailer.name}
-                              variant="outline"
-                              size="sm"
-                              className={`rounded-full bg-white font-medium ${retailer.color}`}
-                              onClick={() => window.open(`${retailer.url}${encodeURIComponent(option.query)}`, '_blank')}
-                            >
-                              {retailer.name}
-                              <ExternalLink className="ml-1.5 h-3 w-3" />
-                            </Button>
-                          ))}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full bg-white border border-[#FF9900] text-[#111111] hover:bg-[#FF9900]/10 font-medium"
+                            onClick={() => window.open(getAmazonSearchUrl(option.query), '_blank')}
+                          >
+                            Amazon
+                            <ExternalLink className="ml-1.5 h-3 w-3" />
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
+                            onClick={() => window.open(getWayfairSearchUrl(option.query), '_blank')}
+                          >
+                            Wayfair
+                            <ExternalLink className="ml-1.5 h-3 w-3" />
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
+                            onClick={() => window.open(getWalmartSearchUrl(option.query), '_blank')}
+                          >
+                            Walmart
+                            <ExternalLink className="ml-1.5 h-3 w-3" />
+                          </Button>
                         </div>
 
-                        {/* Secondary retailers */}
-                        {secondaryRetailers.length > 0 && (
-                          <div className="grid grid-cols-3 gap-2">
-                            {secondaryRetailers.map((retailer) => (
-                              <Button
-                                key={retailer.name}
-                                variant="outline"
-                                size="sm"
-                                className={`rounded-full bg-white ${retailer.color}`}
-                                onClick={() => window.open(`${retailer.url}${encodeURIComponent(option.query)}`, '_blank')}
-                              >
-                                {retailer.name}
-                                <ExternalLink className="ml-1.5 h-3 w-3" />
-                              </Button>
-                            ))}
-                          </div>
-                        )}
+                        {/* Secondary retailers: Temu & Shein */}
+                        <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full bg-white border border-[#FF7A00] text-[#555555] hover:bg-[#FF7A00]/10"
+                            onClick={() => window.open(getTemuSearchUrl(option.query), '_blank')}
+                          >
+                            Temu
+                            <ExternalLink className="ml-1.5 h-3 w-3" />
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full bg-white border border-[#000000] text-[#555555] hover:bg-[#000000]/10"
+                            onClick={() => window.open(getSheinSearchUrl(option.query), '_blank')}
+                          >
+                            Shein
+                            <ExternalLink className="ml-1.5 h-3 w-3" />
+                          </Button>
+                        </div>
 
                         {/* Google Search Link */}
                         <Button
                           variant="ghost"
                           size="sm"
                           className="w-full text-[#555555] hover:text-[#111111]"
-                          onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(option.query)}`, '_blank')}
+                          onClick={() => window.open(getGoogleSearchUrl(option.query), '_blank')}
                         >
                           <Search className="mr-2 h-4 w-4" />
                           Search the web (Google)

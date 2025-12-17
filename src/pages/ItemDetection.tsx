@@ -14,6 +14,14 @@ import { DetectedItem, Product, Board, Checklist } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { ExternalLink, Star, Share2, Upload, Search, ListChecks, Eye } from 'lucide-react';
+import { 
+  getAmazonSearchUrl, 
+  getWalmartSearchUrl, 
+  getWayfairSearchUrl, 
+  getTemuSearchUrl, 
+  getSheinSearchUrl,
+  getGoogleSearchUrl 
+} from '@/lib/retailer-utils';
 
 // 1. Define the interface for the full Search Response object (assumed to be the return type of searchProducts)
 interface SearchResponse {
@@ -446,11 +454,6 @@ export default function ItemDetection() {
     return itemResult && !itemResult.message && itemResult.products.length === 0;
   });
 
-  const createGoogleSearchUrl = (productTitle: string) => {
-    const encodedTitle = encodeURIComponent(productTitle);
-    return `https://www.google.com/search?q=${encodedTitle}`;
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
@@ -817,7 +820,7 @@ export default function ItemDetection() {
                               {/* PRIMARY: Retailer Buttons (3 columns grid) */}
                               <div className="grid grid-cols-3 gap-2">
                                 <Button
-                                  onClick={() => window.open(`https://www.amazon.com/s?k=${encodeURIComponent(item.item_name)}`, '_blank')}
+                                  onClick={() => window.open(getAmazonSearchUrl(item.item_name), '_blank')}
                                   variant="outline"
                                   size="sm"
                                   className="rounded-full bg-white border border-[#FF9900] text-[#111111] hover:bg-[#FF9900]/10 font-medium"
@@ -827,7 +830,7 @@ export default function ItemDetection() {
                                 </Button>
 
                                 <Button
-                                  onClick={() => window.open(`https://www.wayfair.com/keyword.php?keyword=${encodeURIComponent(item.item_name)}`, '_blank')}
+                                  onClick={() => window.open(getWayfairSearchUrl(item.item_name), '_blank')}
                                   variant="outline"
                                   size="sm"
                                   className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
@@ -837,7 +840,7 @@ export default function ItemDetection() {
                                 </Button>
 
                                 <Button
-                                  onClick={() => window.open(`https://www.walmart.com/search?q=${encodeURIComponent(item.item_name)}`, '_blank')}
+                                  onClick={() => window.open(getWalmartSearchUrl(item.item_name), '_blank')}
                                   variant="outline"
                                   size="sm"
                                   className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
@@ -847,10 +850,10 @@ export default function ItemDetection() {
                                 </Button>
                               </div>
 
-                              {/* SECONDARY: Temu Button */}
-                              <div className="grid grid-cols-3 gap-2">
+                              {/* SECONDARY: Temu & Shein Buttons */}
+                              <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
                                 <Button
-                                  onClick={() => window.open(`https://www.temu.com/search_result.html?search_key=${encodeURIComponent(item.item_name)}`, '_blank')}
+                                  onClick={() => window.open(getTemuSearchUrl(item.item_name), '_blank')}
                                   variant="outline"
                                   size="sm"
                                   className="rounded-full bg-white border border-[#FF7A00] text-[#555555] hover:bg-[#FF7A00]/10"
@@ -858,11 +861,21 @@ export default function ItemDetection() {
                                   Temu
                                   <ExternalLink className="ml-1.5 h-3 w-3" />
                                 </Button>
+
+                                <Button
+                                  onClick={() => window.open(getSheinSearchUrl(item.item_name), '_blank')}
+                                  variant="outline"
+                                  size="sm"
+                                  className="rounded-full bg-white border border-[#000000] text-[#555555] hover:bg-[#000000]/10"
+                                >
+                                  Shein
+                                  <ExternalLink className="ml-1.5 h-3 w-3" />
+                                </Button>
                               </div>
 
                               {/* SECONDARY: Google Search Button */}
                               <Button
-                                onClick={() => window.open(createGoogleSearchUrl(item.item_name), '_blank')}
+                                onClick={() => window.open(getGoogleSearchUrl(item.item_name), '_blank')}
                                 variant="ghost"
                                 size="sm"
                                 className="w-full text-[#555555] hover:text-[#111111]"
@@ -961,7 +974,7 @@ export default function ItemDetection() {
                               {/* PRIMARY: Retailer Buttons */}
                               <div className="grid grid-cols-3 gap-2 max-w-md mx-auto">
                                 <Button
-                                  onClick={() => window.open(`https://www.amazon.com/s?k=${encodeURIComponent(item.item_name)}`, '_blank')}
+                                  onClick={() => window.open(getAmazonSearchUrl(item.item_name), '_blank')}
                                   variant="outline"
                                   size="sm"
                                   className="rounded-full bg-white border border-[#FF9900] text-[#111111] hover:bg-[#FF9900]/10 font-medium"
@@ -971,7 +984,7 @@ export default function ItemDetection() {
                                 </Button>
 
                                 <Button
-                                  onClick={() => window.open(`https://www.wayfair.com/keyword.php?keyword=${encodeURIComponent(item.item_name)}`, '_blank')}
+                                  onClick={() => window.open(getWayfairSearchUrl(item.item_name), '_blank')}
                                   variant="outline"
                                   size="sm"
                                   className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
@@ -981,7 +994,7 @@ export default function ItemDetection() {
                                 </Button>
 
                                 <Button
-                                  onClick={() => window.open(`https://www.walmart.com/search?q=${encodeURIComponent(item.item_name)}`, '_blank')}
+                                  onClick={() => window.open(getWalmartSearchUrl(item.item_name), '_blank')}
                                   variant="outline"
                                   size="sm"
                                   className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
@@ -991,10 +1004,10 @@ export default function ItemDetection() {
                                 </Button>
                               </div>
 
-                              {/* SECONDARY: Temu Button */}
-                              <div className="grid grid-cols-3 gap-2 max-w-md mx-auto">
+                              {/* SECONDARY: Temu & Shein Buttons */}
+                              <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
                                 <Button
-                                  onClick={() => window.open(`https://www.temu.com/search_result.html?search_key=${encodeURIComponent(item.item_name)}`, '_blank')}
+                                  onClick={() => window.open(getTemuSearchUrl(item.item_name), '_blank')}
                                   variant="outline"
                                   size="sm"
                                   className="rounded-full bg-white border border-[#FF7A00] text-[#555555] hover:bg-[#FF7A00]/10"
@@ -1002,11 +1015,21 @@ export default function ItemDetection() {
                                   Temu
                                   <ExternalLink className="ml-1.5 h-3 w-3" />
                                 </Button>
+
+                                <Button
+                                  onClick={() => window.open(getSheinSearchUrl(item.item_name), '_blank')}
+                                  variant="outline"
+                                  size="sm"
+                                  className="rounded-full bg-white border border-[#000000] text-[#555555] hover:bg-[#000000]/10"
+                                >
+                                  Shein
+                                  <ExternalLink className="ml-1.5 h-3 w-3" />
+                                </Button>
                               </div>
 
                               {/* SECONDARY: Google Search Button */}
                               <Button
-                                onClick={() => window.open(createGoogleSearchUrl(item.item_name), '_blank')}
+                                onClick={() => window.open(getGoogleSearchUrl(item.item_name), '_blank')}
                                 variant="ghost"
                                 size="sm"
                                 className="w-full text-[#555555] hover:text-[#111111]"
