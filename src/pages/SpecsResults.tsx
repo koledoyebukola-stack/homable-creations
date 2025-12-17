@@ -66,45 +66,106 @@ async function handleRetailerClick(getUrlFn: (query: string) => Promise<string>,
 }
 
 function generateSearchOptions(category: string, data: Record<string, string | boolean>): SearchOption[] {
-  const baseTerms: string[] = [];
+  const queryParts: string[] = [];
   
-  // Build base query from required and optional fields
-  if (category === 'sofa') {
-    if (data.width) baseTerms.push(`${data.width} inch`);
-    if (data.shape) baseTerms.push(data.shape as string);
-    baseTerms.push('sectional sofa');
-    if (data.seating) baseTerms.push(`${data.seating} seater`);
-    if (data.fabric) baseTerms.push(data.fabric as string);
-    if (data.color) baseTerms.push(data.color as string);
-  } else if (category === 'dining-table') {
-    if (data.length) baseTerms.push(`${data.length} inch`);
-    if (data.shape) baseTerms.push(data.shape as string);
-    baseTerms.push('dining table');
-    if (data.seating) baseTerms.push(`${data.seating} seater`);
-    if (data.material) baseTerms.push(data.material as string);
-    if (data.color) baseTerms.push(data.color as string);
-  } else if (category === 'rug') {
-    if (data.width && data.length) baseTerms.push(`${data.width}x${data.length} ft`);
-    if (data.shape) baseTerms.push(data.shape as string);
-    baseTerms.push('rug');
-    if (data.material) baseTerms.push(data.material as string);
-    if (data.color) baseTerms.push(data.color as string);
-  } else if (category === 'bed') {
-    if (data.size) baseTerms.push(data.size as string);
-    baseTerms.push('bed frame');
-    if (data.style) baseTerms.push(data.style as string);
-    if (data.material) baseTerms.push(data.material as string);
-    if (data.color) baseTerms.push(data.color as string);
-  } else if (category === 'desk') {
-    if (data.width) baseTerms.push(`${data.width} inch`);
-    if (data.style) baseTerms.push(data.style as string);
-    baseTerms.push('desk');
-    if (data.material) baseTerms.push(data.material as string);
-    if (data.color) baseTerms.push(data.color as string);
+  // Build query following priority order: Color → Material/Fabric → Category+Variant → Seating → Dimensions
+  
+  // 1. Color (if provided)
+  if (data.color) {
+    queryParts.push(data.color as string);
   }
-
+  
+  // 2. Material/Fabric (if provided)
+  if (data.fabric) {
+    queryParts.push(data.fabric as string);
+  } else if (data.material) {
+    queryParts.push(data.material as string);
+  }
+  
+  // 3. Category + key variant
+  if (category === 'sofa') {
+    // Add shape/orientation as variant
+    if (data.shape) {
+      queryParts.push('sectional sofa');
+      queryParts.push(data.shape as string);
+    } else {
+      queryParts.push('sectional sofa');
+    }
+    
+    // 4. Seating capacity
+    if (data.seating) {
+      queryParts.push(`${data.seating} seater`);
+    }
+    
+    // 5. Dimension constraints
+    if (data.width) {
+      queryParts.push(`under ${data.width} inches`);
+    }
+  } else if (category === 'dining-table') {
+    // Add shape as variant
+    if (data.shape) {
+      queryParts.push(`${data.shape} dining table`);
+    } else {
+      queryParts.push('dining table');
+    }
+    
+    // 4. Seating capacity
+    if (data.seating) {
+      queryParts.push(`${data.seating} seater`);
+    }
+    
+    // 5. Dimension constraints
+    if (data.length) {
+      queryParts.push(`under ${data.length} inches`);
+    }
+  } else if (category === 'rug') {
+    // Add shape as variant
+    if (data.shape) {
+      queryParts.push(`${data.shape} area rug`);
+    } else {
+      queryParts.push('area rug');
+    }
+    
+    // 5. Dimension constraints (rugs use feet)
+    if (data.width && data.length) {
+      queryParts.push(`under ${data.width}x${data.length} feet`);
+    }
+  } else if (category === 'bed') {
+    // Size is part of category variant
+    if (data.size) {
+      queryParts.push(`${data.size} bed frame`);
+    } else {
+      queryParts.push('bed frame');
+    }
+    
+    // Add style if provided
+    if (data.style) {
+      queryParts.push(data.style as string);
+    }
+    
+    // 5. Dimension constraints
+    if (data.height) {
+      queryParts.push(`under ${data.height} inches high`);
+    }
+  } else if (category === 'desk') {
+    // Add style as variant
+    if (data.style) {
+      queryParts.push(`${data.style} desk`);
+    } else {
+      queryParts.push('desk');
+    }
+    
+    // 5. Dimension constraints (width and depth)
+    if (data.width) {
+      queryParts.push(`under ${data.width} inches wide`);
+    }
+    if (data.depth) {
+      queryParts.push(`under ${data.depth} inches deep`);
+    }
+  }
+  
   // Add priority-based modifiers
-  let baseQuery = baseTerms.join(' ');
+  let baseQuery = queryParts.join(' ');
   if (data.easy_returns) {
     baseQuery += ' easy returns';
   }
@@ -121,12 +182,48 @@ function generateSearchOptions(category: string, data: Record<string, string | b
     }
   ];
 
-  // Small-space variant
-  const smallSpaceTerms = baseTerms.filter(term => 
-    !term.includes('inch') && !term.includes('ft') && !term.includes('seater')
-  );
-  smallSpaceTerms.push('small space');
-  let smallSpaceQuery = smallSpaceTerms.join(' ');
+  // Small-space variant (remove dimension constraints)
+  const smallSpaceQueryParts: string[] = [];
+  if (data.color) smallSpaceQueryParts.push(data.color as string);
+  if (data.fabric) smallSpaceQueryParts.push(data.fabric as string);
+  else if (data.material) smallSpaceQueryParts.push(data.material as string);
+  
+  if (category === 'sofa') {
+    if (data.shape) {
+      smallSpaceQueryParts.push('sectional sofa');
+      smallSpaceQueryParts.push(data.shape as string);
+    } else {
+      smallSpaceQueryParts.push('sectional sofa');
+    }
+  } else if (category === 'dining-table') {
+    if (data.shape) {
+      smallSpaceQueryParts.push(`${data.shape} dining table`);
+    } else {
+      smallSpaceQueryParts.push('dining table');
+    }
+  } else if (category === 'rug') {
+    if (data.shape) {
+      smallSpaceQueryParts.push(`${data.shape} area rug`);
+    } else {
+      smallSpaceQueryParts.push('area rug');
+    }
+  } else if (category === 'bed') {
+    if (data.size) {
+      smallSpaceQueryParts.push(`${data.size} bed frame`);
+    } else {
+      smallSpaceQueryParts.push('bed frame');
+    }
+    if (data.style) smallSpaceQueryParts.push(data.style as string);
+  } else if (category === 'desk') {
+    if (data.style) {
+      smallSpaceQueryParts.push(`${data.style} desk`);
+    } else {
+      smallSpaceQueryParts.push('desk');
+    }
+  }
+  
+  smallSpaceQueryParts.push('small space');
+  let smallSpaceQuery = smallSpaceQueryParts.join(' ');
   if (data.easy_returns) smallSpaceQuery += ' easy returns';
   if (data.lowest_price) smallSpaceQuery += ' budget';
   
@@ -137,12 +234,50 @@ function generateSearchOptions(category: string, data: Record<string, string | b
     icon: Maximize2
   });
 
-  // Budget variant
-  const budgetTerms = baseTerms.filter(term => 
-    !term.includes('inch') && !term.includes('ft')
-  );
-  budgetTerms.push('budget');
-  let budgetQuery = budgetTerms.join(' ');
+  // Budget variant (remove dimensions, add budget modifier)
+  const budgetQueryParts: string[] = [];
+  if (data.color) budgetQueryParts.push(data.color as string);
+  if (data.fabric) budgetQueryParts.push(data.fabric as string);
+  else if (data.material) budgetQueryParts.push(data.material as string);
+  
+  if (category === 'sofa') {
+    if (data.shape) {
+      budgetQueryParts.push('sectional sofa');
+      budgetQueryParts.push(data.shape as string);
+    } else {
+      budgetQueryParts.push('sectional sofa');
+    }
+    if (data.seating) budgetQueryParts.push(`${data.seating} seater`);
+  } else if (category === 'dining-table') {
+    if (data.shape) {
+      budgetQueryParts.push(`${data.shape} dining table`);
+    } else {
+      budgetQueryParts.push('dining table');
+    }
+    if (data.seating) budgetQueryParts.push(`${data.seating} seater`);
+  } else if (category === 'rug') {
+    if (data.shape) {
+      budgetQueryParts.push(`${data.shape} area rug`);
+    } else {
+      budgetQueryParts.push('area rug');
+    }
+  } else if (category === 'bed') {
+    if (data.size) {
+      budgetQueryParts.push(`${data.size} bed frame`);
+    } else {
+      budgetQueryParts.push('bed frame');
+    }
+    if (data.style) budgetQueryParts.push(data.style as string);
+  } else if (category === 'desk') {
+    if (data.style) {
+      budgetQueryParts.push(`${data.style} desk`);
+    } else {
+      budgetQueryParts.push('desk');
+    }
+  }
+  
+  budgetQueryParts.push('budget');
+  let budgetQuery = budgetQueryParts.join(' ');
   if (data.easy_returns) budgetQuery += ' easy returns';
   
   options.push({
