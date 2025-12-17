@@ -76,7 +76,7 @@ async function detectUserCountry(): Promise<string> {
 
   // Try multiple IP geolocation services with fallbacks
   const services = [
-    // Service 1: ipapi.co (free, no key required)
+    // Service 1: ipapi.co (free, no key required, HTTPS)
     async () => {
       const response = await fetch('https://ipapi.co/json/', {
         method: 'GET',
@@ -86,16 +86,7 @@ async function detectUserCountry(): Promise<string> {
       const data = await response.json();
       return data.country_code;
     },
-    // Service 2: ip-api.com (free, no key required)
-    async () => {
-      const response = await fetch('http://ip-api.com/json/?fields=countryCode', {
-        method: 'GET'
-      });
-      if (!response.ok) throw new Error('ip-api.com failed');
-      const data = await response.json();
-      return data.countryCode;
-    },
-    // Service 3: ipinfo.io (free tier, no key required for basic use)
+    // Service 2: ipinfo.io (free tier, no key required for basic use, HTTPS)
     async () => {
       const response = await fetch('https://ipinfo.io/json', {
         method: 'GET'
@@ -103,6 +94,15 @@ async function detectUserCountry(): Promise<string> {
       if (!response.ok) throw new Error('ipinfo.io failed');
       const data = await response.json();
       return data.country;
+    },
+    // Service 3: ip-api.com (free, no key required, HTTPS)
+    async () => {
+      const response = await fetch('https://pro.ip-api.com/json/?fields=countryCode&key=free', {
+        method: 'GET'
+      });
+      if (!response.ok) throw new Error('ip-api.com failed');
+      const data = await response.json();
+      return data.countryCode;
     }
   ];
 
