@@ -54,6 +54,17 @@ const FIELD_LABELS: Record<string, string> = {
   lowest_price: 'Lowest price'
 };
 
+// Helper function to handle async retailer button clicks
+async function handleRetailerClick(getUrlFn: (query: string) => Promise<string>, query: string) {
+  try {
+    const url = await getUrlFn(query);
+    window.open(url, '_blank');
+  } catch (error) {
+    console.error('Failed to generate retailer URL:', error);
+    toast.error('Failed to open retailer link');
+  }
+}
+
 function generateSearchOptions(category: string, data: Record<string, string | boolean>): SearchOption[] {
   const baseTerms: string[] = [];
   
@@ -340,7 +351,7 @@ export default function SpecsResults() {
                             variant="outline"
                             size="sm"
                             className="rounded-full bg-white border border-[#FF9900] text-[#111111] hover:bg-[#FF9900]/10 font-medium"
-                            onClick={() => window.open(getAmazonSearchUrl(option.query), '_blank')}
+                            onClick={() => handleRetailerClick(getAmazonSearchUrl, option.query)}
                           >
                             Amazon
                             <ExternalLink className="ml-1.5 h-3 w-3" />
@@ -350,7 +361,7 @@ export default function SpecsResults() {
                             variant="outline"
                             size="sm"
                             className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
-                            onClick={() => window.open(getWayfairSearchUrl(option.query), '_blank')}
+                            onClick={() => handleRetailerClick(getWayfairSearchUrl, option.query)}
                           >
                             Wayfair
                             <ExternalLink className="ml-1.5 h-3 w-3" />
@@ -360,7 +371,7 @@ export default function SpecsResults() {
                             variant="outline"
                             size="sm"
                             className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
-                            onClick={() => window.open(getWalmartSearchUrl(option.query), '_blank')}
+                            onClick={() => handleRetailerClick(getWalmartSearchUrl, option.query)}
                           >
                             Walmart
                             <ExternalLink className="ml-1.5 h-3 w-3" />
@@ -373,7 +384,7 @@ export default function SpecsResults() {
                             variant="outline"
                             size="sm"
                             className="rounded-full bg-white border border-[#FF7A00] text-[#555555] hover:bg-[#FF7A00]/10"
-                            onClick={() => window.open(getTemuSearchUrl(option.query), '_blank')}
+                            onClick={() => handleRetailerClick(getTemuSearchUrl, option.query)}
                           >
                             Temu
                             <ExternalLink className="ml-1.5 h-3 w-3" />
@@ -383,7 +394,7 @@ export default function SpecsResults() {
                             variant="outline"
                             size="sm"
                             className="rounded-full bg-white border border-[#000000] text-[#555555] hover:bg-[#000000]/10"
-                            onClick={() => window.open(getSheinSearchUrl(option.query), '_blank')}
+                            onClick={() => handleRetailerClick(getSheinSearchUrl, option.query)}
                           >
                             Shein
                             <ExternalLink className="ml-1.5 h-3 w-3" />

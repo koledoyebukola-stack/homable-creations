@@ -109,6 +109,17 @@ const handleAffiliateClick = async (itemName: string, affiliateUrl: string, plat
   }
 };
 
+// Helper function to handle async retailer button clicks
+async function handleRetailerClick(getUrlFn: (query: string) => Promise<string>, query: string) {
+  try {
+    const url = await getUrlFn(query);
+    window.open(url, '_blank');
+  } catch (error) {
+    console.error('Failed to generate retailer URL:', error);
+    toast.error('Failed to open retailer link');
+  }
+}
+
 export default function ProductMatches() {
   const { boardId, itemId } = useParams<{ boardId: string; itemId: string }>();
   const navigate = useNavigate();
@@ -268,7 +279,7 @@ export default function ProductMatches() {
                       
                       <div className="grid grid-cols-3 gap-2">
                         <Button
-                          onClick={() => window.open(getAmazonSearchUrl(item.item_name), '_blank')}
+                          onClick={() => handleRetailerClick(getAmazonSearchUrl, item.item_name)}
                           variant="outline"
                           size="sm"
                           className="rounded-full bg-white border border-[#FF9900] text-[#111111] hover:bg-[#FF9900]/10 font-medium"
@@ -278,7 +289,7 @@ export default function ProductMatches() {
                         </Button>
 
                         <Button
-                          onClick={() => window.open(getWayfairSearchUrl(item.item_name), '_blank')}
+                          onClick={() => handleRetailerClick(getWayfairSearchUrl, item.item_name)}
                           variant="outline"
                           size="sm"
                           className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
@@ -288,7 +299,7 @@ export default function ProductMatches() {
                         </Button>
 
                         <Button
-                          onClick={() => window.open(getWalmartSearchUrl(item.item_name), '_blank')}
+                          onClick={() => handleRetailerClick(getWalmartSearchUrl, item.item_name)}
                           variant="outline"
                           size="sm"
                           className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
@@ -301,7 +312,7 @@ export default function ProductMatches() {
                       {/* Secondary Buttons */}
                       <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
                         <Button
-                          onClick={() => window.open(getTemuSearchUrl(item.item_name), '_blank')}
+                          onClick={() => handleRetailerClick(getTemuSearchUrl, item.item_name)}
                           variant="outline"
                           size="sm"
                           className="rounded-full bg-white border border-[#FF7A00] text-[#555555] hover:bg-[#FF7A00]/10"
@@ -311,7 +322,7 @@ export default function ProductMatches() {
                         </Button>
 
                         <Button
-                          onClick={() => window.open(getSheinSearchUrl(item.item_name), '_blank')}
+                          onClick={() => handleRetailerClick(getSheinSearchUrl, item.item_name)}
                           variant="outline"
                           size="sm"
                           className="rounded-full bg-white border border-[#000000] text-[#555555] hover:bg-[#000000]/10"
@@ -420,7 +431,7 @@ export default function ProductMatches() {
                       {/* Primary Retailer Buttons */}
                       <div className="grid grid-cols-3 gap-2">
                         <Button
-                          onClick={() => window.open(getAmazonSearchUrl(item.item_name), '_blank')}
+                          onClick={() => handleRetailerClick(getAmazonSearchUrl, item.item_name)}
                           variant="outline"
                           size="sm"
                           className="rounded-full bg-white border border-[#FF9900] text-[#111111] hover:bg-[#FF9900]/10 font-medium"
@@ -430,7 +441,7 @@ export default function ProductMatches() {
                         </Button>
 
                         <Button
-                          onClick={() => window.open(getWayfairSearchUrl(item.item_name), '_blank')}
+                          onClick={() => handleRetailerClick(getWayfairSearchUrl, item.item_name)}
                           variant="outline"
                           size="sm"
                           className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
@@ -440,7 +451,7 @@ export default function ProductMatches() {
                         </Button>
 
                         <Button
-                          onClick={() => window.open(getWalmartSearchUrl(item.item_name), '_blank')}
+                          onClick={() => handleRetailerClick(getWalmartSearchUrl, item.item_name)}
                           variant="outline"
                           size="sm"
                           className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
@@ -453,7 +464,7 @@ export default function ProductMatches() {
                       {/* Secondary Buttons */}
                       <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
                         <Button
-                          onClick={() => window.open(getTemuSearchUrl(item.item_name), '_blank')}
+                          onClick={() => handleRetailerClick(getTemuSearchUrl, item.item_name)}
                           variant="outline"
                           size="sm"
                           className="rounded-full bg-white border border-[#FF7A00] text-[#555555] hover:bg-[#FF7A00]/10"
@@ -463,7 +474,7 @@ export default function ProductMatches() {
                         </Button>
 
                         <Button
-                          onClick={() => window.open(getSheinSearchUrl(item.item_name), '_blank')}
+                          onClick={() => handleRetailerClick(getSheinSearchUrl, item.item_name)}
                           variant="outline"
                           size="sm"
                           className="rounded-full bg-white border border-[#000000] text-[#555555] hover:bg-[#000000]/10"
