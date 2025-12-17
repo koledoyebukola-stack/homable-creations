@@ -20,7 +20,8 @@ import {
   getWayfairSearchUrl, 
   getTemuSearchUrl, 
   getSheinSearchUrl,
-  getGoogleSearchUrl 
+  getGoogleSearchUrl,
+  buildRetailerQuery
 } from '@/lib/retailer-utils';
 
 // 1. Define the interface for the full Search Response object (assumed to be the return type of searchProducts)
@@ -59,10 +60,11 @@ function isValidProductUrl(url: string | undefined): boolean {
   return true;
 }
 
-// Helper function to handle async retailer button clicks
-async function handleRetailerClick(getUrlFn: (query: string) => Promise<string>, query: string) {
+// Helper function to handle async retailer button clicks with normalized query
+async function handleRetailerClick(getUrlFn: (query: string) => Promise<string>, item: DetectedItem) {
   try {
-    const url = await getUrlFn(query);
+    const normalizedQuery = buildRetailerQuery(item);
+    const url = await getUrlFn(normalizedQuery);
     window.open(url, '_blank');
   } catch (error) {
     console.error('Failed to generate retailer URL:', error);
@@ -831,7 +833,7 @@ export default function ItemDetection() {
                               {/* PRIMARY: Retailer Buttons (3 columns grid) */}
                               <div className="grid grid-cols-3 gap-2">
                                 <Button
-                                  onClick={() => handleRetailerClick(getAmazonSearchUrl, item.item_name)}
+                                  onClick={() => handleRetailerClick(getAmazonSearchUrl, item)}
                                   variant="outline"
                                   size="sm"
                                   className="rounded-full bg-white border border-[#FF9900] text-[#111111] hover:bg-[#FF9900]/10 font-medium"
@@ -841,7 +843,7 @@ export default function ItemDetection() {
                                 </Button>
 
                                 <Button
-                                  onClick={() => handleRetailerClick(getWayfairSearchUrl, item.item_name)}
+                                  onClick={() => handleRetailerClick(getWayfairSearchUrl, item)}
                                   variant="outline"
                                   size="sm"
                                   className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
@@ -851,7 +853,7 @@ export default function ItemDetection() {
                                 </Button>
 
                                 <Button
-                                  onClick={() => handleRetailerClick(getWalmartSearchUrl, item.item_name)}
+                                  onClick={() => handleRetailerClick(getWalmartSearchUrl, item)}
                                   variant="outline"
                                   size="sm"
                                   className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
@@ -864,7 +866,7 @@ export default function ItemDetection() {
                               {/* SECONDARY: Temu & Shein Buttons */}
                               <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
                                 <Button
-                                  onClick={() => handleRetailerClick(getTemuSearchUrl, item.item_name)}
+                                  onClick={() => handleRetailerClick(getTemuSearchUrl, item)}
                                   variant="outline"
                                   size="sm"
                                   className="rounded-full bg-white border border-[#FF7A00] text-[#555555] hover:bg-[#FF7A00]/10"
@@ -874,7 +876,7 @@ export default function ItemDetection() {
                                 </Button>
 
                                 <Button
-                                  onClick={() => handleRetailerClick(getSheinSearchUrl, item.item_name)}
+                                  onClick={() => handleRetailerClick(getSheinSearchUrl, item)}
                                   variant="outline"
                                   size="sm"
                                   className="rounded-full bg-white border border-[#000000] text-[#555555] hover:bg-[#000000]/10"
@@ -886,7 +888,7 @@ export default function ItemDetection() {
 
                               {/* SECONDARY: Google Search Button */}
                               <Button
-                                onClick={() => window.open(getGoogleSearchUrl(item.item_name), '_blank')}
+                                onClick={() => window.open(getGoogleSearchUrl(buildRetailerQuery(item)), '_blank')}
                                 variant="ghost"
                                 size="sm"
                                 className="w-full text-[#555555] hover:text-[#111111]"
@@ -985,7 +987,7 @@ export default function ItemDetection() {
                               {/* PRIMARY: Retailer Buttons */}
                               <div className="grid grid-cols-3 gap-2 max-w-md mx-auto">
                                 <Button
-                                  onClick={() => handleRetailerClick(getAmazonSearchUrl, item.item_name)}
+                                  onClick={() => handleRetailerClick(getAmazonSearchUrl, item)}
                                   variant="outline"
                                   size="sm"
                                   className="rounded-full bg-white border border-[#FF9900] text-[#111111] hover:bg-[#FF9900]/10 font-medium"
@@ -995,7 +997,7 @@ export default function ItemDetection() {
                                 </Button>
 
                                 <Button
-                                  onClick={() => handleRetailerClick(getWayfairSearchUrl, item.item_name)}
+                                  onClick={() => handleRetailerClick(getWayfairSearchUrl, item)}
                                   variant="outline"
                                   size="sm"
                                   className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
@@ -1005,7 +1007,7 @@ export default function ItemDetection() {
                                 </Button>
 
                                 <Button
-                                  onClick={() => handleRetailerClick(getWalmartSearchUrl, item.item_name)}
+                                  onClick={() => handleRetailerClick(getWalmartSearchUrl, item)}
                                   variant="outline"
                                   size="sm"
                                   className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
@@ -1018,7 +1020,7 @@ export default function ItemDetection() {
                               {/* SECONDARY: Temu & Shein Buttons */}
                               <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
                                 <Button
-                                  onClick={() => handleRetailerClick(getTemuSearchUrl, item.item_name)}
+                                  onClick={() => handleRetailerClick(getTemuSearchUrl, item)}
                                   variant="outline"
                                   size="sm"
                                   className="rounded-full bg-white border border-[#FF7A00] text-[#555555] hover:bg-[#FF7A00]/10"
@@ -1028,7 +1030,7 @@ export default function ItemDetection() {
                                 </Button>
 
                                 <Button
-                                  onClick={() => handleRetailerClick(getSheinSearchUrl, item.item_name)}
+                                  onClick={() => handleRetailerClick(getSheinSearchUrl, item)}
                                   variant="outline"
                                   size="sm"
                                   className="rounded-full bg-white border border-[#000000] text-[#555555] hover:bg-[#000000]/10"
@@ -1040,7 +1042,7 @@ export default function ItemDetection() {
 
                               {/* SECONDARY: Google Search Button */}
                               <Button
-                                onClick={() => window.open(getGoogleSearchUrl(item.item_name), '_blank')}
+                                onClick={() => window.open(getGoogleSearchUrl(buildRetailerQuery(item)), '_blank')}
                                 variant="ghost"
                                 size="sm"
                                 className="w-full text-[#555555] hover:text-[#111111]"

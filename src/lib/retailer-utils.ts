@@ -3,6 +3,8 @@
  * Routes users to their local retailer site based on actual location, not browser locale
  */
 
+import { DetectedItem } from './types';
+
 const COUNTRY_CACHE_KEY = 'user_country_code';
 const COUNTRY_CACHE_EXPIRY = 'user_country_expiry';
 const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -56,6 +58,13 @@ const RETAILER_DOMAINS: Record<string, Record<string, string>> = {
     BR: 'br.shein.com',
   },
 };
+
+// Color whitelist for tag extraction
+const COLOR_WHITELIST = [
+  'white', 'black', 'brown', 'beige', 'cream', 
+  'grey', 'gray', 'green', 'blue', 'gold', 
+  'silver', 'clear', 'natural', 'wood'
+];
 
 /**
  * Detect user's country code using IP-based geolocation
@@ -166,6 +175,50 @@ async function getRetailerDomain(retailer: string): Promise<string> {
   
   // Return country-specific domain or fall back to US/.com
   return domains[countryCode] || domains.US || Object.values(domains)[0];
+}
+
+/**
+ * Build normalized retailer query for Inspiration flow
+ * Ensures color is always included when available
+ * 
+ * @param item - DetectedItem from inspiration analysis
+ * @returns Normalized query string with color included
+ */
+export function buildRetailerQuery(item: DetectedItem): string {
+  const itemName = item.item_name.trim().toLowerCase();
+  
+  // Check if color is already in item_name
+  const hasColorInName = COLOR_WHITELIST.some(color => 
+    itemName.includes(color.toLowerCase())
+  );
+  
+  if (hasColorInName) {
+    // Color already present, use item_name as-is
+    return item.item_name;
+  }
+  
+  // Try to get color from dominant_color
+  if (item.dominant_color) {
+    const color = item.dominant_color.trim().toLowerCase();
+    // Only add if it's a valid color from whitelist
+    if (COLOR_WHITELIST.includes(color)) {
+      return `${color} ${item.item_name}`;
+    }
+  }
+  
+  // Try to infer color from tags
+  if (item.tags && Array.isArray(item.tags)) {
+    const colorFromTags = item.tags.find(tag => 
+      COLOR_WHITELIST.includes(tag.toLowerCase())
+    );
+    
+    if (colorFromTags) {
+      return `${colorFromTags.toLowerCase()} ${item.item_name}`;
+    }
+  }
+  
+  // No color found, return item_name as-is
+  return item.item_name;
 }
 
 /**
