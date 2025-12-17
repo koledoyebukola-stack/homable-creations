@@ -5,6 +5,7 @@ import Footer from '@/components/Footer';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Auth from '@/components/AuthModal';
 import ShareModal from '@/components/ShareModal';
+import VisualSearchModal from '@/components/VisualSearchModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,7 +14,7 @@ import { getDetectedItems, getBoardById, getBoards, searchProducts, getProductsF
 import { DetectedItem, Product, Board, Checklist } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { ExternalLink, Star, Share2, Upload, Search, ListChecks, Eye } from 'lucide-react';
+import { ExternalLink, Star, Share2, Upload, Search, ListChecks, Eye, Camera } from 'lucide-react';
 import { 
   getAmazonSearchUrl, 
   getWalmartSearchUrl, 
@@ -92,6 +93,10 @@ export default function ItemDetection() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [savingChecklist, setSavingChecklist] = useState(false);
   const [loadingMoreItems, setLoadingMoreItems] = useState(false);
+  const [visualSearchModal, setVisualSearchModal] = useState<{
+    isOpen: boolean;
+    item: DetectedItem | null;
+  }>({ isOpen: false, item: null });
   
   // Refs for scrolling to item sections
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -896,6 +901,22 @@ export default function ItemDetection() {
                                 <Search className="mr-2 h-4 w-4" />
                                 Search the web (Google)
                               </Button>
+
+                              {/* NEW: More search options section */}
+                              <div className="pt-4 border-t border-gray-200">
+                                <p className="text-xs font-medium text-[#777777] uppercase tracking-wide text-center mb-3">
+                                  More search options
+                                </p>
+                                <Button
+                                  onClick={() => setVisualSearchModal({ isOpen: true, item })}
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full rounded-full bg-white border border-[#C89F7A] text-[#111111] hover:bg-[#C89F7A]/10 font-medium"
+                                >
+                                  <Camera className="mr-2 h-4 w-4" />
+                                  Find exact match (photo)
+                                </Button>
+                              </div>
                             </CardContent>
                           </Card>
                         ) : (
@@ -1050,6 +1071,22 @@ export default function ItemDetection() {
                                 <Search className="mr-2 h-4 w-4" />
                                 Search the web (Google)
                               </Button>
+
+                              {/* NEW: More search options section */}
+                              <div className="pt-4 border-t border-gray-200">
+                                <p className="text-xs font-medium text-[#777777] uppercase tracking-wide text-center mb-3">
+                                  More search options
+                                </p>
+                                <Button
+                                  onClick={() => setVisualSearchModal({ isOpen: true, item })}
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full rounded-full bg-white border border-[#C89F7A] text-[#111111] hover:bg-[#C89F7A]/10 font-medium"
+                                >
+                                  <Camera className="mr-2 h-4 w-4" />
+                                  Find exact match (photo)
+                                </Button>
+                              </div>
                             </div>
                           </>
                         )}
@@ -1299,6 +1336,16 @@ export default function ItemDetection() {
           boardId={board.id}
           checklistId={existingChecklist?.id}
           boardName={board.name}
+        />
+      )}
+
+      {visualSearchModal.item && (
+        <VisualSearchModal
+          isOpen={visualSearchModal.isOpen}
+          onClose={() => setVisualSearchModal({ isOpen: false, item: null })}
+          itemName={visualSearchModal.item.item_name}
+          imageUrl={board?.source_image_url || ''}
+          croppedImageUrl={visualSearchModal.item.position?.cropped_image_url as string | undefined}
         />
       )}
 
