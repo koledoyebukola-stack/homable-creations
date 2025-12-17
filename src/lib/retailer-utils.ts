@@ -4,6 +4,7 @@
  */
 
 import { DetectedItem } from './types';
+import { getShapeForQuery } from './shape-refinement';
 
 const COUNTRY_CACHE_KEY = 'user_country_code';
 const COUNTRY_CACHE_EXPIRY = 'user_country_expiry';
@@ -66,18 +67,121 @@ const COLOR_WHITELIST = [
   'silver', 'clear', 'natural', 'wood'
 ];
 
-// Shape whitelist for tag extraction
-const SHAPE_WHITELIST = ['round', 'rectangular', 'square', 'oval'];
+// Expanded shape whitelist (now includes organic/freeform)
+const SHAPE_WHITELIST = ['organic', 'freeform', 'round', 'rectangular', 'square', 'oval'];
 
 // Categories that support shape in search queries
 const SHAPE_SUPPORTED_CATEGORIES = [
   'coffee table',
   'side table',
   'dining table',
+  'console table',
+  'end table',
   'chair',
   'rug',
   'mirror'
 ];
+
+// Pattern terms whitelist (use longest forms to avoid partial matches)
+const PATTERN_TERMS = [
+  'striped', 'checkered', 'plaid', 'geometric', 
+  'floral', 'animal print', 'bouclé', 'boucle', 'tufted', 
+  'ribbed', 'corduroy', 'velvet', 'chenille', 'tweed',
+  'patterned', 'textured'
+];
+
+// Category-specific subtype terms (whitelist only)
+// Note: "waterfall" removed as it's not a shape
+const SUBTYPE_TERMS: Record<string, string[]> = {
+  'chandelier': ['branch', 'leaf', 'sputnik', 'tiered', 'flush mount', 'pendant'],
+  'lighting': ['branch', 'leaf', 'sputnik', 'tiered', 'flush mount', 'pendant'],
+  'lamp': ['branch', 'leaf', 'sputnik', 'tiered', 'flush mount', 'pendant'],
+  'sofa': ['curved', 'modular', 'chaise', 'low profile', 'tufted'],
+  'sectional': ['curved', 'modular', 'chaise', 'low profile', 'tufted'],
+  'coffee table': ['drum', 'nesting', 'pedestal'],
+  'side table': ['drum', 'nesting', 'pedestal'],
+  'mirror': ['arched', 'full length', 'leaning', 'floor'],
+  'rug': ['runner', 'shag', 'jute', 'woven', 'braided'],
+  'chair': ['wingback', 'barrel', 'slipper', 'accent'],
+  'dining table': ['pedestal', 'trestle', 'extendable']
+};
+
+// Feature terms (lightweight descriptors)
+const FEATURE_TERMS = [
+  'curved', 'rounded', 'scalloped', 'channel tufted', 
+  'upholstered', 'slipcovered', 'nailhead', 'wingback'
+];
+
+/**
+ * Extract descriptors from item fields (tags, name, description)
+ * Returns pattern terms, subtype terms, and feature terms found in the item
+ */
+function extractDescriptors(item: DetectedItem): {
+  patternTerms: string[];
+  subtypeTerms: string[];
+  featureTerms: string[];
+} {
+  const allText = [
+    ...(item.tags || []),
+    item.item_name,
+    item.description || ''
+  ].map(t => t.toLowerCase()).join(' ');
+
+  const categoryLower = item.category?.toLowerCase() || '';
+
+  // Extract pattern terms (exact word match, max 1 to avoid redundancy)
+  const foundPatterns = PATTERN_TERMS.filter(term => {
+    const regex = new RegExp(`\\b${term.toLowerCase()}\\b`, 'i');
+    return regex.test(allText);
+  }).slice(0, 1);
+
+  // Extract category-specific subtype terms (max 2)
+  let foundSubtypes: string[] = [];
+  for (const [category, subtypes] of Object.entries(SUBTYPE_TERMS)) {
+    if (categoryLower.includes(category)) {
+      foundSubtypes = subtypes.filter(term => {
+        const regex = new RegExp(`\\b${term.toLowerCase()}\\b`, 'i');
+        return regex.test(allText);
+      }).slice(0, 2);
+      break;
+    }
+  }
+
+  // Extract feature terms (max 1 to avoid over-constraining)
+  const foundFeatures = FEATURE_TERMS.filter(term => {
+    const regex = new RegExp(`\\b${term.toLowerCase()}\\b`, 'i');
+    return regex.test(allText);
+  }).slice(0, 1);
+
+  return {
+    patternTerms: foundPatterns,
+    subtypeTerms: foundSubtypes,
+    featureTerms: foundFeatures
+  };
+}
+
+/**
+ * Deduplicate tokens in query to avoid repetition
+ */
+function deduplicateTokens(parts: string[]): string[] {
+  const seen = new Set<string>();
+  return parts.filter(part => {
+    const lower = part.toLowerCase();
+    if (seen.has(lower)) {
+      return false;
+    }
+    seen.add(lower);
+    return true;
+  });
+}
+
+/**
+ * Check if a term already exists in the item name
+ */
+function isTermInItemName(term: string, itemName: string): boolean {
+  const regex = new RegExp(`\\b${term.toLowerCase()}\\b`, 'i');
+  return regex.test(itemName.toLowerCase());
+}
 
 /**
  * Detect user's country code using IP-based geolocation
@@ -192,8 +296,8 @@ async function getRetailerDomain(retailer: string): Promise<string> {
 
 /**
  * Build normalized retailer query for Inspiration flow
- * Constructs query with color, shape (for supported categories), and material
- * Priority order: color → shape → material → base item name
+ * Constructs query with color, pattern, shape, subtype/feature, and material
+ * Priority order: color → pattern → shape → subtype/feature → material → base item name
  * 
  * @param item - DetectedItem from inspiration analysis
  * @returns Normalized query string with attributes included
@@ -201,6 +305,9 @@ async function getRetailerDomain(retailer: string): Promise<string> {
 export function buildRetailerQuery(item: DetectedItem): string {
   const itemName = item.item_name.trim().toLowerCase();
   const queryParts: string[] = [];
+  
+  // Extract descriptors from existing fields
+  const descriptors = extractDescriptors(item);
   
   // 1. Add color (if not already in item_name)
   const hasColorInName = COLOR_WHITELIST.some(color => 
@@ -225,22 +332,43 @@ export function buildRetailerQuery(item: DetectedItem): string {
     }
   }
   
-  // 2. Add shape (only for supported categories, only if found in tags)
+  // 2. Add pattern terms (if found and not in item_name)
+  for (const pattern of descriptors.patternTerms) {
+    if (!isTermInItemName(pattern, itemName)) {
+      queryParts.push(pattern);
+    }
+  }
+  
+  // 3. Add shape (with refinement for tables)
   const categoryLower = item.category?.toLowerCase() || '';
   const isCategorySupportedForShape = SHAPE_SUPPORTED_CATEGORIES.some(
     cat => categoryLower.includes(cat.toLowerCase())
   );
   
-  if (isCategorySupportedForShape && item.tags && Array.isArray(item.tags)) {
-    const shapeFromTags = item.tags.find(tag => 
-      SHAPE_WHITELIST.includes(tag.toLowerCase())
-    );
-    if (shapeFromTags) {
-      queryParts.push(shapeFromTags.toLowerCase());
+  if (isCategorySupportedForShape) {
+    // Use shape refinement for better accuracy
+    const refinedShape = getShapeForQuery(item);
+    
+    if (refinedShape && !isTermInItemName(refinedShape, itemName)) {
+      // Normalize "freeform" to "organic" for consistency
+      const normalizedShape = refinedShape === 'freeform' ? 'organic' : refinedShape;
+      queryParts.push(normalizedShape);
     }
   }
   
-  // 3. Add material (if present and not already in item_name)
+  // 4. Add subtype/feature terms (max 2 combined, not in item_name)
+  const combinedDescriptors = [
+    ...descriptors.subtypeTerms,
+    ...descriptors.featureTerms
+  ].slice(0, 2);
+  
+  for (const descriptor of combinedDescriptors) {
+    if (!isTermInItemName(descriptor, itemName)) {
+      queryParts.push(descriptor);
+    }
+  }
+  
+  // 5. Add material (if present and not already in item_name)
   if (item.materials && Array.isArray(item.materials) && item.materials.length > 0) {
     const firstMaterial = item.materials[0].trim().toLowerCase();
     if (!itemName.includes(firstMaterial)) {
@@ -248,10 +376,19 @@ export function buildRetailerQuery(item: DetectedItem): string {
     }
   }
   
-  // 4. Add base item name
-  queryParts.push(item.item_name);
+  // 6. Add base item name (but filter out shape terms that will be replaced)
+  // Remove "freeform" from item name if we're adding "organic"
+  let finalItemName = item.item_name;
+  if (queryParts.some(p => p === 'organic')) {
+    finalItemName = finalItemName.replace(/\bfreeform\b/gi, '').replace(/\bfree\s+form\b/gi, '').trim();
+  }
+  queryParts.push(finalItemName);
   
-  return queryParts.join(' ');
+  // Deduplicate and limit length
+  const dedupedParts = deduplicateTokens(queryParts);
+  const finalQuery = dedupedParts.slice(0, 10).join(' '); // Max 10 words
+  
+  return finalQuery;
 }
 
 /**

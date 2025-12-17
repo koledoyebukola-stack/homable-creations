@@ -830,8 +830,18 @@ export default function ItemDetection() {
                                 Search on:
                               </p>
                               
-                              {/* PRIMARY: Retailer Buttons (3 columns grid) */}
+                              {/* PRIMARY: Retailer Buttons (3 columns grid) - UPDATED ORDER */}
                               <div className="grid grid-cols-3 gap-2">
+                                <Button
+                                  onClick={() => handleRetailerClick(getWalmartSearchUrl, item)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
+                                >
+                                  Walmart
+                                  <ExternalLink className="ml-1.5 h-3 w-3" />
+                                </Button>
+
                                 <Button
                                   onClick={() => handleRetailerClick(getAmazonSearchUrl, item)}
                                   variant="outline"
@@ -849,16 +859,6 @@ export default function ItemDetection() {
                                   className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
                                 >
                                   Wayfair
-                                  <ExternalLink className="ml-1.5 h-3 w-3" />
-                                </Button>
-
-                                <Button
-                                  onClick={() => handleRetailerClick(getWalmartSearchUrl, item)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
-                                >
-                                  Walmart
                                   <ExternalLink className="ml-1.5 h-3 w-3" />
                                 </Button>
                               </div>
@@ -984,8 +984,18 @@ export default function ItemDetection() {
                                 Search on:
                               </p>
                               
-                              {/* PRIMARY: Retailer Buttons */}
+                              {/* PRIMARY: Retailer Buttons - UPDATED ORDER */}
                               <div className="grid grid-cols-3 gap-2 max-w-md mx-auto">
+                                <Button
+                                  onClick={() => handleRetailerClick(getWalmartSearchUrl, item)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
+                                >
+                                  Walmart
+                                  <ExternalLink className="ml-1.5 h-3 w-3" />
+                                </Button>
+
                                 <Button
                                   onClick={() => handleRetailerClick(getAmazonSearchUrl, item)}
                                   variant="outline"
@@ -1003,16 +1013,6 @@ export default function ItemDetection() {
                                   className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
                                 >
                                   Wayfair
-                                  <ExternalLink className="ml-1.5 h-3 w-3" />
-                                </Button>
-
-                                <Button
-                                  onClick={() => handleRetailerClick(getWalmartSearchUrl, item)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
-                                >
-                                  Walmart
                                   <ExternalLink className="ml-1.5 h-3 w-3" />
                                 </Button>
                               </div>
