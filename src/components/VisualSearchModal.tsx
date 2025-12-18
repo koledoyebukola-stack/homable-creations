@@ -22,6 +22,7 @@ export default function VisualSearchModal({
   croppedImageUrl,
 }: VisualSearchModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showNextStep, setShowNextStep] = useState(false);
   const isMobile = useIsMobile();
   const displayImage = croppedImageUrl || imageUrl;
 
@@ -71,18 +72,19 @@ export default function VisualSearchModal({
         duration: 5000,
       });
 
-      // Open Google Images in a new tab after a short delay
-      setTimeout(() => {
-        window.open('https://images.google.com/', '_blank');
-      }, 500);
-
-      onClose();
+      // Show next-step prompt inline
+      setShowNextStep(true);
+      setIsProcessing(false);
     } catch (error) {
       console.error('Failed to process visual search:', error);
       toast.error('Failed to prepare visual search. Please try again.');
-    } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleOpenGoogleImages = () => {
+    window.open('https://images.google.com/', '_blank');
+    onClose();
   };
 
   const content = (
@@ -113,7 +115,7 @@ export default function VisualSearchModal({
       {/* Primary CTA */}
       <Button
         onClick={handleContinueToVisualSearch}
-        disabled={isProcessing}
+        disabled={isProcessing || showNextStep}
         className="w-full bg-[#111111] hover:bg-[#333333] text-white rounded-full py-6 text-base font-semibold"
         size="lg"
       >
@@ -130,10 +132,33 @@ export default function VisualSearchModal({
         )}
       </Button>
 
+      {/* Next-step Prompt (shown after download) */}
+      {showNextStep && (
+        <div className="space-y-3 p-4 bg-[#F5F5F5] rounded-xl border border-gray-200">
+          <p className="text-sm font-bold text-[#111111]">
+            Next step: search with the photo
+          </p>
+          
+          <Button
+            onClick={handleOpenGoogleImages}
+            className="w-full bg-[#111111] hover:bg-[#333333] text-white rounded-full py-3 text-sm font-semibold"
+          >
+            <ExternalLink className="mr-2 h-4 w-4" />
+            Open Google Images
+          </Button>
+          
+          <p className="text-xs text-[#777777] text-center">
+            Upload the photo you just saved to find identical items.
+          </p>
+        </div>
+      )}
+
       {/* Secondary Info */}
-      <p className="text-xs text-center text-[#999999]">
-        This will open a new tab. No data is sent to Google by Homable.
-      </p>
+      {!showNextStep && (
+        <p className="text-xs text-center text-[#999999]">
+          This will open a new tab. No data is sent to Google by Homable.
+        </p>
+      )}
     </div>
   );
 
