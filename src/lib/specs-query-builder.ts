@@ -45,10 +45,9 @@ export function buildSpecsQuery(data: SpecsFormData): string {
   
   // 3. Category + key variant
   if (category === 'sofa') {
-    // Add shape/orientation as variant
-    if (data.shape) {
-      queryParts.push('sectional sofa');
-      queryParts.push(data.shape as string);
+    // Add shape/orientation as variant - avoid "sectional sofa sofa" repetition
+    if (data.shape && data.shape !== 'sofa') {
+      queryParts.push(`${data.shape} sectional sofa`);
     } else {
       queryParts.push('sectional sofa');
     }
@@ -63,7 +62,7 @@ export function buildSpecsQuery(data: SpecsFormData): string {
       queryParts.push(`under ${data.width} inches`);
     }
   } else if (category === 'dining-table') {
-    // Add shape as variant
+    // Add shape as variant - avoid "dining table table" repetition
     if (data.shape) {
       queryParts.push(`${data.shape} dining table`);
     } else {
@@ -80,8 +79,8 @@ export function buildSpecsQuery(data: SpecsFormData): string {
       queryParts.push(`under ${data.length} inches`);
     }
   } else if (category === 'rug') {
-    // Add shape as variant
-    if (data.shape) {
+    // Add shape as variant - avoid "area rug rug" repetition
+    if (data.shape && data.shape !== 'rug') {
       queryParts.push(`${data.shape} area rug`);
     } else {
       queryParts.push('area rug');
@@ -109,8 +108,8 @@ export function buildSpecsQuery(data: SpecsFormData): string {
       queryParts.push(`under ${data.height} inches high`);
     }
   } else if (category === 'desk') {
-    // Add style as variant
-    if (data.style) {
+    // Add style as variant - avoid "desk desk" repetition
+    if (data.style && data.style !== 'desk') {
       queryParts.push(`${data.style} desk`);
     } else {
       queryParts.push('desk');

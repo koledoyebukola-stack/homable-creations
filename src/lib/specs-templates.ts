@@ -67,7 +67,7 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       formData: {
         width: 60,
         seating: 2,
-        shape: 'sofa',
+        shape: 'loveseat',
         orientation: 'reversible',
         fabric: 'linen',
         color: 'blue'
@@ -109,7 +109,7 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       formData: {
         width: 78,
         seating: 3,
-        shape: 'sofa',
+        shape: 'standard',
         orientation: 'reversible',
         fabric: 'cotton',
         color: 'white'
@@ -130,7 +130,7 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       formData: {
         width: 82,
         seating: 3,
-        shape: 'sofa',
+        shape: 'standard',
         orientation: 'reversible',
         fabric: 'leather',
         color: 'brown'
@@ -407,7 +407,7 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       formData: {
         width: 48,
         depth: 24,
-        style: 'writing desk',
+        style: 'writing',
         material: 'wood',
         color: 'white'
       },
@@ -426,7 +426,7 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       formData: {
         width: 60,
         depth: 30,
-        style: 'standing desk',
+        style: 'standing',
         material: 'wood',
         color: 'brown'
       },
@@ -445,7 +445,7 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       formData: {
         width: 36,
         depth: 20,
-        style: 'writing desk',
+        style: 'writing',
         material: 'wood',
         color: 'natural wood'
       },
@@ -464,7 +464,7 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       formData: {
         width: 55,
         depth: 28,
-        style: 'writing desk',
+        style: 'writing',
         material: 'wood',
         color: 'natural wood'
       },
