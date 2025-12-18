@@ -3,17 +3,18 @@ import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Search } from 'lucide-react';
 import { getTemplateById } from '@/lib/specs-templates';
-import { buildRetailerQuery } from '@/lib/retailer-utils';
-
-const RETAILERS = [
-  { name: 'Wayfair', baseUrl: 'https://www.wayfair.com/keyword.php?keyword=' },
-  { name: 'Amazon', baseUrl: 'https://www.amazon.com/s?k=' },
-  { name: 'Walmart', baseUrl: 'https://www.walmart.com/search?q=' },
-  { name: 'Temu', baseUrl: 'https://www.temu.com/search_result.html?search_key=' },
-  { name: 'Shein', baseUrl: 'https://us.shein.com/search?q=' }
-];
+import { buildSpecsQuery } from '@/lib/specs-query-builder';
+import { 
+  getAmazonSearchUrl, 
+  getWalmartSearchUrl, 
+  getWayfairSearchUrl, 
+  getTemuSearchUrl, 
+  getSheinSearchUrl,
+  getGoogleSearchUrl 
+} from '@/lib/retailer-utils';
+import { toast } from 'sonner';
 
 // Field labels by category
 const FIELD_LABELS: Record<string, Record<string, string>> = {
@@ -79,6 +80,17 @@ const formatFieldValue = (fieldId: string, value: string | number, category: str
   return String(value).charAt(0).toUpperCase() + String(value).slice(1);
 };
 
+// Helper function to handle async retailer button clicks
+async function handleRetailerClick(getUrlFn: (query: string) => Promise<string>, query: string) {
+  try {
+    const url = await getUrlFn(query);
+    window.open(url, '_blank');
+  } catch (error) {
+    console.error('Failed to generate retailer URL:', error);
+    toast.error('Failed to open retailer link');
+  }
+}
+
 export default function TemplateResults() {
   const { templateId } = useParams<{ templateId: string }>();
   const navigate = useNavigate();
@@ -110,19 +122,13 @@ export default function TemplateResults() {
   }
 
   // Build search query using the same logic as Specs results
-  const searchQuery = buildRetailerQuery({
-    item_name: template.label,
+  const searchQuery = buildSpecsQuery({
     category: template.category,
     ...template.formData
   });
 
-  const handleRetailerClick = (retailer: typeof RETAILERS[0]) => {
-    const url = `${retailer.baseUrl}${encodeURIComponent(searchQuery)}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
   const handleGoogleSearch = () => {
-    const url = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}&tbm=shop`;
+    const url = getGoogleSearchUrl(searchQuery);
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
@@ -190,23 +196,76 @@ export default function TemplateResults() {
               </div>
             </div>
 
-            {/* Retailer Links */}
+            {/* Search Query Display */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-2xl border border-gray-200">
+              <p className="text-xs font-medium text-[#555555] uppercase tracking-wide mb-2">
+                Search query
+              </p>
+              <p className="text-sm font-mono text-[#111111] break-words">
+                {searchQuery}
+              </p>
+            </div>
+
+            {/* Retailer Buttons - Using IP-based location detection */}
             <div className="mb-6">
               <h2 className="text-xl font-semibold text-[#111111] mb-4">
                 Shop this style
               </h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {RETAILERS.map((retailer) => (
-                  <Button
-                    key={retailer.name}
-                    onClick={() => handleRetailerClick(retailer)}
-                    variant="outline"
-                    className="h-auto py-3 px-4 justify-between hover:bg-gray-50"
-                  >
-                    <span className="font-medium">{retailer.name}</span>
-                    <ExternalLink className="h-4 w-4 ml-2" />
-                  </Button>
-                ))}
+              
+              {/* Primary retailers: Amazon, Wayfair, Walmart */}
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full bg-white border border-[#FF9900] text-[#111111] hover:bg-[#FF9900]/10 font-medium"
+                  onClick={() => handleRetailerClick(getAmazonSearchUrl, searchQuery)}
+                >
+                  Amazon
+                  <ExternalLink className="ml-1.5 h-3 w-3" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
+                  onClick={() => handleRetailerClick(getWayfairSearchUrl, searchQuery)}
+                >
+                  Wayfair
+                  <ExternalLink className="ml-1.5 h-3 w-3" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
+                  onClick={() => handleRetailerClick(getWalmartSearchUrl, searchQuery)}
+                >
+                  Walmart
+                  <ExternalLink className="ml-1.5 h-3 w-3" />
+                </Button>
+              </div>
+
+              {/* Secondary retailers: Temu & Shein */}
+              <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full bg-white border border-[#FF7A00] text-[#555555] hover:bg-[#FF7A00]/10"
+                  onClick={() => handleRetailerClick(getTemuSearchUrl, searchQuery)}
+                >
+                  Temu
+                  <ExternalLink className="ml-1.5 h-3 w-3" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full bg-white border border-[#000000] text-[#555555] hover:bg-[#000000]/10"
+                  onClick={() => handleRetailerClick(getSheinSearchUrl, searchQuery)}
+                >
+                  Shein
+                  <ExternalLink className="ml-1.5 h-3 w-3" />
+                </Button>
               </div>
             </div>
 
@@ -214,11 +273,12 @@ export default function TemplateResults() {
             <div className="pt-4 border-t border-gray-200">
               <Button
                 onClick={handleGoogleSearch}
-                className="w-full bg-[#111111] hover:bg-[#333333] text-white"
-                size="lg"
+                variant="ghost"
+                size="sm"
+                className="w-full text-[#555555] hover:text-[#111111]"
               >
-                Search on Google
-                <ExternalLink className="ml-2 h-4 w-4" />
+                <Search className="mr-2 h-4 w-4" />
+                Search the web (Google)
               </Button>
             </div>
           </div>
