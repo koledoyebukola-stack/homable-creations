@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,14 @@ export default function VisualSearchModal({
   const isMobile = useIsMobile();
   const displayImage = croppedImageUrl || imageUrl;
 
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setShowNextStep(false);
+      setIsProcessing(false);
+    }
+  }, [isOpen]);
+
   const handleContinueToVisualSearch = async () => {
     setIsProcessing(true);
 
@@ -44,9 +52,17 @@ export default function VisualSearchModal({
             files: [file],
           });
 
-          toast.success('Share sheet opened! Choose Google or Google Lens to search.');
-          onClose();
-          setIsProcessing(false);
+          // navigator.share() resolved - user completed the share action
+          // Check if page is still visible (user didn't leave)
+          if (document.visibilityState === 'visible') {
+            toast.success('Photo saved! Now search with it.');
+            setShowNextStep(true);
+            setIsProcessing(false);
+          } else {
+            // User left the page, close modal
+            onClose();
+            setIsProcessing(false);
+          }
           return;
         } catch (shareError) {
           console.log('Share API not supported or cancelled, falling back to Path B');
@@ -132,7 +148,7 @@ export default function VisualSearchModal({
         )}
       </Button>
 
-      {/* Next-step Prompt (shown after download) */}
+      {/* Next-step Prompt (shown after share/download when user remains on page) */}
       {showNextStep && (
         <div className="space-y-3 p-4 bg-[#F5F5F5] rounded-xl border border-gray-200">
           <p className="text-sm font-bold text-[#111111]">
