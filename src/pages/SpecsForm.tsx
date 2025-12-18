@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import AuthModal from '@/components/AuthModal';
 import SpecsTemplateSection from '@/components/SpecsTemplateSection';
@@ -23,6 +23,7 @@ interface FormField {
   helperText?: string;
   min?: number;
   max?: number;
+  showInCollapsed?: boolean; // New property to control visibility in collapsed state
 }
 
 interface CategoryConfig {
@@ -42,7 +43,8 @@ const CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
         unit: 'inches',
         helperText: 'This helps us avoid options that won\'t fit.',
         min: 30,
-        max: 200
+        max: 200,
+        showInCollapsed: true
       },
       { 
         id: 'seating', 
@@ -51,9 +53,10 @@ const CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
         required: true,
         helperText: 'Ensures you get the right size for your space.',
         min: 1,
-        max: 12
+        max: 12,
+        showInCollapsed: true
       },
-      { id: 'shape', label: 'Shape', type: 'select', options: ['Sofa', 'Sectional', 'Chaise', 'U-shaped', 'Modular'] },
+      { id: 'shape', label: 'Shape', type: 'select', options: ['Sofa', 'Sectional', 'Chaise', 'U-shaped', 'Modular'], showInCollapsed: true },
       { id: 'orientation', label: 'Orientation', type: 'select', options: ['Left', 'Right', 'Reversible'] },
       { id: 'fabric', label: 'Fabric type', type: 'select', options: ['Corduroy', 'Leather', 'Velvet', 'Linen', 'Microfiber', 'Cotton'] },
       { id: 'color', label: 'Color family', type: 'select', options: ['Brown', 'Beige', 'Gray', 'Black', 'White', 'Blue', 'Green'] },
@@ -72,7 +75,8 @@ const CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
         unit: 'inches',
         helperText: 'This helps us avoid options that won\'t fit.',
         min: 24,
-        max: 144
+        max: 144,
+        showInCollapsed: true
       },
       { 
         id: 'seating', 
@@ -81,9 +85,10 @@ const CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
         required: true,
         helperText: 'Ensures you get the right size for your space.',
         min: 2,
-        max: 16
+        max: 16,
+        showInCollapsed: true
       },
-      { id: 'shape', label: 'Shape', type: 'select', options: ['Rectangular', 'Round', 'Square', 'Oval'] },
+      { id: 'shape', label: 'Shape', type: 'select', options: ['Rectangular', 'Round', 'Square', 'Oval'], showInCollapsed: true },
       { id: 'material', label: 'Material', type: 'select', options: ['Wood', 'Glass', 'Marble', 'Metal'] },
       { id: 'color', label: 'Color family', type: 'select', options: ['Brown', 'Black', 'White', 'Natural wood', 'Gray'] },
       { id: 'easy_returns', label: 'Easy returns', type: 'checkbox' },
@@ -101,7 +106,8 @@ const CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
         unit: 'feet',
         helperText: 'This helps us avoid options that won\'t fit.',
         min: 2,
-        max: 20
+        max: 20,
+        showInCollapsed: true
       },
       { 
         id: 'length', 
@@ -111,9 +117,10 @@ const CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
         unit: 'feet',
         helperText: 'Ensures you get the right size for your space.',
         min: 2,
-        max: 30
+        max: 30,
+        showInCollapsed: true
       },
-      { id: 'shape', label: 'Shape', type: 'select', options: ['Rectangular', 'Round', 'Square', 'Runner'] },
+      { id: 'shape', label: 'Shape', type: 'select', options: ['Rectangular', 'Round', 'Square', 'Runner'], showInCollapsed: true },
       { id: 'material', label: 'Material', type: 'select', options: ['Wool', 'Cotton', 'Jute', 'Synthetic', 'Silk'] },
       { id: 'color', label: 'Color family', type: 'select', options: ['Beige', 'Gray', 'Blue', 'Red', 'Multi-color', 'Black', 'White'] },
       { id: 'easy_returns', label: 'Easy returns', type: 'checkbox' },
@@ -129,7 +136,8 @@ const CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
         type: 'select', 
         required: true, 
         options: ['Twin', 'Full', 'Queen', 'King', 'California King'],
-        helperText: 'Ensures you get the right size for your space.'
+        helperText: 'Ensures you get the right size for your space.',
+        showInCollapsed: true
       },
       { 
         id: 'height', 
@@ -139,9 +147,10 @@ const CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
         unit: 'inches',
         helperText: 'This helps us avoid options that won\'t fit.',
         min: 10,
-        max: 96
+        max: 96,
+        showInCollapsed: true
       },
-      { id: 'style', label: 'Style', type: 'select', options: ['Platform', 'Panel', 'Canopy', 'Sleigh', 'Storage'] },
+      { id: 'style', label: 'Style', type: 'select', options: ['Platform', 'Panel', 'Canopy', 'Sleigh', 'Storage'], showInCollapsed: true },
       { id: 'material', label: 'Material', type: 'select', options: ['Wood', 'Metal', 'Upholstered', 'Leather'] },
       { id: 'color', label: 'Color family', type: 'select', options: ['Brown', 'Black', 'White', 'Gray', 'Natural wood'] },
       { id: 'easy_returns', label: 'Easy returns', type: 'checkbox' },
@@ -159,7 +168,8 @@ const CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
         unit: 'inches',
         helperText: 'This helps us avoid options that won\'t fit.',
         min: 20,
-        max: 96
+        max: 96,
+        showInCollapsed: true
       },
       { 
         id: 'depth', 
@@ -169,9 +179,10 @@ const CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
         unit: 'inches',
         helperText: 'Ensures you get the right size for your space.',
         min: 16,
-        max: 48
+        max: 48,
+        showInCollapsed: true
       },
-      { id: 'style', label: 'Style', type: 'select', options: ['Writing desk', 'Computer desk', 'L-shaped', 'Standing desk', 'Secretary'] },
+      { id: 'style', label: 'Style', type: 'select', options: ['Writing desk', 'Computer desk', 'L-shaped', 'Standing desk', 'Secretary'], showInCollapsed: true },
       { id: 'material', label: 'Material', type: 'select', options: ['Wood', 'Metal', 'Glass', 'Laminate'] },
       { id: 'color', label: 'Color family', type: 'select', options: ['Brown', 'Black', 'White', 'Natural wood', 'Gray'] },
       { id: 'easy_returns', label: 'Easy returns', type: 'checkbox' },
@@ -188,6 +199,7 @@ export default function SpecsForm() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const config = categoryId ? CATEGORY_CONFIGS[categoryId] : null;
   const templates = categoryId ? getTemplatesForCategory(categoryId) : [];
@@ -201,11 +213,18 @@ export default function SpecsForm() {
       try {
         const existingData = JSON.parse(decodeURIComponent(dataStr));
         setFormData(existingData);
+        // Auto-expand if there are optional fields filled
+        const hasOptionalFields = config?.fields.some(
+          f => !f.showInCollapsed && existingData[f.id]
+        );
+        if (hasOptionalFields) {
+          setIsExpanded(true);
+        }
       } catch (error) {
         console.error('Failed to parse existing data:', error);
       }
     }
-  }, [searchParams]);
+  }, [searchParams, config]);
 
   if (!config) {
     return (
@@ -329,6 +348,93 @@ export default function SpecsForm() {
     navigate('/upload?tab=specs');
   };
 
+  // Split fields into collapsed and expanded groups
+  const collapsedFields = config.fields.filter(f => f.showInCollapsed);
+  const expandedFields = config.fields.filter(f => !f.showInCollapsed);
+
+  const renderField = (field: FormField) => (
+    <div key={field.id}>
+      <Label htmlFor={field.id} className="text-sm font-medium text-[#111111] mb-2 block">
+        {field.label}
+        {field.required && <span className="text-red-500 ml-1">*</span>}
+      </Label>
+
+      {field.type === 'number' && (
+        <>
+          <div className="flex gap-2">
+            <Input
+              id={field.id}
+              type="number"
+              value={formData[field.id] as string || ''}
+              onChange={(e) => handleInputChange(field.id, e.target.value)}
+              required={field.required}
+              min={field.min}
+              max={field.max}
+              className={`flex-1 ${validationErrors[field.id] ? 'border-red-500' : ''}`}
+              placeholder={`Enter ${field.label.toLowerCase()}`}
+            />
+            {field.unit && (
+              <span className="flex items-center px-3 text-sm text-[#555555] bg-gray-50 rounded-md border">
+                {field.unit}
+              </span>
+            )}
+          </div>
+          {validationErrors[field.id] && (
+            <p className="text-xs text-red-500 mt-1.5">
+              {validationErrors[field.id]}
+            </p>
+          )}
+          {!validationErrors[field.id] && field.helperText && (
+            <p className="text-xs text-[#888888] mt-1.5">
+              {field.helperText}
+            </p>
+          )}
+        </>
+      )}
+
+      {field.type === 'select' && (
+        <>
+          <Select
+            value={formData[field.id] as string || ''}
+            onValueChange={(value) => handleInputChange(field.id, value)}
+          >
+            <SelectTrigger id={field.id}>
+              <SelectValue placeholder={`Select ${field.label.toLowerCase()}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {field.options?.map((option) => (
+                <SelectItem key={option} value={option.toLowerCase()}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {field.helperText && (
+            <p className="text-xs text-[#888888] mt-1.5">
+              {field.helperText}
+            </p>
+          )}
+        </>
+      )}
+
+      {field.type === 'checkbox' && (
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id={field.id}
+            checked={formData[field.id] as boolean || false}
+            onCheckedChange={(checked) => handleInputChange(field.id, checked as boolean)}
+          />
+          <label
+            htmlFor={field.id}
+            className="text-sm text-[#555555] cursor-pointer"
+          >
+            Prioritize {field.label.toLowerCase()}
+          </label>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
       <Header />
@@ -349,94 +455,43 @@ export default function SpecsForm() {
               <h1 className="text-3xl font-bold text-[#111111] mb-2">
                 {config.title}
               </h1>
-              <p className="text-sm text-[#555555]">
+              <p className="text-sm text-[#555555] mb-3">
                 Fill in the details to find options that match your needs
+              </p>
+              <p className="text-sm text-[#111111] font-medium bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5">
+                💡 You only need the first two fields to get started.
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              {config.fields.map((field) => (
-                <div key={field.id}>
-                  <Label htmlFor={field.id} className="text-sm font-medium text-[#111111] mb-2 block">
-                    {field.label}
-                    {field.required && <span className="text-red-500 ml-1">*</span>}
-                  </Label>
+              {/* Collapsed fields - always visible */}
+              {collapsedFields.map(renderField)}
 
-                  {field.type === 'number' && (
-                    <>
-                      <div className="flex gap-2">
-                        <Input
-                          id={field.id}
-                          type="number"
-                          value={formData[field.id] as string || ''}
-                          onChange={(e) => handleInputChange(field.id, e.target.value)}
-                          required={field.required}
-                          min={field.min}
-                          max={field.max}
-                          className={`flex-1 ${validationErrors[field.id] ? 'border-red-500' : ''}`}
-                          placeholder={`Enter ${field.label.toLowerCase()}`}
-                        />
-                        {field.unit && (
-                          <span className="flex items-center px-3 text-sm text-[#555555] bg-gray-50 rounded-md border">
-                            {field.unit}
-                          </span>
-                        )}
-                      </div>
-                      {validationErrors[field.id] && (
-                        <p className="text-xs text-red-500 mt-1.5">
-                          {validationErrors[field.id]}
-                        </p>
-                      )}
-                      {!validationErrors[field.id] && field.helperText && (
-                        <p className="text-xs text-[#888888] mt-1.5">
-                          {field.helperText}
-                        </p>
-                      )}
-                    </>
-                  )}
-
-                  {field.type === 'select' && (
-                    <>
-                      <Select
-                        value={formData[field.id] as string || ''}
-                        onValueChange={(value) => handleInputChange(field.id, value)}
-                      >
-                        <SelectTrigger id={field.id}>
-                          <SelectValue placeholder={`Select ${field.label.toLowerCase()}`} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {field.options?.map((option) => (
-                            <SelectItem key={option} value={option.toLowerCase()}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {field.helperText && (
-                        <p className="text-xs text-[#888888] mt-1.5">
-                          {field.helperText}
-                        </p>
-                      )}
-                    </>
-                  )}
-
-                  {field.type === 'checkbox' && (
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id={field.id}
-                        checked={formData[field.id] as boolean || false}
-                        onCheckedChange={(checked) => handleInputChange(field.id, checked as boolean)}
-                      />
-                      <label
-                        htmlFor={field.id}
-                        className="text-sm text-[#555555] cursor-pointer"
-                      >
-                        Prioritize {field.label.toLowerCase()}
-                      </label>
-                    </div>
-                  )}
+              {/* Expandable section toggle */}
+              {expandedFields.length > 0 && (
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="w-full justify-between text-[#555555] hover:text-[#111111] hover:bg-gray-50"
+                  >
+                    <span className="font-medium">More filters (optional)</span>
+                    {isExpanded ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </Button>
                 </div>
-              ))}
+              )}
+
+              {/* Expanded fields - conditionally visible */}
+              {isExpanded && (
+                <div className="space-y-6 pt-2 border-t border-gray-100">
+                  {expandedFields.map(renderField)}
+                </div>
+              )}
 
               <div className="pt-4">
                 <Button
