@@ -15,6 +15,70 @@ const RETAILERS = [
   { name: 'Shein', baseUrl: 'https://us.shein.com/search?q=' }
 ];
 
+// Field labels by category
+const FIELD_LABELS: Record<string, Record<string, string>> = {
+  'sofa': {
+    width: 'Max width',
+    seating: 'Seating capacity',
+    shape: 'Shape',
+    orientation: 'Orientation',
+    fabric: 'Fabric type',
+    color: 'Color family'
+  },
+  'dining-table': {
+    length: 'Max length',
+    seating: 'Seating capacity',
+    shape: 'Shape',
+    material: 'Material',
+    color: 'Color family'
+  },
+  'rug': {
+    width: 'Max width',
+    length: 'Max length',
+    shape: 'Shape',
+    material: 'Material',
+    color: 'Color family'
+  },
+  'bed': {
+    size: 'Bed size',
+    height: 'Max height',
+    style: 'Style',
+    material: 'Material',
+    color: 'Color family'
+  },
+  'desk': {
+    width: 'Max width',
+    depth: 'Max depth',
+    style: 'Style',
+    material: 'Material',
+    color: 'Color family'
+  }
+};
+
+// Units by field
+const FIELD_UNITS: Record<string, string> = {
+  width: 'inches',
+  length: 'inches',
+  depth: 'inches',
+  height: 'inches',
+  seating: 'people'
+};
+
+// Special formatting for rug dimensions (feet instead of inches)
+const formatFieldValue = (fieldId: string, value: string | number, category: string): string => {
+  if (category === 'rug' && (fieldId === 'width' || fieldId === 'length')) {
+    return `${value} feet`;
+  }
+  
+  const unit = FIELD_UNITS[fieldId];
+  if (unit) {
+    return `${value} ${unit}`;
+  }
+  
+  // Capitalize first letter for text values
+  return String(value).charAt(0).toUpperCase() + String(value).slice(1);
+};
+
 export default function TemplateResults() {
   const { templateId } = useParams<{ templateId: string }>();
   const navigate = useNavigate();
@@ -45,14 +109,11 @@ export default function TemplateResults() {
     );
   }
 
-  // Build search query based on template details
+  // Build search query using the same logic as Specs results
   const searchQuery = buildRetailerQuery({
     item_name: template.label,
     category: template.category,
-    shape: template.styleDetails.shape,
-    material: template.styleDetails.material,
-    color: template.styleDetails.color,
-    style: template.styleDetails.style
+    ...template.formData
   });
 
   const handleRetailerClick = (retailer: typeof RETAILERS[0]) => {
@@ -68,6 +129,8 @@ export default function TemplateResults() {
   const handleBack = () => {
     navigate(`/specs/${template.category}`);
   };
+
+  const fieldLabels = FIELD_LABELS[template.category] || {};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
@@ -105,36 +168,25 @@ export default function TemplateResults() {
               </p>
             </div>
 
-            {/* Style Details */}
+            {/* Style Details - Using Form Fields */}
             <div className="mb-8 p-6 bg-gray-50 rounded-2xl">
               <h2 className="text-xl font-semibold text-[#111111] mb-4">
                 Style details
               </h2>
               <div className="grid grid-cols-2 gap-4">
-                {template.styleDetails.style && (
-                  <div>
-                    <p className="text-xs text-[#888888] mb-1">Style</p>
-                    <p className="text-sm font-medium text-[#111111]">{template.styleDetails.style}</p>
-                  </div>
-                )}
-                {template.styleDetails.shape && (
-                  <div>
-                    <p className="text-xs text-[#888888] mb-1">Shape</p>
-                    <p className="text-sm font-medium text-[#111111]">{template.styleDetails.shape}</p>
-                  </div>
-                )}
-                {template.styleDetails.material && (
-                  <div>
-                    <p className="text-xs text-[#888888] mb-1">Material look</p>
-                    <p className="text-sm font-medium text-[#111111]">{template.styleDetails.material}</p>
-                  </div>
-                )}
-                {template.styleDetails.color && (
-                  <div>
-                    <p className="text-xs text-[#888888] mb-1">Color family</p>
-                    <p className="text-sm font-medium text-[#111111]">{template.styleDetails.color}</p>
-                  </div>
-                )}
+                {Object.entries(template.formData).map(([fieldId, value]) => {
+                  const label = fieldLabels[fieldId];
+                  if (!label) return null;
+                  
+                  return (
+                    <div key={fieldId}>
+                      <p className="text-xs text-[#888888] mb-1">{label}</p>
+                      <p className="text-sm font-medium text-[#111111]">
+                        {formatFieldValue(fieldId, value, template.category)}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

@@ -5,6 +5,7 @@ export interface SpecsTemplate {
   label: string;
   image: string;
   category: string;
+  formData: Record<string, string | number>;
   styleDetails: {
     style?: string;
     shape?: string;
@@ -21,6 +22,14 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Curved sofa',
       image: '/assets/curved-sofa.jpg',
       category: 'sofa',
+      formData: {
+        width: 84,
+        seating: 3,
+        shape: 'curved',
+        orientation: 'reversible',
+        fabric: 'velvet',
+        color: 'beige'
+      },
       styleDetails: {
         style: 'Modern curved',
         shape: 'Curved',
@@ -34,6 +43,14 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Modular sectional',
       image: '/assets/modular-sectional.jpg',
       category: 'sofa',
+      formData: {
+        width: 120,
+        seating: 5,
+        shape: 'modular',
+        orientation: 'reversible',
+        fabric: 'microfiber',
+        color: 'gray'
+      },
       styleDetails: {
         style: 'Modular',
         shape: 'Sectional',
@@ -47,6 +64,14 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Small-space loveseat',
       image: '/assets/small-loveseat.jpg',
       category: 'sofa',
+      formData: {
+        width: 60,
+        seating: 2,
+        shape: 'sofa',
+        orientation: 'reversible',
+        fabric: 'linen',
+        color: 'blue'
+      },
       styleDetails: {
         style: 'Compact',
         shape: 'Loveseat',
@@ -60,6 +85,14 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Chaise sectional',
       image: '/assets/chaise-sectional.jpg',
       category: 'sofa',
+      formData: {
+        width: 100,
+        seating: 4,
+        shape: 'chaise',
+        orientation: 'left',
+        fabric: 'cotton',
+        color: 'gray'
+      },
       styleDetails: {
         style: 'L-shaped',
         shape: 'Chaise',
@@ -73,6 +106,14 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Boucle sofa',
       image: '/assets/boucle-sofa.jpg',
       category: 'sofa',
+      formData: {
+        width: 78,
+        seating: 3,
+        shape: 'sofa',
+        orientation: 'reversible',
+        fabric: 'cotton',
+        color: 'white'
+      },
       styleDetails: {
         style: 'Textured',
         shape: 'Sofa',
@@ -86,6 +127,14 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Low-profile leather sofa',
       image: '/assets/low-leather-sofa.jpg',
       category: 'sofa',
+      formData: {
+        width: 82,
+        seating: 3,
+        shape: 'sofa',
+        orientation: 'reversible',
+        fabric: 'leather',
+        color: 'brown'
+      },
       styleDetails: {
         style: 'Mid-century modern',
         shape: 'Sofa',
@@ -101,6 +150,13 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Round dining table',
       image: '/assets/round-dining-table.jpg',
       category: 'dining-table',
+      formData: {
+        length: 48,
+        seating: 4,
+        shape: 'round',
+        material: 'wood',
+        color: 'natural wood'
+      },
       styleDetails: {
         shape: 'Round',
         material: 'Wood',
@@ -113,6 +169,13 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Oval dining table',
       image: '/assets/oval-dining-table.jpg',
       category: 'dining-table',
+      formData: {
+        length: 72,
+        seating: 6,
+        shape: 'oval',
+        material: 'wood',
+        color: 'brown'
+      },
       styleDetails: {
         shape: 'Oval',
         material: 'Wood',
@@ -125,6 +188,13 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Pedestal base table',
       image: '/assets/pedestal-table.jpg',
       category: 'dining-table',
+      formData: {
+        length: 54,
+        seating: 5,
+        shape: 'round',
+        material: 'wood',
+        color: 'natural wood'
+      },
       styleDetails: {
         style: 'Pedestal',
         shape: 'Round',
@@ -138,6 +208,13 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Walnut wood dining table',
       image: '/assets/walnut-table.jpg',
       category: 'dining-table',
+      formData: {
+        length: 84,
+        seating: 8,
+        shape: 'rectangular',
+        material: 'wood',
+        color: 'brown'
+      },
       styleDetails: {
         shape: 'Rectangular',
         material: 'Walnut wood',
@@ -150,6 +227,13 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Solid wood slab table',
       image: '/assets/wood-slab-table.jpg',
       category: 'dining-table',
+      formData: {
+        length: 96,
+        seating: 10,
+        shape: 'rectangular',
+        material: 'wood',
+        color: 'natural wood'
+      },
       styleDetails: {
         style: 'Live edge',
         shape: 'Rectangular',
@@ -165,6 +249,13 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Neutral jute rug',
       image: '/assets/jute-rug.jpg',
       category: 'rug',
+      formData: {
+        width: 8,
+        length: 10,
+        shape: 'rectangular',
+        material: 'jute',
+        color: 'beige'
+      },
       styleDetails: {
         material: 'Jute',
         color: 'Natural beige',
@@ -176,6 +267,13 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Vintage Persian-style rug',
       image: '/assets/persian-rug.jpg',
       category: 'rug',
+      formData: {
+        width: 9,
+        length: 12,
+        shape: 'rectangular',
+        material: 'wool',
+        color: 'multi-color'
+      },
       styleDetails: {
         style: 'Traditional Persian',
         material: 'Wool blend',
@@ -188,6 +286,13 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Plush shag rug',
       image: '/assets/shag-rug.jpg',
       category: 'rug',
+      formData: {
+        width: 8,
+        length: 10,
+        shape: 'rectangular',
+        material: 'synthetic',
+        color: 'gray'
+      },
       styleDetails: {
         style: 'Shag',
         material: 'Synthetic',
@@ -200,6 +305,13 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Abstract organic rug',
       image: '/assets/abstract-rug.jpg',
       category: 'rug',
+      formData: {
+        width: 9,
+        length: 12,
+        shape: 'rectangular',
+        material: 'wool',
+        color: 'beige'
+      },
       styleDetails: {
         style: 'Modern abstract',
         material: 'Wool blend',
@@ -214,6 +326,13 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Upholstered bed frame',
       image: '/assets/upholstered-bed.jpg',
       category: 'bed',
+      formData: {
+        size: 'queen',
+        height: 48,
+        style: 'panel',
+        material: 'upholstered',
+        color: 'gray'
+      },
       styleDetails: {
         style: 'Upholstered',
         material: 'Fabric',
@@ -226,6 +345,13 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Soft curved upholstered bed',
       image: '/assets/curved-bed.jpg',
       category: 'bed',
+      formData: {
+        size: 'queen',
+        height: 52,
+        style: 'panel',
+        material: 'upholstered',
+        color: 'white'
+      },
       styleDetails: {
         style: 'Modern curved',
         material: 'Upholstered',
@@ -238,6 +364,13 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Canopy bed',
       image: '/assets/canopy-bed.jpg',
       category: 'bed',
+      formData: {
+        size: 'king',
+        height: 84,
+        style: 'canopy',
+        material: 'wood',
+        color: 'black'
+      },
       styleDetails: {
         style: 'Canopy',
         material: 'Wood/Metal',
@@ -250,6 +383,13 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Wooden slatted bed (Japandi style)',
       image: '/assets/japandi-bed.jpg',
       category: 'bed',
+      formData: {
+        size: 'queen',
+        height: 36,
+        style: 'platform',
+        material: 'wood',
+        color: 'natural wood'
+      },
       styleDetails: {
         style: 'Japandi minimalist',
         material: 'Wood',
@@ -264,6 +404,13 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Minimalist desk',
       image: '/assets/minimalist-desk.jpg',
       category: 'desk',
+      formData: {
+        width: 48,
+        depth: 24,
+        style: 'writing desk',
+        material: 'wood',
+        color: 'white'
+      },
       styleDetails: {
         style: 'Minimalist',
         material: 'Wood/Metal',
@@ -276,6 +423,13 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Standing desk',
       image: '/assets/standing-desk.jpg',
       category: 'desk',
+      formData: {
+        width: 60,
+        depth: 30,
+        style: 'standing desk',
+        material: 'wood',
+        color: 'brown'
+      },
       styleDetails: {
         style: 'Adjustable',
         material: 'Wood/Metal',
@@ -288,6 +442,13 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Small-space desk',
       image: '/assets/compact-desk.jpg',
       category: 'desk',
+      formData: {
+        width: 36,
+        depth: 20,
+        style: 'writing desk',
+        material: 'wood',
+        color: 'natural wood'
+      },
       styleDetails: {
         style: 'Compact',
         material: 'Wood',
@@ -300,6 +461,13 @@ export const SPECS_TEMPLATES: Record<string, SpecsTemplate[]> = {
       label: 'Wooden minimalist desk',
       image: '/assets/wood-minimalist-desk.jpg',
       category: 'desk',
+      formData: {
+        width: 55,
+        depth: 28,
+        style: 'writing desk',
+        material: 'wood',
+        color: 'natural wood'
+      },
       styleDetails: {
         style: 'Scandinavian',
         material: 'Solid wood',
