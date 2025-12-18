@@ -831,91 +831,81 @@ export default function ItemDetection() {
                         {customMessage || itemProducts.length === 0 ? (
                           <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200 shadow-sm">
                             <CardContent className="p-6 md:p-8 space-y-4">
-                              <p className="text-xs font-medium text-[#555555] uppercase tracking-wide text-center">
-                                Search on:
-                              </p>
-                              
-                              {/* PRIMARY: Retailer Buttons (3 columns grid) - CORRECTED ORDER: Wayfair, Amazon, Walmart */}
-                              <div className="grid grid-cols-3 gap-2">
-                                <Button
-                                  onClick={() => handleRetailerClick(getWayfairSearchUrl, item)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
-                                >
-                                  Wayfair
-                                  <ExternalLink className="ml-1.5 h-3 w-3" />
-                                </Button>
-
-                                <Button
-                                  onClick={() => handleRetailerClick(getAmazonSearchUrl, item)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full bg-white border border-[#FF9900] text-[#111111] hover:bg-[#FF9900]/10 font-medium"
-                                >
-                                  Amazon
-                                  <ExternalLink className="ml-1.5 h-3 w-3" />
-                                </Button>
-
-                                <Button
-                                  onClick={() => handleRetailerClick(getWalmartSearchUrl, item)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
-                                >
-                                  Walmart
-                                  <ExternalLink className="ml-1.5 h-3 w-3" />
-                                </Button>
+                              {/* SEARCH ON Section */}
+                              <div className="space-y-3">
+                                <h3 className="text-sm font-bold text-[#111111] uppercase tracking-wide">
+                                  SEARCH ON
+                                </h3>
+                                
+                                <div className="flex flex-wrap gap-2 text-base">
+                                  <button
+                                    onClick={() => handleRetailerClick(getWalmartSearchUrl, item)}
+                                    className="text-[#111111] hover:underline font-normal"
+                                  >
+                                    [ Walmart ]
+                                  </button>
+                                  <button
+                                    onClick={() => handleRetailerClick(getAmazonSearchUrl, item)}
+                                    className="text-[#111111] hover:underline font-normal"
+                                  >
+                                    [ Amazon ]
+                                  </button>
+                                  <button
+                                    onClick={() => handleRetailerClick(getWayfairSearchUrl, item)}
+                                    className="text-[#111111] hover:underline font-normal"
+                                  >
+                                    [ Wayfair ]
+                                  </button>
+                                </div>
                               </div>
 
-                              {/* SECONDARY: Temu & Shein Buttons */}
-                              <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
-                                <Button
-                                  onClick={() => handleRetailerClick(getTemuSearchUrl, item)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full bg-white border border-[#FF7A00] text-[#555555] hover:bg-[#FF7A00]/10"
-                                >
-                                  Temu
-                                  <ExternalLink className="ml-1.5 h-3 w-3" />
-                                </Button>
-
-                                <Button
-                                  onClick={() => handleRetailerClick(getSheinSearchUrl, item)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full bg-white border border-[#000000] text-[#555555] hover:bg-[#000000]/10"
-                                >
-                                  Shein
-                                  <ExternalLink className="ml-1.5 h-3 w-3" />
-                                </Button>
+                              {/* More stores Section */}
+                              <div className="space-y-2">
+                                <h3 className="text-sm font-bold text-[#111111]">
+                                  More stores
+                                </h3>
+                                <div className="flex gap-2 text-base">
+                                  <button
+                                    onClick={() => handleRetailerClick(getTemuSearchUrl, item)}
+                                    className="text-[#111111] hover:underline font-normal"
+                                  >
+                                    Temu
+                                  </button>
+                                  <span className="text-[#111111]">·</span>
+                                  <button
+                                    onClick={() => handleRetailerClick(getSheinSearchUrl, item)}
+                                    className="text-[#111111] hover:underline font-normal"
+                                  >
+                                    Shein
+                                  </button>
+                                </div>
                               </div>
 
-                              {/* SECONDARY: Google Search Button */}
-                              <Button
-                                onClick={() => window.open(getGoogleSearchUrl(buildRetailerQuery(item)), '_blank')}
-                                variant="ghost"
-                                size="sm"
-                                className="w-full text-[#555555] hover:text-[#111111]"
-                              >
-                                <Search className="mr-2 h-4 w-4" />
-                                Search the web (Google)
-                              </Button>
+                              {/* Google Search Section */}
+                              <div>
+                                <button
+                                  onClick={() => window.open(getGoogleSearchUrl(buildRetailerQuery(item)), '_blank')}
+                                  className="text-base text-[#111111] hover:underline font-normal"
+                                >
+                                  Search the web (Google)
+                                </button>
+                              </div>
 
-                              {/* NEW: More search options section */}
-                              <div className="pt-4 border-t border-gray-200">
-                                <p className="text-xs font-medium text-[#777777] uppercase tracking-wide text-center mb-3">
+                              {/* Divider */}
+                              <div className="border-t border-gray-300 my-4"></div>
+
+                              {/* More search options Section */}
+                              <div className="space-y-3">
+                                <h3 className="text-sm font-bold text-[#111111]">
                                   More search options
-                                </p>
-                                <Button
+                                </h3>
+                                <button
                                   onClick={() => setVisualSearchModal({ isOpen: true, item })}
-                                  variant="outline"
-                                  size="sm"
-                                  className="w-full rounded-full bg-white border border-[#C89F7A] text-[#111111] hover:bg-[#C89F7A]/10 font-medium"
+                                  className="flex items-center gap-2 text-base text-[#111111] hover:underline font-normal"
                                 >
-                                  <Camera className="mr-2 h-4 w-4" />
+                                  <Camera className="h-5 w-5" />
                                   Find exact match (photo)
-                                </Button>
+                                </button>
                               </div>
                             </CardContent>
                           </Card>
@@ -996,97 +986,91 @@ export default function ItemDetection() {
                               ))}
                             </div>
                             
-                            <div className="text-center pt-4 space-y-3">
-                              <p className="text-sm text-[#555555] mb-2">
+                            <div className="text-center pt-4">
+                              <p className="text-sm text-[#555555] mb-4">
                                 Need more options? Find similar items below
                               </p>
                               
-                              <p className="text-xs font-medium text-[#555555] uppercase tracking-wide">
-                                Search on:
-                              </p>
-                              
-                              {/* PRIMARY: Retailer Buttons - CORRECTED ORDER: Wayfair, Amazon, Walmart */}
-                              <div className="grid grid-cols-3 gap-2 max-w-md mx-auto">
-                                <Button
-                                  onClick={() => handleRetailerClick(getWayfairSearchUrl, item)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
-                                >
-                                  Wayfair
-                                  <ExternalLink className="ml-1.5 h-3 w-3" />
-                                </Button>
+                              <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200 shadow-sm inline-block">
+                                <CardContent className="p-6 space-y-4">
+                                  {/* SEARCH ON Section */}
+                                  <div className="space-y-3">
+                                    <h3 className="text-sm font-bold text-[#111111] uppercase tracking-wide">
+                                      SEARCH ON
+                                    </h3>
+                                    
+                                    <div className="flex flex-wrap gap-2 text-base">
+                                      <button
+                                        onClick={() => handleRetailerClick(getWalmartSearchUrl, item)}
+                                        className="text-[#111111] hover:underline font-normal"
+                                      >
+                                        [ Walmart ]
+                                      </button>
+                                      <button
+                                        onClick={() => handleRetailerClick(getAmazonSearchUrl, item)}
+                                        className="text-[#111111] hover:underline font-normal"
+                                      >
+                                        [ Amazon ]
+                                      </button>
+                                      <button
+                                        onClick={() => handleRetailerClick(getWayfairSearchUrl, item)}
+                                        className="text-[#111111] hover:underline font-normal"
+                                      >
+                                        [ Wayfair ]
+                                      </button>
+                                    </div>
+                                  </div>
 
-                                <Button
-                                  onClick={() => handleRetailerClick(getAmazonSearchUrl, item)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full bg-white border border-[#FF9900] text-[#111111] hover:bg-[#FF9900]/10 font-medium"
-                                >
-                                  Amazon
-                                  <ExternalLink className="ml-1.5 h-3 w-3" />
-                                </Button>
+                                  {/* More stores Section */}
+                                  <div className="space-y-2">
+                                    <h3 className="text-sm font-bold text-[#111111]">
+                                      More stores
+                                    </h3>
+                                    <div className="flex gap-2 text-base">
+                                      <button
+                                        onClick={() => handleRetailerClick(getTemuSearchUrl, item)}
+                                        className="text-[#111111] hover:underline font-normal"
+                                      >
+                                        Temu
+                                      </button>
+                                      <span className="text-[#111111]">·</span>
+                                      <button
+                                        onClick={() => handleRetailerClick(getSheinSearchUrl, item)}
+                                        className="text-[#111111] hover:underline font-normal"
+                                      >
+                                        Shein
+                                      </button>
+                                    </div>
+                                  </div>
 
-                                <Button
-                                  onClick={() => handleRetailerClick(getWalmartSearchUrl, item)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
-                                >
-                                  Walmart
-                                  <ExternalLink className="ml-1.5 h-3 w-3" />
-                                </Button>
-                              </div>
+                                  {/* Google Search Section */}
+                                  <div>
+                                    <button
+                                      onClick={() => window.open(getGoogleSearchUrl(buildRetailerQuery(item)), '_blank')}
+                                      className="text-base text-[#111111] hover:underline font-normal"
+                                    >
+                                      Search the web (Google)
+                                    </button>
+                                  </div>
 
-                              {/* SECONDARY: Temu & Shein Buttons */}
-                              <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
-                                <Button
-                                  onClick={() => handleRetailerClick(getTemuSearchUrl, item)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full bg-white border border-[#FF7A00] text-[#555555] hover:bg-[#FF7A00]/10"
-                                >
-                                  Temu
-                                  <ExternalLink className="ml-1.5 h-3 w-3" />
-                                </Button>
+                                  {/* Divider */}
+                                  <div className="border-t border-gray-300 my-4"></div>
 
-                                <Button
-                                  onClick={() => handleRetailerClick(getSheinSearchUrl, item)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full bg-white border border-[#000000] text-[#555555] hover:bg-[#000000]/10"
-                                >
-                                  Shein
-                                  <ExternalLink className="ml-1.5 h-3 w-3" />
-                                </Button>
-                              </div>
-
-                              {/* SECONDARY: Google Search Button */}
-                              <Button
-                                onClick={() => window.open(getGoogleSearchUrl(buildRetailerQuery(item)), '_blank')}
-                                variant="ghost"
-                                size="sm"
-                                className="w-full text-[#555555] hover:text-[#111111]"
-                              >
-                                <Search className="mr-2 h-4 w-4" />
-                                Search the web (Google)
-                              </Button>
-
-                              {/* NEW: More search options section */}
-                              <div className="pt-4 border-t border-gray-200">
-                                <p className="text-xs font-medium text-[#777777] uppercase tracking-wide text-center mb-3">
-                                  More search options
-                                </p>
-                                <Button
-                                  onClick={() => setVisualSearchModal({ isOpen: true, item })}
-                                  variant="outline"
-                                  size="sm"
-                                  className="w-full rounded-full bg-white border border-[#C89F7A] text-[#111111] hover:bg-[#C89F7A]/10 font-medium"
-                                >
-                                  <Camera className="mr-2 h-4 w-4" />
-                                  Find exact match (photo)
-                                </Button>
-                              </div>
+                                  {/* More search options Section */}
+                                  <div className="space-y-3">
+                                    <h3 className="text-sm font-bold text-[#111111]">
+                                      More search options
+                                    </h3>
+                                    <button
+                                      onClick={() => setVisualSearchModal({ isOpen: true, item })}
+                                      className="flex items-center gap-2 text-base text-[#111111] hover:underline font-normal"
+                                    >
+                                      <Camera className="h-5 w-5" />
+                                      Find exact match (photo)
+                                    </button>
+                                  </div>
+                                </CardContent>
+                              </Card>
                             </div>
                           </>
                         )}
