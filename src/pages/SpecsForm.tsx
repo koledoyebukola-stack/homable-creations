@@ -10,6 +10,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import AuthModal from '@/components/AuthModal';
+import SpecsTemplateSection from '@/components/SpecsTemplateSection';
+import { getTemplatesForCategory } from '@/lib/specs-templates';
 
 interface FormField {
   id: string;
@@ -188,6 +190,7 @@ export default function SpecsForm() {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const config = categoryId ? CATEGORY_CONFIGS[categoryId] : null;
+  const templates = categoryId ? getTemplatesForCategory(categoryId) : [];
 
   // Load existing data if editing
   useEffect(() => {
@@ -445,6 +448,9 @@ export default function SpecsForm() {
                 </Button>
               </div>
             </form>
+
+            {/* Template Section */}
+            <SpecsTemplateSection templates={templates} categoryId={categoryId || ''} />
           </div>
         </div>
       </main>

@@ -20,6 +20,7 @@ import ResetPassword from './pages/ResetPassword';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import SpecsForm from './pages/SpecsForm';
 import SpecsResults from './pages/SpecsResults';
+import TemplateResults from './pages/TemplateResults';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -72,6 +73,7 @@ const App = () => (
           {/* Specs flow routes - PUBLIC */}
           <Route path="/specs/:categoryId" element={<SpecsForm />} />
           <Route path="/specs-results" element={<SpecsResults />} />
+          <Route path="/template-results/:templateId" element={<TemplateResults />} />
           {/* Other results pages require authentication */}
           <Route
             path="/products/:boardId/:itemId"
