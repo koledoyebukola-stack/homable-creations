@@ -335,7 +335,7 @@ export default function ProductMatches() {
                       {/* Google Search */}
                       <Button
                         onClick={() => window.open(getGoogleSearchUrl(item.item_name), '_blank')}
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         className="w-full text-[#555555] hover:text-[#111111]"
                       >
@@ -487,9 +487,9 @@ export default function ProductMatches() {
                       {/* Google Search */}
                       <Button
                         onClick={() => window.open(getGoogleSearchUrl(item.item_name), '_blank')}
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        className="w-full text-[#555555] hover:text-[#111111]"
+                        className="w-full bg-gray-50 hover:bg-gray-100 text-[#111111] border-gray-200 font-medium"
                       >
                         <Search className="mr-2 h-4 w-4" />
                         Search the web (Google)

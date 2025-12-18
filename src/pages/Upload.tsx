@@ -215,7 +215,7 @@ export default function Upload() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-8">
               <TabsTrigger value="inspiration">Start with Inspiration</TabsTrigger>
-              <TabsTrigger value="specs">Start with Specs</TabsTrigger>
+              <TabsTrigger value="specs">Start with What Fits</TabsTrigger>
             </TabsList>
 
             {/* Start with Inspiration Tab */}

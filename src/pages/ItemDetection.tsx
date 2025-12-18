@@ -901,9 +901,9 @@ export default function ItemDetection() {
                               {/* Google Search Section */}
                               <Button
                                 onClick={() => window.open(getGoogleSearchUrl(buildRetailerQuery(item)), '_blank')}
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
-                                className="w-full text-[#555555] hover:text-[#111111]"
+                                className="w-full bg-gray-50 hover:bg-gray-100 text-[#111111] border-gray-200 font-medium"
                               >
                                 <Search className="mr-2 h-4 w-4" />
                                 Search the web (Google)
@@ -1074,9 +1074,9 @@ export default function ItemDetection() {
                               {/* SECONDARY: Google Search Button */}
                               <Button
                                 onClick={() => window.open(getGoogleSearchUrl(buildRetailerQuery(item)), '_blank')}
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
-                                className="w-full text-[#555555] hover:text-[#111111]"
+                                className="w-full bg-gray-50 hover:bg-gray-100 text-[#111111] border-gray-200 font-medium"
                               >
                                 <Search className="mr-2 h-4 w-4" />
                                 Search the web (Google)
