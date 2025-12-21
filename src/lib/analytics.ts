@@ -37,17 +37,65 @@ interface EventData {
 }
 
 /**
+ * Extract UTM parameters from URL
+ */
+function getUTMParams(): Record<string, string> {
+  const params: Record<string, string> = {};
+  
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    const utm_source = urlParams.get('utm_source');
+    const utm_medium = urlParams.get('utm_medium');
+    const utm_campaign = urlParams.get('utm_campaign');
+    
+    if (utm_source) params.utm_source = utm_source;
+    if (utm_medium) params.utm_medium = utm_medium;
+    if (utm_campaign) params.utm_campaign = utm_campaign;
+  } catch (error) {
+    // Silently fail - never block user experience
+  }
+  
+  return params;
+}
+
+/**
+ * Get referrer
+ */
+function getReferrer(): string | null {
+  try {
+    return document.referrer || null;
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
  * Log an event to Supabase
  * Fire-and-forget: errors are logged but never throw
  */
 export async function trackEvent(eventName: EventName, metadata?: Record<string, string | number | boolean>): Promise<void> {
   try {
+    // Capture traffic source data
+    const utmParams = getUTMParams();
+    const referrer = getReferrer();
+    
+    // Merge all metadata
+    const enrichedMetadata: Record<string, string | number | boolean> = {
+      ...(metadata || {}),
+      ...utmParams,
+    };
+    
+    if (referrer) {
+      enrichedMetadata.referrer = referrer;
+    }
+    
     // Fire-and-forget: don't await, don't block UI
     supabase
       .from('app_8574c59127_analytics_events')
       .insert({
         event_name: eventName,
-        metadata: metadata || {},
+        metadata: enrichedMetadata,
         created_at: new Date().toISOString(),
       })
       .then(({ error }) => {
