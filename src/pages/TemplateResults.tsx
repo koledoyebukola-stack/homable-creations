@@ -17,6 +17,7 @@ import {
 } from '@/lib/retailer-utils';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { trackPageView, trackAction, EVENTS } from '@/lib/analytics';
 
 // Field labels by category
 const FIELD_LABELS: Record<string, Record<string, string>> = {
@@ -108,6 +109,11 @@ export default function TemplateResults() {
       setIsAuthenticated(!!user);
       setLoading(false);
       
+      // Track template results viewed if authenticated
+      if (user && templateId) {
+        trackPageView(EVENTS.TEMPLATE_RESULTS_VIEWED);
+      }
+      
       // Show auth modal after a delay if not authenticated
       if (!user) {
         setTimeout(() => setShowAuthModal(true), 1000);
@@ -125,18 +131,32 @@ export default function TemplateResults() {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [templateId]);
 
   useEffect(() => {
     if (templateId) {
       const foundTemplate = getTemplateById(templateId);
       setTemplate(foundTemplate);
+      
+      // Track template selected
+      if (foundTemplate) {
+        trackAction(EVENTS.TEMPLATE_SELECTED, {
+          template_id: templateId,
+          category: foundTemplate.category
+        });
+      }
     }
   }, [templateId]);
 
   const handleAuthSuccess = () => {
     setShowAuthModal(false);
     setIsAuthenticated(true);
+    
+    // Track template auth completed
+    trackAction(EVENTS.TEMPLATE_AUTH_COMPLETED);
+    
+    // Track template results viewed after auth
+    trackPageView(EVENTS.TEMPLATE_RESULTS_VIEWED);
   };
 
   if (!template) {

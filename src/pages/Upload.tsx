@@ -10,6 +10,7 @@ import { uploadImage, createBoard, validateDecorImage } from '@/lib/api';
 import { toast } from 'sonner';
 import { AlertCircle, Info } from 'lucide-react';
 import SpecsCategorySelection from '@/components/specs/SpecsCategorySelection';
+import { trackPageView, trackAction, EVENTS } from '@/lib/analytics';
 
 // Sample images organized by category
 const SAMPLE_CATEGORIES = [
@@ -66,6 +67,11 @@ export default function Upload() {
   const [sampleImageAlt, setSampleImageAlt] = useState<string>('');
   const [activeTab, setActiveTab] = useState<string>('inspiration');
 
+  // Track homepage view on mount
+  useEffect(() => {
+    trackPageView(EVENTS.HOMEPAGE_VIEWED);
+  }, []);
+
   // Read tab from URL query parameter on mount
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -83,6 +89,12 @@ export default function Upload() {
     // Create preview URL
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
+
+    // Track upload started
+    trackAction(EVENTS.UPLOAD_STARTED, { 
+      file_size: file.size,
+      file_type: file.type 
+    });
   };
 
   const handleClear = () => {
@@ -109,6 +121,11 @@ export default function Upload() {
     console.log('Starting upload process for:', selectedFile.name);
     setUploading(true);
     setValidationError(null);
+
+    // Track image analysis started
+    trackAction(EVENTS.IMAGE_ANALYSIS_STARTED, {
+      is_sample_image: isSampleImage
+    });
 
     try {
       // Upload image to Supabase storage
@@ -166,6 +183,12 @@ export default function Upload() {
   const handleSampleImageClick = async (imageUrl: string, altText: string) => {
     console.log('Sample image clicked:', imageUrl);
     
+    // Track upload clicked
+    trackAction(EVENTS.UPLOAD_CLICKED, {
+      source: 'sample_image',
+      image_alt: altText
+    });
+
     try {
       // Fetch the sample image and convert to blob
       const response = await fetch(imageUrl);

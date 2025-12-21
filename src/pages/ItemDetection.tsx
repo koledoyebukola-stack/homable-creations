@@ -25,6 +25,7 @@ import {
   buildRetailerQuery
 } from '@/lib/retailer-utils';
 
+import { trackPageView, trackAction, EVENTS } from '@/lib/analytics';
 // 1. Define the interface for the full Search Response object (assumed to be the return type of searchProducts)
 interface SearchResponse {
   products: Product[];
@@ -166,6 +167,11 @@ export default function ItemDetection() {
 
         // Load products for each detected item (only if authenticated)
         if (detectedItems.length > 0 && userIsAuthenticated) {
+        // Track inspiration results viewed (only if authenticated)
+        if (detectedItems.length > 0 && userIsAuthenticated) {
+          trackPageView(EVENTS.INSPIRATION_RESULTS_VIEWED);
+        }
+
           setLoadingProducts(true);
           const productsMap: Record<string, ItemProductResult> = {};
           
@@ -259,6 +265,9 @@ export default function ItemDetection() {
     setShowAuthModal(false);
     setIsAuthenticated(true);
     
+    // Track inspiration auth completed
+    trackAction(EVENTS.INSPIRATION_AUTH_COMPLETED);
+
     // Check if board has existing checklist
     if (boardId) {
       const checklist = await getChecklistByBoardId(boardId);
@@ -303,6 +312,9 @@ export default function ItemDetection() {
         const numberOfItemsDetected = items.length;
         const numberOfItemsWithProducts = Object.values(productsMap).filter(r => !r.message && r.products.length > 0).length;
         const numberOfProductsShown = Object.values(productsMap).filter(r => !r.message).flatMap(r => r.products).length;
+
+      // Track inspiration results viewed after auth
+      trackPageView(EVENTS.INSPIRATION_RESULTS_VIEWED);
         
         await logAnalysis(boardId, numberOfItemsDetected, numberOfItemsWithProducts, numberOfProductsShown);
       }
@@ -901,9 +913,9 @@ export default function ItemDetection() {
                               {/* Google Search Section */}
                               <Button
                                 onClick={() => window.open(getGoogleSearchUrl(buildRetailerQuery(item)), '_blank')}
-                                variant="outline"
+                                variant="ghost"
                                 size="sm"
-                                className="w-full bg-gray-50 hover:bg-gray-100 text-[#111111] border-gray-200 font-medium"
+                                className="w-full text-[#555555] hover:text-[#111111]"
                               >
                                 <Search className="mr-2 h-4 w-4" />
                                 Search the web (Google)
@@ -1074,9 +1086,9 @@ export default function ItemDetection() {
                               {/* SECONDARY: Google Search Button */}
                               <Button
                                 onClick={() => window.open(getGoogleSearchUrl(buildRetailerQuery(item)), '_blank')}
-                                variant="outline"
+                                variant="ghost"
                                 size="sm"
-                                className="w-full bg-gray-50 hover:bg-gray-100 text-[#111111] border-gray-200 font-medium"
+                                className="w-full text-[#555555] hover:text-[#111111]"
                               >
                                 <Search className="mr-2 h-4 w-4" />
                                 Search the web (Google)

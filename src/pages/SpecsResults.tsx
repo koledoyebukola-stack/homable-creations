@@ -16,6 +16,7 @@ import {
   getSheinSearchUrl,
   getGoogleSearchUrl 
 } from '@/lib/retailer-utils';
+import { trackPageView, EVENTS } from '@/lib/analytics';
 
 interface SpecsData {
   category: string;
@@ -338,6 +339,9 @@ export default function SpecsResults() {
         // Generate search options
         const options = generateSearchOptions(category, data);
         setSearchOptions(options);
+
+        // Track specs results viewed
+        trackPageView(EVENTS.SPECS_RESULTS_VIEWED);
 
         // Auto-save to history
         const queries = options.map(opt => opt.query);

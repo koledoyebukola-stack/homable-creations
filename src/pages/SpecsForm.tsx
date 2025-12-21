@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase';
 import AuthModal from '@/components/AuthModal';
 import SpecsTemplateSection from '@/components/SpecsTemplateSection';
 import { getTemplatesForCategory } from '@/lib/specs-templates';
+import { trackPageView, trackAction, EVENTS } from '@/lib/analytics';
 
 interface FormField {
   id: string;
@@ -204,6 +205,13 @@ export default function SpecsForm() {
   const config = categoryId ? CATEGORY_CONFIGS[categoryId] : null;
   const templates = categoryId ? getTemplatesForCategory(categoryId) : [];
 
+  // Track specs page viewed on mount
+  useEffect(() => {
+    if (categoryId) {
+      trackPageView(EVENTS.SPECS_PAGE_VIEWED);
+    }
+  }, [categoryId]);
+
   // Load existing data if editing
   useEffect(() => {
     const isEdit = searchParams.get('edit') === 'true';
@@ -314,6 +322,11 @@ export default function SpecsForm() {
       return;
     }
 
+    // Track specs form submitted
+    trackAction(EVENTS.SPECS_FORM_SUBMITTED, {
+      category: categoryId || 'unknown'
+    });
+
     // Check authentication before showing results
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -338,6 +351,10 @@ export default function SpecsForm() {
 
   const handleAuthSuccess = () => {
     setShowAuthModal(false);
+    
+    // Track specs auth completed
+    trackAction(EVENTS.SPECS_AUTH_COMPLETED);
+    
     if (pendingNavigation) {
       navigate(pendingNavigation);
       setPendingNavigation(null);
