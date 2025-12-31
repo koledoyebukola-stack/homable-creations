@@ -60,6 +60,7 @@ const MODE_CONTENT = {
       'Get space-safe design options and a guided plan'
     ],
     cta: 'Start from my room',
+    uploadMode: 'design',
     images: [
       {
         url: '/assets/before-empty-room.png',
@@ -81,6 +82,7 @@ const MODE_CONTENT = {
       'Get a clear shopping list'
     ],
     cta: 'Upload inspiration',
+    uploadMode: 'inspiration',
     images: [
       {
         url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/4a353320-f266-498a-b105-8ffe1b423b27.png',
@@ -104,6 +106,7 @@ const MODE_CONTENT = {
       'Find options that fit your space'
     ],
     cta: 'Find what fits',
+    uploadMode: 'find',
     images: [
       {
         url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/6855ff28-4d3c-4e99-b4f5-1646eae59997.png',
@@ -143,9 +146,8 @@ export default function Home() {
     setCurrentSlide(0);
   };
 
-  // Navigate to upload page with mode parameter
-  const handleNavigateToUpload = () => {
-    navigate(`/upload?mode=${selectedMode}`);
+  const handleCTAClick = () => {
+    navigate(`/upload?mode=${currentContent.uploadMode}`);
   };
 
   return (
@@ -158,11 +160,11 @@ export default function Home() {
           {/* Section 1: Hero Header */}
           <div className="text-center mb-8 space-y-3">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#111111] leading-tight">
-              Start with your space, an inspiration, or a single item
+              From empty space to execution
             </h1>
             
             <p className="text-lg md:text-xl text-[#555555] max-w-3xl mx-auto">
-              Homable helps you design, shop, and track—whether you're decorating a whole room or finding one perfect piece.
+              Homable helps you plan, shop, and track everything needed to get a room done without juggling multiple tools.
             </p>
           </div>
 
@@ -224,7 +226,7 @@ export default function Home() {
               {/* Section 4: Primary CTA */}
               <div>
                 <Button
-                  onClick={handleNavigateToUpload}
+                  onClick={handleCTAClick}
                   size="lg"
                   className="w-full bg-[#111111] hover:bg-[#333333] text-white px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
                 >
@@ -340,7 +342,7 @@ export default function Home() {
 
             <div className="text-center mt-12">
               <Button
-                onClick={handleNavigateToUpload}
+                onClick={() => navigate('/upload?mode=inspiration')}
                 size="lg"
                 className="bg-black hover:bg-black/90 text-white px-8 rounded-full"
               >
@@ -463,7 +465,7 @@ export default function Home() {
             Join thousands discovering affordable ways to bring their home decor dreams to life.
           </p>
           <Button
-            onClick={handleNavigateToUpload}
+            onClick={() => navigate('/upload?mode=inspiration')}
             size="lg"
             className="bg-white hover:bg-gray-100 text-black px-8 py-6 text-lg rounded-full"
           >
