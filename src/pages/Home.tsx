@@ -51,6 +51,36 @@ const CAROUSEL_EXAMPLES = [
 
 type Mode = 'design' | 'replicate' | 'find';
 
+const MODE_CONTENT = {
+  design: {
+    title: 'Design your space from scratch',
+    steps: [
+      'Upload your room',
+      'We understand layout and constraints',
+      'Get space-safe design options and a guided plan'
+    ],
+    cta: 'Start from my room'
+  },
+  replicate: {
+    title: 'Replicate an inspiration',
+    steps: [
+      'Upload inspiration',
+      'AI identifies decor',
+      'Get a clear shopping list'
+    ],
+    cta: 'Upload inspiration'
+  },
+  find: {
+    title: 'Find one item that fits',
+    steps: [
+      'Choose the item',
+      'Enter size and preferences',
+      'Find options that fit your space'
+    ],
+    cta: 'Find what fits'
+  }
+};
+
 export default function Home() {
   const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -64,45 +94,7 @@ export default function Home() {
     setCurrentSlide((prev) => (prev - 1 + CAROUSEL_EXAMPLES.length) % CAROUSEL_EXAMPLES.length);
   };
 
-  const getModeContent = () => {
-    switch (selectedMode) {
-      case 'design':
-        return {
-          title: 'Design your space from scratch',
-          steps: [
-            'Upload your room',
-            'We understand layout and constraints',
-            'Get space-safe design options and a guided plan'
-          ],
-          ctaLabel: 'Start from my room',
-          ctaAction: () => navigate('/upload')
-        };
-      case 'replicate':
-        return {
-          title: 'Replicate an inspiration',
-          steps: [
-            'Upload inspiration',
-            'AI identifies decor',
-            'Get a clear shopping list'
-          ],
-          ctaLabel: 'Upload inspiration',
-          ctaAction: () => navigate('/upload')
-        };
-      case 'find':
-        return {
-          title: 'Find one item that fits',
-          steps: [
-            'Choose the item',
-            'Enter size and preferences',
-            'Find options that fit your space'
-          ],
-          ctaLabel: 'Find what fits',
-          ctaAction: () => navigate('/upload')
-        };
-    }
-  };
-
-  const modeContent = getModeContent();
+  const currentContent = MODE_CONTENT[selectedMode];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
@@ -110,7 +102,7 @@ export default function Home() {
 
       {/* Hero Section */}
       <section className="container mx-auto px-4 md:px-6 pt-12 md:pt-20 pb-16 md:pb-24">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           {/* Section 1: Hero Header */}
           <div className="text-center mb-8 space-y-3">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#111111] leading-tight">
@@ -127,7 +119,7 @@ export default function Home() {
             <div className="inline-flex bg-white rounded-full p-1 shadow-md border border-gray-200">
               <button
                 onClick={() => setSelectedMode('design')}
-                className={`px-6 py-3 rounded-full text-sm md:text-base font-medium transition-all ${
+                className={`px-6 py-3 rounded-full text-sm font-medium transition-all ${
                   selectedMode === 'design'
                     ? 'bg-[#111111] text-white'
                     : 'text-[#555555] hover:text-[#111111]'
@@ -137,7 +129,7 @@ export default function Home() {
               </button>
               <button
                 onClick={() => setSelectedMode('replicate')}
-                className={`px-6 py-3 rounded-full text-sm md:text-base font-medium transition-all ${
+                className={`px-6 py-3 rounded-full text-sm font-medium transition-all ${
                   selectedMode === 'replicate'
                     ? 'bg-[#111111] text-white'
                     : 'text-[#555555] hover:text-[#111111]'
@@ -147,7 +139,7 @@ export default function Home() {
               </button>
               <button
                 onClick={() => setSelectedMode('find')}
-                className={`px-6 py-3 rounded-full text-sm md:text-base font-medium transition-all ${
+                className={`px-6 py-3 rounded-full text-sm font-medium transition-all ${
                   selectedMode === 'find'
                     ? 'bg-[#111111] text-white'
                     : 'text-[#555555] hover:text-[#111111]'
@@ -158,15 +150,16 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Section 3: Step Preview Panel (Dynamic) */}
-          <div className="max-w-3xl mx-auto mb-8">
-            <div className="bg-white rounded-2xl p-8 md:p-10 shadow-lg border border-gray-200">
-              <h2 className="text-2xl md:text-3xl font-bold text-[#111111] mb-8 text-center">
-                {modeContent.title}
+          {/* Two-Column Layout: Left (Content) + Right (Image Carousel) */}
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            {/* Left Column: Step Preview Panel */}
+            <div className="bg-white rounded-2xl p-8 md:p-10 shadow-lg">
+              <h2 className="text-2xl md:text-3xl font-bold text-[#111111] mb-8">
+                {currentContent.title}
               </h2>
 
-              <div className="space-y-6">
-                {modeContent.steps.map((step, index) => (
+              <div className="space-y-6 mb-8">
+                {currentContent.steps.map((step, index) => (
                   <div key={index} className="flex items-start gap-4">
                     <div className="flex-shrink-0 w-8 h-8 bg-[#111111] text-white rounded-full flex items-center justify-center font-bold">
                       {index + 1}
@@ -176,22 +169,63 @@ export default function Home() {
                 ))}
               </div>
 
-              {/* Section 4: Primary CTA (Dynamic) */}
-              <div className="mt-8 text-center">
+              {/* Section 4: Primary CTA */}
+              <div>
                 <Button
-                  onClick={modeContent.ctaAction}
+                  onClick={() => navigate('/upload')}
                   size="lg"
-                  className="bg-[#111111] hover:bg-[#333333] text-white px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
+                  className="w-full bg-[#111111] hover:bg-[#333333] text-white px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
                 >
-                  {modeContent.ctaLabel}
+                  {currentContent.cta}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </div>
             </div>
-          </div>
 
-          {/* Hero Carousel */}
-          <HeroCarousel />
+            {/* Right Column: Large Image Carousel */}
+            <div className="relative">
+              <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl">
+                <img
+                  src={CAROUSEL_EXAMPLES[currentSlide].image}
+                  alt={CAROUSEL_EXAMPLES[currentSlide].imageAlt}
+                  className="w-full h-full object-cover"
+                />
+                
+                {/* Carousel Controls Overlay */}
+                <button
+                  onClick={prevSlide}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/90 hover:bg-white transition-colors shadow-lg"
+                  aria-label="Previous slide"
+                >
+                  <ChevronLeft className="w-6 h-6 text-[#111111]" />
+                </button>
+
+                <button
+                  onClick={nextSlide}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/90 hover:bg-white transition-colors shadow-lg"
+                  aria-label="Next slide"
+                >
+                  <ChevronRight className="w-6 h-6 text-[#111111]" />
+                </button>
+
+                {/* Carousel Indicators */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                  {CAROUSEL_EXAMPLES.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentSlide(index)}
+                      className={`h-2 rounded-full transition-all ${
+                        index === currentSlide
+                          ? 'bg-white w-8'
+                          : 'bg-white/50 w-2'
+                      }`}
+                      aria-label={`Go to slide ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
