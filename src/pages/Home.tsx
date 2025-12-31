@@ -62,16 +62,16 @@ const MODE_CONTENT = {
     cta: 'Start from my room',
     images: [
       {
-        url: '/images/ModernLoftDesign.jpg',
-        alt: 'Empty modern loft with floor-to-ceiling windows'
+        url: '/images/photo1767207963.jpg',
+        alt: 'Empty modern living room'
       },
       {
-        url: '/images/LuxuryBedroom.jpg',
-        alt: 'Empty luxury bedroom with city views'
+        url: '/images/EmptyBedroom.jpg',
+        alt: 'Empty bedroom with natural light'
       },
       {
-        url: '/images/OpenConcept.jpg',
-        alt: 'Empty open-concept space with natural light'
+        url: '/images/EmptySpace.jpg',
+        alt: 'Empty open-concept space'
       }
     ]
   },
@@ -85,16 +85,16 @@ const MODE_CONTENT = {
     cta: 'Upload inspiration',
     images: [
       {
-        url: '/images/ModernLivingRoom.jpg',
-        alt: 'Luxurious modern living room with bouclé sofa'
+        url: '/images/photo1767207963.jpg',
+        alt: 'Styled modern living room'
       },
       {
-        url: '/images/photo1767207550.jpg',
-        alt: 'Contemporary bedroom with elegant styling'
+        url: '/images/photo1767207963.jpg',
+        alt: 'Styled contemporary bedroom'
       },
       {
-        url: '/images/photo1767207550.jpg',
-        alt: 'Elegant dining room with live-edge table'
+        url: '/images/photo1767207963.jpg',
+        alt: 'Styled elegant dining room'
       }
     ]
   },
@@ -108,16 +108,16 @@ const MODE_CONTENT = {
     cta: 'Find what fits',
     images: [
       {
-        url: '/images/photo1767207550.jpg',
-        alt: 'Modern curved bouclé sofa'
+        url: '/images/photo1767207963.jpg',
+        alt: 'Modern sofa'
       },
       {
-        url: '/images/coffeetable.jpg',
-        alt: 'Organic-shaped coffee table'
+        url: '/images/photo1767207963.jpg',
+        alt: 'Dining table'
       },
       {
-        url: '/images/DesignerLamp.jpg',
-        alt: 'Designer arc floor lamp'
+        url: '/images/Bed.jpg',
+        alt: 'Bed frame'
       }
     ]
   }
