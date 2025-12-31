@@ -62,13 +62,13 @@ const MODE_CONTENT = {
     cta: 'Start from my room',
     images: [
       {
-        url: '/images/photo1767212486.jpg',
-        alt: 'Empty living room with arched windows - Before',
+        url: '/images/photo1767212743.jpg',
+        alt: 'Empty living room - Before',
         label: 'Before'
       },
       {
-        url: '/images/LivingRoomDecoration.jpg',
-        alt: 'Same living room now furnished and decorated - After',
+        url: '/images/RoomFurnishing.jpg',
+        alt: 'Same room now furnished - After',
         label: 'After'
       }
     ]
