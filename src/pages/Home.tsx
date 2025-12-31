@@ -49,16 +49,105 @@ const CAROUSEL_EXAMPLES = [
   }
 ];
 
+type Mode = 'design' | 'replicate' | 'find';
+
+const MODE_CONTENT = {
+  design: {
+    title: 'Design your space from scratch',
+    steps: [
+      'Upload your room',
+      'We understand layout and constraints',
+      'Get space-safe design options and a guided plan'
+    ],
+    cta: 'Start from my room',
+    uploadMode: 'design',
+    images: [
+      {
+        url: '/assets/before-empty-room.png',
+        alt: 'Empty room with sliding door and natural light - Before',
+        label: 'Before'
+      },
+      {
+        url: '/assets/after-furnished-room.png',
+        alt: 'Same room now beautifully furnished with modern decor - After',
+        label: 'After'
+      }
+    ]
+  },
+  replicate: {
+    title: 'Replicate an inspiration',
+    steps: [
+      'Upload inspiration',
+      'AI identifies decor',
+      'Get a clear shopping list'
+    ],
+    cta: 'Upload inspiration',
+    uploadMode: 'inspiration',
+    images: [
+      {
+        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/4a353320-f266-498a-b105-8ffe1b423b27.png',
+        alt: 'Styled modern living room'
+      },
+      {
+        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/d105eabc-9e94-443c-b1d2-1da1d1ff381e.png',
+        alt: 'Styled contemporary bedroom'
+      },
+      {
+        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/5e43a37b-7c8b-406a-9456-3f811e52767c.png',
+        alt: 'Styled elegant dining room'
+      }
+    ]
+  },
+  find: {
+    title: 'Find one item that fits',
+    steps: [
+      'Choose the item',
+      'Enter size and preferences',
+      'Find options that fit your space'
+    ],
+    cta: 'Find what fits',
+    uploadMode: 'find',
+    images: [
+      {
+        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/6855ff28-4d3c-4e99-b4f5-1646eae59997.png',
+        alt: 'Modern sofa'
+      },
+      {
+        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/172faa3b-7a0f-4fe7-8ba0-9305f538d68c.png',
+        alt: 'Dining table'
+      },
+      {
+        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/7880913b-ec35-46c8-b358-0c40f0410b2d.png',
+        alt: 'Bed frame'
+      }
+    ]
+  }
+};
+
 export default function Home() {
   const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [selectedMode, setSelectedMode] = useState<Mode>('design');
+
+  const currentContent = MODE_CONTENT[selectedMode];
+  const currentImages = currentContent.images;
 
   const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % CAROUSEL_EXAMPLES.length);
+    setCurrentSlide((prev) => (prev + 1) % currentImages.length);
   };
 
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + CAROUSEL_EXAMPLES.length) % CAROUSEL_EXAMPLES.length);
+    setCurrentSlide((prev) => (prev - 1 + currentImages.length) % currentImages.length);
+  };
+
+  // Reset slide to 0 when mode changes
+  const handleModeChange = (mode: Mode) => {
+    setSelectedMode(mode);
+    setCurrentSlide(0);
+  };
+
+  const handleCTAClick = () => {
+    navigate(`/upload?mode=${currentContent.uploadMode}`);
   };
 
   return (
@@ -67,32 +156,138 @@ export default function Home() {
 
       {/* Hero Section */}
       <section className="container mx-auto px-4 md:px-6 pt-12 md:pt-20 pb-16 md:pb-24">
-        <div className="max-w-6xl mx-auto">
-          {/* Hero Content */}
-          <div className="text-center mb-12 md:mb-16 space-y-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Section 1: Hero Header */}
+          <div className="text-center mb-8 space-y-3">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#111111] leading-tight">
-              Design Beautiful Spaces With Just a Photo
+              From empty space to execution
             </h1>
             
-            <p className="text-lg md:text-xl text-[#555555] max-w-3xl mx-auto leading-relaxed">
-              Homable turns any inspiration photo into a clear list of decor items you can shop for, save, and track. It helps you bring your dream space to life piece by piece, in a way that feels easy and personal.
+            <p className="text-lg md:text-xl text-[#555555] max-w-3xl mx-auto">
+              Homable helps you plan, shop, and track everything needed to get a room done without juggling multiple tools.
             </p>
+          </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-              <Button
-                onClick={() => navigate('/upload')}
-                size="lg"
-                className="bg-[#111111] hover:bg-[#333333] text-white px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
+          {/* Section 2: Mode Selector */}
+          <div className="flex justify-center mb-12">
+            <div className="inline-flex bg-white rounded-full p-1 shadow-md border border-gray-200">
+              <button
+                onClick={() => handleModeChange('design')}
+                className={`px-6 py-2 md:py-3 rounded-full text-sm font-medium transition-all ${
+                  selectedMode === 'design'
+                    ? 'bg-[#111111] text-white'
+                    : 'text-[#555555] hover:text-[#111111]'
+                }`}
               >
-                <Upload className="mr-2 h-5 w-5" />
-                Upload Your Inspiration
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
+                Design my space
+              </button>
+              <button
+                onClick={() => handleModeChange('replicate')}
+                className={`px-6 py-2 md:py-3 rounded-full text-sm font-medium transition-all ${
+                  selectedMode === 'replicate'
+                    ? 'bg-[#111111] text-white'
+                    : 'text-[#555555] hover:text-[#111111]'
+                }`}
+              >
+                Replicate an inspiration
+              </button>
+              <button
+                onClick={() => handleModeChange('find')}
+                className={`px-6 py-2 md:py-3 rounded-full text-sm font-medium transition-all ${
+                  selectedMode === 'find'
+                    ? 'bg-[#111111] text-white'
+                    : 'text-[#555555] hover:text-[#111111]'
+                }`}
+              >
+                Find one item that fits
+              </button>
             </div>
           </div>
 
-          {/* Hero Carousel */}
-          <HeroCarousel />
+          {/* Two-Column Layout: Left (Content) + Right (Image Carousel) */}
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            {/* Left Column: Step Preview Panel */}
+            <div className="bg-white rounded-2xl p-8 md:p-10 shadow-lg">
+              <h2 className="text-2xl md:text-3xl font-bold text-[#111111] mb-8">
+                {currentContent.title}
+              </h2>
+
+              <div className="space-y-6 mb-8">
+                {currentContent.steps.map((step, index) => (
+                  <div key={index} className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 bg-[#111111] text-white rounded-full flex items-center justify-center font-bold">
+                      {index + 1}
+                    </div>
+                    <p className="text-lg text-[#333333] pt-1">{step}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Section 4: Primary CTA */}
+              <div>
+                <Button
+                  onClick={handleCTAClick}
+                  size="lg"
+                  className="w-full bg-[#111111] hover:bg-[#333333] text-white px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
+                >
+                  {currentContent.cta}
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Right Column: Large Image Carousel */}
+            <div className="relative">
+              <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl">
+                <img
+                  key={`${selectedMode}-${currentSlide}`}
+                  src={currentImages[currentSlide].url}
+                  alt={currentImages[currentSlide].alt}
+                  className="w-full h-full object-cover"
+                />
+                
+                {/* Before/After Label for Design Mode */}
+                {selectedMode === 'design' && currentImages[currentSlide].label && (
+                  <div className="absolute top-4 left-4 bg-black/80 text-white px-4 py-2 rounded-full text-sm font-semibold">
+                    {currentImages[currentSlide].label}
+                  </div>
+                )}
+                
+                {/* Carousel Controls Overlay */}
+                <button
+                  onClick={prevSlide}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/90 hover:bg-white transition-colors shadow-lg"
+                  aria-label="Previous slide"
+                >
+                  <ChevronLeft className="w-6 h-6 text-[#111111]" />
+                </button>
+
+                <button
+                  onClick={nextSlide}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/90 hover:bg-white transition-colors shadow-lg"
+                  aria-label="Next slide"
+                >
+                  <ChevronRight className="w-6 h-6 text-[#111111]" />
+                </button>
+
+                {/* Carousel Indicators */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                  {currentImages.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentSlide(index)}
+                      className={`h-2 rounded-full transition-all ${
+                        index === currentSlide
+                          ? 'bg-white w-8'
+                          : 'bg-white/50 w-2'
+                      }`}
+                      aria-label={`Go to slide ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -147,7 +342,7 @@ export default function Home() {
 
             <div className="text-center mt-12">
               <Button
-                onClick={() => navigate('/upload')}
+                onClick={() => navigate('/upload?mode=inspiration')}
                 size="lg"
                 className="bg-black hover:bg-black/90 text-white px-8 rounded-full"
               >
@@ -270,7 +465,7 @@ export default function Home() {
             Join thousands discovering affordable ways to bring their home decor dreams to life.
           </p>
           <Button
-            onClick={() => navigate('/upload')}
+            onClick={() => navigate('/upload?mode=inspiration')}
             size="lg"
             className="bg-white hover:bg-gray-100 text-black px-8 py-6 text-lg rounded-full"
           >

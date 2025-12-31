@@ -5,7 +5,6 @@ import Footer from '@/components/Footer';
 import ImageUploader from '@/components/ImageUploader';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { uploadImage, createBoard, validateDecorImage } from '@/lib/api';
 import { toast } from 'sonner';
 import { AlertCircle, Info } from 'lucide-react';
@@ -56,6 +55,8 @@ const SAMPLE_CATEGORIES = [
   }
 ];
 
+type TabType = 'design' | 'inspiration' | 'specs';
+
 export default function Upload() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -65,7 +66,7 @@ export default function Upload() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isSampleImage, setIsSampleImage] = useState(false);
   const [sampleImageAlt, setSampleImageAlt] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<string>('inspiration');
+  const [activeTab, setActiveTab] = useState<TabType>('inspiration');
 
   // Track homepage view on mount
   useEffect(() => {
@@ -74,8 +75,14 @@ export default function Upload() {
 
   // Read tab from URL query parameter on mount
   useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab === 'specs') {
+    const mode = searchParams.get('mode');
+    
+    // Map mode parameter to tab
+    if (mode === 'design') {
+      setActiveTab('design');
+    } else if (mode === 'replicate' || mode === 'inspiration') {
+      setActiveTab('inspiration');
+    } else if (mode === 'find') {
       setActiveTab('specs');
     }
   }, [searchParams]);
@@ -218,6 +225,20 @@ export default function Upload() {
     }
   };
 
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+    // Update URL without full navigation
+    const newSearchParams = new URLSearchParams(searchParams);
+    if (tab === 'design') {
+      newSearchParams.set('mode', 'design');
+    } else if (tab === 'inspiration') {
+      newSearchParams.set('mode', 'inspiration');
+    } else if (tab === 'specs') {
+      newSearchParams.set('mode', 'find');
+    }
+    window.history.replaceState({}, '', `${window.location.pathname}?${newSearchParams}`);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
       <Header />
@@ -234,15 +255,66 @@ export default function Upload() {
             </p>
           </div>
 
-          {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-8">
-              <TabsTrigger value="inspiration">Start with Inspiration</TabsTrigger>
-              <TabsTrigger value="specs">Start with What Fits</TabsTrigger>
-            </TabsList>
+          {/* Three-Tab Selector */}
+          <div className="flex justify-center mb-12">
+            <div className="inline-flex bg-white rounded-full p-1 shadow-md border border-gray-200">
+              <button
+                onClick={() => handleTabChange('design')}
+                className={`px-6 py-2 md:py-3 rounded-full text-sm font-medium transition-all ${
+                  activeTab === 'design'
+                    ? 'bg-[#111111] text-white'
+                    : 'text-[#555555] hover:text-[#111111]'
+                }`}
+              >
+                Design my space
+              </button>
+              <button
+                onClick={() => handleTabChange('inspiration')}
+                className={`px-6 py-2 md:py-3 rounded-full text-sm font-medium transition-all ${
+                  activeTab === 'inspiration'
+                    ? 'bg-[#111111] text-white'
+                    : 'text-[#555555] hover:text-[#111111]'
+                }`}
+              >
+                Start with inspiration
+              </button>
+              <button
+                onClick={() => handleTabChange('specs')}
+                className={`px-6 py-2 md:py-3 rounded-full text-sm font-medium transition-all ${
+                  activeTab === 'specs'
+                    ? 'bg-[#111111] text-white'
+                    : 'text-[#555555] hover:text-[#111111]'
+                }`}
+              >
+                Start with what fits
+              </button>
+            </div>
+          </div>
 
-            {/* Start with Inspiration Tab */}
-            <TabsContent value="inspiration">
+          {/* Tab Content */}
+          {/* Design My Space Tab - Placeholder */}
+          {activeTab === 'design' && (
+            <div className="bg-white rounded-3xl p-8 shadow-lg">
+              <div className="text-center py-12">
+                <h2 className="text-2xl font-bold text-[#111111] mb-4">
+                  Design My Space
+                </h2>
+                <p className="text-[#555555] mb-8">
+                  This feature is coming soon. Upload a photo of your empty room and we'll help you design it.
+                </p>
+                <Button
+                  onClick={() => handleTabChange('inspiration')}
+                  className="bg-[#111111] hover:bg-[#333333] text-white"
+                >
+                  Try Start with Inspiration Instead
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Start with Inspiration Tab - PRESERVED EXISTING FLOW */}
+          {activeTab === 'inspiration' && (
+            <>
               <div className="bg-white rounded-3xl p-8 shadow-lg">
                 {/* Info Banner - Positioned above the upload box */}
                 <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
@@ -344,13 +416,13 @@ export default function Upload() {
                   ))}
                 </div>
               </div>
-            </TabsContent>
+            </>
+          )}
 
-            {/* Start with Specs Tab */}
-            <TabsContent value="specs">
-              <SpecsCategorySelection />
-            </TabsContent>
-          </Tabs>
+          {/* Start with Specs Tab - PRESERVED EXISTING FLOW */}
+          {activeTab === 'specs' && (
+            <SpecsCategorySelection />
+          )}
         </div>
       </main>
 
