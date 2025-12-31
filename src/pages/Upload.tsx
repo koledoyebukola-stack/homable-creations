@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { uploadImage, createBoard, validateDecorImage } from '@/lib/api';
 import { toast } from 'sonner';
-import { AlertCircle, Info } from 'lucide-react';
+import { AlertCircle, Info, Check, Upload as UploadIcon } from 'lucide-react';
 import SpecsCategorySelection from '@/components/specs/SpecsCategorySelection';
 import { trackPageView, trackAction, EVENTS } from '@/lib/analytics';
 
@@ -55,6 +55,34 @@ const SAMPLE_CATEGORIES = [
   }
 ];
 
+// Room templates for Design My Space
+const ROOM_TEMPLATES = [
+  {
+    id: 'living-room',
+    name: 'Empty Living Room',
+    image: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/d0d966e8-188f-4d04-a96d-426b17fd2c45.png',
+    description: 'Start with a blank living room space'
+  },
+  {
+    id: 'bedroom',
+    name: 'Empty Bedroom',
+    image: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/440cd2b1-4463-4154-adc6-9b80782a0131.png',
+    description: 'Start with a blank bedroom space'
+  },
+  {
+    id: 'dining-room',
+    name: 'Empty Dining Room',
+    image: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/9a416eec-cc75-47d0-bfa6-80faeb568e7d.png',
+    description: 'Start with a blank dining room space'
+  },
+  {
+    id: 'home-office',
+    name: 'Empty Home Office',
+    image: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/9db30342-fada-4979-a670-aac08c259107.png',
+    description: 'Start with a blank home office space'
+  }
+];
+
 type TabType = 'design' | 'inspiration' | 'specs';
 
 export default function Upload() {
@@ -67,6 +95,11 @@ export default function Upload() {
   const [isSampleImage, setIsSampleImage] = useState(false);
   const [sampleImageAlt, setSampleImageAlt] = useState<string>('');
   const [activeTab, setActiveTab] = useState<TabType>('inspiration');
+  
+  // Design space states
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [designSpaceFiles, setDesignSpaceFiles] = useState<File[]>([]);
+  const [unknownDimensions, setUnknownDimensions] = useState(false);
 
   // Track homepage view on mount
   useEffect(() => {
@@ -239,6 +272,39 @@ export default function Upload() {
     window.history.replaceState({}, '', `${window.location.pathname}?${newSearchParams}`);
   };
 
+  // Design Space handlers
+  const handleTemplateSelect = (templateId: string) => {
+    setSelectedTemplate(templateId);
+    setDesignSpaceFiles([]);
+  };
+
+  const handleDesignSpaceFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      const fileArray = Array.from(files).slice(0, 3);
+      setDesignSpaceFiles(fileArray);
+      setSelectedTemplate(null);
+    }
+  };
+
+  const handleDesignSpaceContinue = () => {
+    if (!selectedTemplate && designSpaceFiles.length === 0) {
+      toast.error('Please select a template or upload room photos');
+      return;
+    }
+
+    // Navigate to design space analysis page
+    const params = new URLSearchParams();
+    if (selectedTemplate) {
+      params.set('template', selectedTemplate);
+    }
+    if (unknownDimensions) {
+      params.set('unknown_dimensions', 'true');
+    }
+    
+    navigate(`/design-space/analyze?${params.toString()}`);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
       <Header />
@@ -292,21 +358,131 @@ export default function Upload() {
           </div>
 
           {/* Tab Content */}
-          {/* Design My Space Tab - Placeholder */}
+          {/* Design My Space Tab - WITH UPLOAD FIRST, THEN TEMPLATES */}
           {activeTab === 'design' && (
-            <div className="bg-white rounded-3xl p-8 shadow-lg">
-              <div className="text-center py-12">
-                <h2 className="text-2xl font-bold text-[#111111] mb-4">
-                  Design My Space
+            <div className="space-y-12">
+              {/* Upload Section - NOW FIRST */}
+              <div className="bg-white rounded-3xl p-8 shadow-lg">
+                <h2 className="text-2xl font-bold mb-6 text-[#111111]">
+                  Upload Your Room Photos
                 </h2>
-                <p className="text-[#555555] mb-8">
-                  This feature is coming soon. Upload a photo of your empty room and we'll help you design it.
+                
+                <div className="border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center hover:border-[#111111] transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    multiple
+                    onChange={handleDesignSpaceFileUpload}
+                    className="hidden"
+                    id="design-room-upload"
+                  />
+                  <label htmlFor="design-room-upload" className="cursor-pointer">
+                    <UploadIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                    <p className="text-lg font-medium text-[#111111] mb-2">
+                      Upload 1-3 photos or a short video
+                    </p>
+                    <p className="text-sm text-[#555555]">
+                      Click to browse or drag and drop
+                    </p>
+                  </label>
+                </div>
+
+                {designSpaceFiles.length > 0 && (
+                  <div className="mt-6">
+                    <p className="text-sm text-[#555555] mb-3">
+                      {designSpaceFiles.length} file(s) selected
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {designSpaceFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className="px-4 py-2 bg-gray-100 rounded-full text-sm text-[#111111]"
+                        >
+                          {file.name}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Unknown Dimensions Checkbox */}
+                <div className="mt-6 flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="unknown-dimensions"
+                    checked={unknownDimensions}
+                    onChange={(e) => setUnknownDimensions(e.target.checked)}
+                    className="mt-1 w-5 h-5 rounded border-gray-300"
+                  />
+                  <label
+                    htmlFor="unknown-dimensions"
+                    className="text-sm text-[#555555] cursor-pointer"
+                  >
+                    I don't know the room dimensions
+                  </label>
+                </div>
+              </div>
+
+              {/* OR Divider */}
+              <div className="flex items-center gap-4">
+                <div className="flex-1 h-px bg-gray-300"></div>
+                <span className="text-[#555555] font-medium">OR</span>
+                <div className="flex-1 h-px bg-gray-300"></div>
+              </div>
+
+              {/* Room Templates - NOW SECOND (FALLBACK) */}
+              <div>
+                <h2 className="text-2xl font-bold mb-2 text-[#111111]">
+                  Try with a Template
+                </h2>
+                <p className="text-sm text-[#555555] mb-6">
+                  Don't have photos? Start with one of our empty room templates
                 </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {ROOM_TEMPLATES.map((template) => (
+                    <Card
+                      key={template.id}
+                      className={`cursor-pointer transition-all duration-300 hover:shadow-xl ${
+                        selectedTemplate === template.id
+                          ? 'ring-2 ring-[#111111]'
+                          : ''
+                      }`}
+                      onClick={() => handleTemplateSelect(template.id)}
+                    >
+                      <div className="relative aspect-[4/3] overflow-hidden rounded-t-lg">
+                        <img
+                          src={template.image}
+                          alt={template.name}
+                          className="w-full h-full object-cover"
+                        />
+                        {selectedTemplate === template.id && (
+                          <div className="absolute top-2 right-2 bg-[#111111] text-white rounded-full p-1">
+                            <Check className="w-5 h-5" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-semibold text-[#111111] mb-1">
+                          {template.name}
+                        </h3>
+                        <p className="text-sm text-[#555555]">
+                          {template.description}
+                        </p>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              {/* Continue Button */}
+              <div className="flex justify-center">
                 <Button
-                  onClick={() => handleTabChange('inspiration')}
-                  className="bg-[#111111] hover:bg-[#333333] text-white"
+                  onClick={handleDesignSpaceContinue}
+                  size="lg"
+                  disabled={!selectedTemplate && designSpaceFiles.length === 0}
+                  className="bg-[#111111] hover:bg-[#333333] text-white px-12 py-6 text-lg rounded-full"
                 >
-                  Try Start with Inspiration Instead
+                  Continue to Design Options
                 </Button>
               </div>
             </div>
