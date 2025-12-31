@@ -62,16 +62,16 @@ const MODE_CONTENT = {
     cta: 'Start from my room',
     images: [
       {
-        url: '/images/EmptyRoomDesign.jpg',
-        alt: 'Empty modern living room ready for design'
+        url: '/images/ModernLoftDesign.jpg',
+        alt: 'Empty modern loft with floor-to-ceiling windows'
       },
       {
-        url: '/images/emptyroomdesign.jpg',
-        alt: 'Empty bedroom with natural light'
+        url: '/images/LuxuryBedroom.jpg',
+        alt: 'Empty luxury bedroom with city views'
       },
       {
-        url: '/images/EmptyRoomDesign.jpg',
-        alt: 'Empty dining room with windows'
+        url: '/images/OpenConcept.jpg',
+        alt: 'Empty open-concept space with natural light'
       }
     ]
   },
@@ -85,16 +85,16 @@ const MODE_CONTENT = {
     cta: 'Upload inspiration',
     images: [
       {
-        url: '/images/LivingRoomDecor.jpg',
-        alt: 'Beautifully styled living room inspiration'
+        url: '/images/ModernLivingRoom.jpg',
+        alt: 'Luxurious modern living room with bouclé sofa'
       },
       {
-        url: '/images/BedroomDesign.jpg',
-        alt: 'Elegant bedroom design inspiration'
+        url: '/images/photo1767207550.jpg',
+        alt: 'Contemporary bedroom with elegant styling'
       },
       {
-        url: '/images/DiningRoom.jpg',
-        alt: 'Sophisticated dining room inspiration'
+        url: '/images/photo1767207550.jpg',
+        alt: 'Elegant dining room with live-edge table'
       }
     ]
   },
@@ -108,16 +108,16 @@ const MODE_CONTENT = {
     cta: 'Find what fits',
     images: [
       {
-        url: '/images/Sofa.jpg',
-        alt: 'Modern gray sofa'
+        url: '/images/photo1767207550.jpg',
+        alt: 'Modern curved bouclé sofa'
       },
       {
-        url: '/images/Furniture.jpg',
-        alt: 'Wooden coffee table'
+        url: '/images/coffeetable.jpg',
+        alt: 'Organic-shaped coffee table'
       },
       {
-        url: '/images/FloorLamp.jpg',
-        alt: 'Modern floor lamp'
+        url: '/images/DesignerLamp.jpg',
+        alt: 'Designer arc floor lamp'
       }
     ]
   }
