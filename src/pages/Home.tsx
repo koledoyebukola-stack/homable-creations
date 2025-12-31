@@ -49,9 +49,12 @@ const CAROUSEL_EXAMPLES = [
   }
 ];
 
+type Mode = 'design' | 'replicate' | 'find';
+
 export default function Home() {
   const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [selectedMode, setSelectedMode] = useState<Mode>('design');
 
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % CAROUSEL_EXAMPLES.length);
@@ -61,6 +64,46 @@ export default function Home() {
     setCurrentSlide((prev) => (prev - 1 + CAROUSEL_EXAMPLES.length) % CAROUSEL_EXAMPLES.length);
   };
 
+  const getModeContent = () => {
+    switch (selectedMode) {
+      case 'design':
+        return {
+          title: 'Design your space from scratch',
+          steps: [
+            'Upload your room',
+            'We understand layout and constraints',
+            'Get space-safe design options and a guided plan'
+          ],
+          ctaLabel: 'Start from my room',
+          ctaAction: () => navigate('/upload')
+        };
+      case 'replicate':
+        return {
+          title: 'Replicate an inspiration',
+          steps: [
+            'Upload inspiration',
+            'AI identifies decor',
+            'Get a clear shopping list'
+          ],
+          ctaLabel: 'Upload inspiration',
+          ctaAction: () => navigate('/upload')
+        };
+      case 'find':
+        return {
+          title: 'Find one item that fits',
+          steps: [
+            'Choose the item',
+            'Enter size and preferences',
+            'Find options that fit your space'
+          ],
+          ctaLabel: 'Find what fits',
+          ctaAction: () => navigate('/upload')
+        };
+    }
+  };
+
+  const modeContent = getModeContent();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
       <Header />
@@ -68,26 +111,82 @@ export default function Home() {
       {/* Hero Section */}
       <section className="container mx-auto px-4 md:px-6 pt-12 md:pt-20 pb-16 md:pb-24">
         <div className="max-w-6xl mx-auto">
-          {/* Hero Content */}
-          <div className="text-center mb-12 md:mb-16 space-y-6">
+          {/* Section 1: Hero Header */}
+          <div className="text-center mb-8 space-y-3">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#111111] leading-tight">
-              Design Beautiful Spaces With Just a Photo
+              Start with your space, an inspiration, or a single item
             </h1>
             
-            <p className="text-lg md:text-xl text-[#555555] max-w-3xl mx-auto leading-relaxed">
-              Homable turns any inspiration photo into a clear list of decor items you can shop for, save, and track. It helps you bring your dream space to life piece by piece, in a way that feels easy and personal.
+            <p className="text-lg md:text-xl text-[#555555] max-w-3xl mx-auto">
+              Homable helps you design, shop, and track—whether you're decorating a whole room or finding one perfect piece.
             </p>
+          </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-              <Button
-                onClick={() => navigate('/upload')}
-                size="lg"
-                className="bg-[#111111] hover:bg-[#333333] text-white px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
+          {/* Section 2: Mode Selector */}
+          <div className="flex justify-center mb-12">
+            <div className="inline-flex bg-white rounded-full p-1 shadow-md border border-gray-200">
+              <button
+                onClick={() => setSelectedMode('design')}
+                className={`px-6 py-3 rounded-full text-sm md:text-base font-medium transition-all ${
+                  selectedMode === 'design'
+                    ? 'bg-[#111111] text-white'
+                    : 'text-[#555555] hover:text-[#111111]'
+                }`}
               >
-                <Upload className="mr-2 h-5 w-5" />
-                Upload Your Inspiration
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
+                Design my space
+              </button>
+              <button
+                onClick={() => setSelectedMode('replicate')}
+                className={`px-6 py-3 rounded-full text-sm md:text-base font-medium transition-all ${
+                  selectedMode === 'replicate'
+                    ? 'bg-[#111111] text-white'
+                    : 'text-[#555555] hover:text-[#111111]'
+                }`}
+              >
+                Replicate an inspiration
+              </button>
+              <button
+                onClick={() => setSelectedMode('find')}
+                className={`px-6 py-3 rounded-full text-sm md:text-base font-medium transition-all ${
+                  selectedMode === 'find'
+                    ? 'bg-[#111111] text-white'
+                    : 'text-[#555555] hover:text-[#111111]'
+                }`}
+              >
+                Find one item that fits
+              </button>
+            </div>
+          </div>
+
+          {/* Section 3: Step Preview Panel (Dynamic) */}
+          <div className="max-w-3xl mx-auto mb-8">
+            <div className="bg-white rounded-2xl p-8 md:p-10 shadow-lg border border-gray-200">
+              <h2 className="text-2xl md:text-3xl font-bold text-[#111111] mb-8 text-center">
+                {modeContent.title}
+              </h2>
+
+              <div className="space-y-6">
+                {modeContent.steps.map((step, index) => (
+                  <div key={index} className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 bg-[#111111] text-white rounded-full flex items-center justify-center font-bold">
+                      {index + 1}
+                    </div>
+                    <p className="text-lg text-[#333333] pt-1">{step}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Section 4: Primary CTA (Dynamic) */}
+              <div className="mt-8 text-center">
+                <Button
+                  onClick={modeContent.ctaAction}
+                  size="lg"
+                  className="bg-[#111111] hover:bg-[#333333] text-white px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
+                >
+                  {modeContent.ctaLabel}
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </div>
             </div>
           </div>
 
