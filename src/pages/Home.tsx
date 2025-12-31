@@ -59,7 +59,21 @@ const MODE_CONTENT = {
       'We understand layout and constraints',
       'Get space-safe design options and a guided plan'
     ],
-    cta: 'Start from my room'
+    cta: 'Start from my room',
+    images: [
+      {
+        url: '/images/EmptyRoomDesign.jpg',
+        alt: 'Empty modern living room ready for design'
+      },
+      {
+        url: '/images/emptyroomdesign.jpg',
+        alt: 'Empty bedroom with natural light'
+      },
+      {
+        url: '/images/EmptyRoomDesign.jpg',
+        alt: 'Empty dining room with windows'
+      }
+    ]
   },
   replicate: {
     title: 'Replicate an inspiration',
@@ -68,7 +82,21 @@ const MODE_CONTENT = {
       'AI identifies decor',
       'Get a clear shopping list'
     ],
-    cta: 'Upload inspiration'
+    cta: 'Upload inspiration',
+    images: [
+      {
+        url: '/images/LivingRoomDecor.jpg',
+        alt: 'Beautifully styled living room inspiration'
+      },
+      {
+        url: '/images/BedroomDesign.jpg',
+        alt: 'Elegant bedroom design inspiration'
+      },
+      {
+        url: '/images/DiningRoom.jpg',
+        alt: 'Sophisticated dining room inspiration'
+      }
+    ]
   },
   find: {
     title: 'Find one item that fits',
@@ -77,7 +105,21 @@ const MODE_CONTENT = {
       'Enter size and preferences',
       'Find options that fit your space'
     ],
-    cta: 'Find what fits'
+    cta: 'Find what fits',
+    images: [
+      {
+        url: '/images/Sofa.jpg',
+        alt: 'Modern gray sofa'
+      },
+      {
+        url: '/images/Furniture.jpg',
+        alt: 'Wooden coffee table'
+      },
+      {
+        url: '/images/FloorLamp.jpg',
+        alt: 'Modern floor lamp'
+      }
+    ]
   }
 };
 
@@ -86,15 +128,22 @@ export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [selectedMode, setSelectedMode] = useState<Mode>('design');
 
+  const currentContent = MODE_CONTENT[selectedMode];
+  const currentImages = currentContent.images;
+
   const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % CAROUSEL_EXAMPLES.length);
+    setCurrentSlide((prev) => (prev + 1) % currentImages.length);
   };
 
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + CAROUSEL_EXAMPLES.length) % CAROUSEL_EXAMPLES.length);
+    setCurrentSlide((prev) => (prev - 1 + currentImages.length) % currentImages.length);
   };
 
-  const currentContent = MODE_CONTENT[selectedMode];
+  // Reset slide to 0 when mode changes
+  const handleModeChange = (mode: Mode) => {
+    setSelectedMode(mode);
+    setCurrentSlide(0);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
@@ -118,7 +167,7 @@ export default function Home() {
           <div className="flex justify-center mb-12">
             <div className="inline-flex bg-white rounded-full p-1 shadow-md border border-gray-200">
               <button
-                onClick={() => setSelectedMode('design')}
+                onClick={() => handleModeChange('design')}
                 className={`px-6 py-3 rounded-full text-sm font-medium transition-all ${
                   selectedMode === 'design'
                     ? 'bg-[#111111] text-white'
@@ -128,7 +177,7 @@ export default function Home() {
                 Design my space
               </button>
               <button
-                onClick={() => setSelectedMode('replicate')}
+                onClick={() => handleModeChange('replicate')}
                 className={`px-6 py-3 rounded-full text-sm font-medium transition-all ${
                   selectedMode === 'replicate'
                     ? 'bg-[#111111] text-white'
@@ -138,7 +187,7 @@ export default function Home() {
                 Replicate an inspiration
               </button>
               <button
-                onClick={() => setSelectedMode('find')}
+                onClick={() => handleModeChange('find')}
                 className={`px-6 py-3 rounded-full text-sm font-medium transition-all ${
                   selectedMode === 'find'
                     ? 'bg-[#111111] text-white'
@@ -186,8 +235,8 @@ export default function Home() {
             <div className="relative">
               <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl">
                 <img
-                  src={CAROUSEL_EXAMPLES[currentSlide].image}
-                  alt={CAROUSEL_EXAMPLES[currentSlide].imageAlt}
+                  src={currentImages[currentSlide].url}
+                  alt={currentImages[currentSlide].alt}
                   className="w-full h-full object-cover"
                 />
                 
@@ -210,7 +259,7 @@ export default function Home() {
 
                 {/* Carousel Indicators */}
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                  {CAROUSEL_EXAMPLES.map((_, index) => (
+                  {currentImages.map((_, index) => (
                     <button
                       key={index}
                       onClick={() => setCurrentSlide(index)}
