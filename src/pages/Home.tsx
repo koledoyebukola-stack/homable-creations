@@ -62,15 +62,15 @@ const MODE_CONTENT = {
     cta: 'Start from my room',
     images: [
       {
-        url: '/images/photo1767207963.jpg',
+        url: '/images/LivingRoomDesign.jpg',
         alt: 'Empty modern living room'
       },
       {
-        url: '/images/EmptyBedroom.jpg',
+        url: '/images/photo1767208351.jpg',
         alt: 'Empty bedroom with natural light'
       },
       {
-        url: '/images/EmptySpace.jpg',
+        url: '/images/photo1767208351.jpg',
         alt: 'Empty open-concept space'
       }
     ]
@@ -85,15 +85,15 @@ const MODE_CONTENT = {
     cta: 'Upload inspiration',
     images: [
       {
-        url: '/images/photo1767207963.jpg',
+        url: '/images/photo1767208350.jpg',
         alt: 'Styled modern living room'
       },
       {
-        url: '/images/photo1767207963.jpg',
+        url: '/images/photo1767208351.jpg',
         alt: 'Styled contemporary bedroom'
       },
       {
-        url: '/images/photo1767207963.jpg',
+        url: '/images/photo1767208351.jpg',
         alt: 'Styled elegant dining room'
       }
     ]
@@ -108,16 +108,16 @@ const MODE_CONTENT = {
     cta: 'Find what fits',
     images: [
       {
-        url: '/images/photo1767207963.jpg',
+        url: '/images/Modernfurniture.jpg',
         alt: 'Modern sofa'
       },
       {
-        url: '/images/photo1767207963.jpg',
-        alt: 'Dining table'
+        url: '/images/Modernfurniture.jpg',
+        alt: 'Modern dining chair'
       },
       {
-        url: '/images/Bed.jpg',
-        alt: 'Bed frame'
+        url: '/images/ModernFurniture.jpg',
+        alt: 'Modern dining table'
       }
     ]
   }
