@@ -63,12 +63,12 @@ const MODE_CONTENT = {
     images: [
       {
         url: '/assets/before-empty-room.png',
-        alt: 'Empty living room - Before',
+        alt: 'Empty room with sliding door and natural light - Before',
         label: 'Before'
       },
       {
         url: '/assets/after-furnished-room.png',
-        alt: 'Same room now furnished - After',
+        alt: 'Same room now beautifully furnished with modern decor - After',
         label: 'After'
       }
     ]
@@ -141,6 +141,11 @@ export default function Home() {
   const handleModeChange = (mode: Mode) => {
     setSelectedMode(mode);
     setCurrentSlide(0);
+  };
+
+  // Navigate to upload page with mode parameter
+  const handleNavigateToUpload = () => {
+    navigate(`/upload?mode=${selectedMode}`);
   };
 
   return (
@@ -219,7 +224,7 @@ export default function Home() {
               {/* Section 4: Primary CTA */}
               <div>
                 <Button
-                  onClick={() => navigate('/upload')}
+                  onClick={handleNavigateToUpload}
                   size="lg"
                   className="w-full bg-[#111111] hover:bg-[#333333] text-white px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
                 >
@@ -335,7 +340,7 @@ export default function Home() {
 
             <div className="text-center mt-12">
               <Button
-                onClick={() => navigate('/upload')}
+                onClick={handleNavigateToUpload}
                 size="lg"
                 className="bg-black hover:bg-black/90 text-white px-8 rounded-full"
               >
@@ -458,7 +463,7 @@ export default function Home() {
             Join thousands discovering affordable ways to bring their home decor dreams to life.
           </p>
           <Button
-            onClick={() => navigate('/upload')}
+            onClick={handleNavigateToUpload}
             size="lg"
             className="bg-white hover:bg-gray-100 text-black px-8 py-6 text-lg rounded-full"
           >
