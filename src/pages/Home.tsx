@@ -173,7 +173,7 @@ export default function Home() {
             <div className="inline-flex bg-white rounded-full p-1 shadow-md border border-gray-200">
               <button
                 onClick={() => handleModeChange('design')}
-                className={`px-6 py-3 rounded-full text-sm font-medium transition-all ${
+                className={`px-6 py-2 md:py-3 rounded-full text-sm font-medium transition-all ${
                   selectedMode === 'design'
                     ? 'bg-[#111111] text-white'
                     : 'text-[#555555] hover:text-[#111111]'
@@ -183,7 +183,7 @@ export default function Home() {
               </button>
               <button
                 onClick={() => handleModeChange('replicate')}
-                className={`px-6 py-3 rounded-full text-sm font-medium transition-all ${
+                className={`px-6 py-2 md:py-3 rounded-full text-sm font-medium transition-all ${
                   selectedMode === 'replicate'
                     ? 'bg-[#111111] text-white'
                     : 'text-[#555555] hover:text-[#111111]'
@@ -193,7 +193,7 @@ export default function Home() {
               </button>
               <button
                 onClick={() => handleModeChange('find')}
-                className={`px-6 py-3 rounded-full text-sm font-medium transition-all ${
+                className={`px-6 py-2 md:py-3 rounded-full text-sm font-medium transition-all ${
                   selectedMode === 'find'
                     ? 'bg-[#111111] text-white'
                     : 'text-[#555555] hover:text-[#111111]'

@@ -76,7 +76,6 @@ export default function Upload() {
   // Read tab from URL query parameter on mount
   useEffect(() => {
     const mode = searchParams.get('mode');
-    const tab = searchParams.get('tab');
     
     // Map mode parameter to tab
     if (mode === 'design') {
@@ -84,8 +83,6 @@ export default function Upload() {
     } else if (mode === 'replicate' || mode === 'inspiration') {
       setActiveTab('inspiration');
     } else if (mode === 'find') {
-      setActiveTab('specs');
-    } else if (tab === 'specs') {
       setActiveTab('specs');
     }
   }, [searchParams]);
@@ -263,7 +260,7 @@ export default function Upload() {
             <div className="inline-flex bg-white rounded-full p-1 shadow-md border border-gray-200">
               <button
                 onClick={() => handleTabChange('design')}
-                className={`px-6 py-3 rounded-full text-sm font-medium transition-all ${
+                className={`px-6 py-2 md:py-3 rounded-full text-sm font-medium transition-all ${
                   activeTab === 'design'
                     ? 'bg-[#111111] text-white'
                     : 'text-[#555555] hover:text-[#111111]'
@@ -273,7 +270,7 @@ export default function Upload() {
               </button>
               <button
                 onClick={() => handleTabChange('inspiration')}
-                className={`px-6 py-3 rounded-full text-sm font-medium transition-all ${
+                className={`px-6 py-2 md:py-3 rounded-full text-sm font-medium transition-all ${
                   activeTab === 'inspiration'
                     ? 'bg-[#111111] text-white'
                     : 'text-[#555555] hover:text-[#111111]'
@@ -283,7 +280,7 @@ export default function Upload() {
               </button>
               <button
                 onClick={() => handleTabChange('specs')}
-                className={`px-6 py-3 rounded-full text-sm font-medium transition-all ${
+                className={`px-6 py-2 md:py-3 rounded-full text-sm font-medium transition-all ${
                   activeTab === 'specs'
                     ? 'bg-[#111111] text-white'
                     : 'text-[#555555] hover:text-[#111111]'
