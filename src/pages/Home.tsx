@@ -62,16 +62,14 @@ const MODE_CONTENT = {
     cta: 'Start from my room',
     images: [
       {
-        url: '/images/LivingRoomDesign.jpg',
-        alt: 'Empty modern living room'
+        url: '/assets/empty-room-before.png',
+        alt: 'Empty room before design',
+        label: 'Before'
       },
       {
-        url: '/images/photo1767208351.jpg',
-        alt: 'Empty bedroom with natural light'
-      },
-      {
-        url: '/images/photo1767208351.jpg',
-        alt: 'Empty open-concept space'
+        url: '/images/RoomDesign.jpg',
+        alt: 'Furnished room after design',
+        label: 'After'
       }
     ]
   },
@@ -85,15 +83,15 @@ const MODE_CONTENT = {
     cta: 'Upload inspiration',
     images: [
       {
-        url: '/images/photo1767208350.jpg',
+        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/4a353320-f266-498a-b105-8ffe1b423b27.png',
         alt: 'Styled modern living room'
       },
       {
-        url: '/images/photo1767208351.jpg',
+        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/d105eabc-9e94-443c-b1d2-1da1d1ff381e.png',
         alt: 'Styled contemporary bedroom'
       },
       {
-        url: '/images/photo1767208351.jpg',
+        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/5e43a37b-7c8b-406a-9456-3f811e52767c.png',
         alt: 'Styled elegant dining room'
       }
     ]
@@ -108,16 +106,16 @@ const MODE_CONTENT = {
     cta: 'Find what fits',
     images: [
       {
-        url: '/images/Modernfurniture.jpg',
+        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/6855ff28-4d3c-4e99-b4f5-1646eae59997.png',
         alt: 'Modern sofa'
       },
       {
-        url: '/images/Modernfurniture.jpg',
-        alt: 'Modern dining chair'
+        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/172faa3b-7a0f-4fe7-8ba0-9305f538d68c.png',
+        alt: 'Dining table'
       },
       {
-        url: '/images/ModernFurniture.jpg',
-        alt: 'Modern dining table'
+        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/7880913b-ec35-46c8-b358-0c40f0410b2d.png',
+        alt: 'Bed frame'
       }
     ]
   }
@@ -235,10 +233,18 @@ export default function Home() {
             <div className="relative">
               <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl">
                 <img
+                  key={`${selectedMode}-${currentSlide}`}
                   src={currentImages[currentSlide].url}
                   alt={currentImages[currentSlide].alt}
                   className="w-full h-full object-cover"
                 />
+                
+                {/* Before/After Label for Design Mode */}
+                {selectedMode === 'design' && currentImages[currentSlide].label && (
+                  <div className="absolute top-4 left-4 bg-black/80 text-white px-4 py-2 rounded-full text-sm font-semibold">
+                    {currentImages[currentSlide].label}
+                  </div>
+                )}
                 
                 {/* Carousel Controls Overlay */}
                 <button
