@@ -38,9 +38,9 @@ export default function Header() {
   return (
     <header className="bg-black sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4">
-        {/* Desktop Layout: Single row with centered pill */}
+        {/* Desktop Layout */}
         <div className="hidden md:block">
-          <div className="relative flex items-center justify-between max-w-7xl mx-auto">
+          <div className="flex items-center justify-between max-w-7xl mx-auto">
             {/* Left: Logo */}
             <button
               onClick={() => navigate('/')}
@@ -48,13 +48,6 @@ export default function Header() {
             >
               Homable Creations
             </button>
-
-            {/* Center: Holiday Badge (absolutely positioned) */}
-            <div className="absolute left-1/2 -translate-x-1/2 flex items-center">
-              <div className="flex items-center gap-2 text-white/80 text-sm font-medium whitespace-nowrap">
-                <span>🎄 Holiday Decor Beta</span>
-              </div>
-            </div>
 
             {/* Right: Auth Buttons */}
             <nav className="flex items-center gap-3">
@@ -108,7 +101,7 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Mobile Layout: Brand + Shopping List (NO "New" pill) + Menu */}
+        {/* Mobile Layout: Brand + Shopping List + Menu */}
         <div className="md:hidden flex items-center justify-between">
           <button
             onClick={() => navigate('/')}

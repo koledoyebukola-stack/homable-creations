@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { Upload, Sparkles, ArrowRight } from 'lucide-react';
+import { Upload, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import Header from '@/components/Header';
 import HeroCarousel from '@/components/HeroCarousel';
 import PopularProducts from '@/components/PopularProducts';
@@ -16,17 +15,6 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="container mx-auto px-4 md:px-6 pt-12 md:pt-20 pb-16 md:pb-24">
         <div className="max-w-6xl mx-auto">
-          {/* Holiday Badge */}
-          <div className="flex justify-center mb-6">
-            <Badge 
-              variant="outline" 
-              className="px-4 py-2 text-sm font-medium border-red-200 bg-red-50 text-red-700"
-            >
-              <Sparkles className="h-4 w-4 mr-2" />
-              Holiday Beta · Christmas Decor Focus
-            </Badge>
-          </div>
-
           {/* Hero Content */}
           <div className="text-center mb-12 md:mb-16 space-y-6">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#111111] leading-tight">
@@ -52,13 +40,6 @@ export default function HomePage() {
 
           {/* Hero Carousel */}
           <HeroCarousel />
-
-          {/* Promo Strip */}
-          <div className="mt-8 md:mt-12 text-center">
-            <p className="text-base md:text-lg text-[#666666] font-medium">
-              🎄 Last minute Christmas shoppers: upload your inspiration and find matching decor in minutes.
-            </p>
-          </div>
         </div>
       </section>
 

@@ -93,13 +93,6 @@ export default function Home() {
 
           {/* Hero Carousel */}
           <HeroCarousel />
-
-          {/* Promo Strip */}
-          <div className="mt-8 md:mt-12 text-center">
-            <p className="text-base md:text-lg text-[#666666] font-medium">
-              🎄 Last minute Christmas shoppers: upload your inspiration and find matching decor in minutes.
-            </p>
-          </div>
         </div>
       </section>
 
