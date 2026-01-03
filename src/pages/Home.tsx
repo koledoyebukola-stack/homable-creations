@@ -49,51 +49,53 @@ const CAROUSEL_EXAMPLES = [
   }
 ];
 
-type Mode = 'design' | 'replicate' | 'find';
+type Mode = 'explore' | 'replicate' | 'find';
 
 const MODE_CONTENT = {
-  design: {
-    title: 'Design your space from scratch',
+  explore: {
+    title: 'Explore styles & ideas',
     steps: [
-      'Upload your room',
-      'We understand layout and constraints',
-      'Get space-safe design options and a guided plan'
+      'Browse curated room inspirations',
+      'Explore styles, moods, and room types',
+      'Choose a look to execute'
     ],
-    cta: 'Start from my room',
-    uploadMode: 'design',
+    cta: 'Explore styles',
+    uploadMode: 'explore',
     images: [
       {
-        url: '/assets/before-empty-room.png',
-        alt: 'Empty room with sliding door and natural light - Before',
-        label: 'Before'
+        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/4a353320-f266-498a-b105-8ffe1b423b27.png',
+        alt: 'Modern minimalist living room'
       },
       {
-        url: '/assets/after-furnished-room.png',
-        alt: 'Same room now beautifully furnished with modern decor - After',
-        label: 'After'
+        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/d105eabc-9e94-443c-b1d2-1da1d1ff381e.png',
+        alt: 'Scandinavian bedroom'
+      },
+      {
+        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/5e43a37b-7c8b-406a-9456-3f811e52767c.png',
+        alt: 'Industrial dining space'
       }
     ]
   },
   replicate: {
     title: 'Replicate an inspiration',
     steps: [
-      'Upload inspiration',
-      'AI identifies decor',
-      'Get a clear shopping list'
+      'Upload an inspiration image',
+      'AI identifies decor and style elements',
+      'Get a clear shopping list and execution plan'
     ],
     cta: 'Upload inspiration',
     uploadMode: 'inspiration',
     images: [
       {
-        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/4a353320-f266-498a-b105-8ffe1b423b27.png',
+        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-27/f5c2c97d-14f6-4c30-8611-9c97d727c2c6.png',
         alt: 'Styled modern living room'
       },
       {
-        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/d105eabc-9e94-443c-b1d2-1da1d1ff381e.png',
+        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-27/d8585f08-b5c0-406b-adf3-12ca5b4e4e4f.png',
         alt: 'Styled contemporary bedroom'
       },
       {
-        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/5e43a37b-7c8b-406a-9456-3f811e52767c.png',
+        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-27/083c7d04-5b8c-4617-80f4-13ba1ddbe422.png',
         alt: 'Styled elegant dining room'
       }
     ]
@@ -127,7 +129,7 @@ const MODE_CONTENT = {
 export default function Home() {
   const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [selectedMode, setSelectedMode] = useState<Mode>('design');
+  const [selectedMode, setSelectedMode] = useState<Mode>('explore');
 
   const currentContent = MODE_CONTENT[selectedMode];
   const currentImages = currentContent.images;
@@ -160,7 +162,7 @@ export default function Home() {
           {/* Section 1: Hero Header */}
           <div className="text-center mb-8 space-y-3">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#111111] leading-tight">
-              From empty space to execution
+              From inspiration to execution
             </h1>
             
             <p className="text-lg md:text-xl text-[#555555] max-w-3xl mx-auto">
@@ -172,14 +174,14 @@ export default function Home() {
           <div className="flex justify-center mb-12">
             <div className="inline-flex bg-white rounded-full p-1 shadow-md border border-gray-200">
               <button
-                onClick={() => handleModeChange('design')}
+                onClick={() => handleModeChange('explore')}
                 className={`px-6 py-2 md:py-3 rounded-full text-sm font-medium transition-all ${
-                  selectedMode === 'design'
+                  selectedMode === 'explore'
                     ? 'bg-[#111111] text-white'
                     : 'text-[#555555] hover:text-[#111111]'
                 }`}
               >
-                Design my space
+                Explore styles
               </button>
               <button
                 onClick={() => handleModeChange('replicate')}
@@ -245,13 +247,6 @@ export default function Home() {
                   alt={currentImages[currentSlide].alt}
                   className="w-full h-full object-cover"
                 />
-                
-                {/* Before/After Label for Design Mode */}
-                {selectedMode === 'design' && currentImages[currentSlide].label && (
-                  <div className="absolute top-4 left-4 bg-black/80 text-white px-4 py-2 rounded-full text-sm font-semibold">
-                    {currentImages[currentSlide].label}
-                  </div>
-                )}
                 
                 {/* Carousel Controls Overlay */}
                 <button
