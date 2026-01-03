@@ -388,50 +388,19 @@ export default function Upload() {
     });
 
     try {
-      // Fetch the style image and convert to blob
-      const response = await fetch(selectedStyleImage);
-      if (!response.ok) {
-        throw new Error('Failed to load style image');
-      }
-      const blob = await response.blob();
-      
-      // Create a File object from the blob
-      const file = new File([blob], `style-${Date.now()}.jpg`, { type: 'image/jpeg' });
-      
-      console.log('Style image loaded, starting upload process...');
+      // FIXED: Skip fetch and directly use the CDN URL
+      // The CDN images are already hosted and accessible, no need to re-upload
+      console.log('Using CDN image URL directly:', selectedStyleImage);
       
       // Track image analysis started
       trackAction(EVENTS.IMAGE_ANALYSIS_STARTED, {
         is_sample_image: true,
         source: 'explore_styles'
       });
-
-      // Upload image to Supabase storage
-      console.log('Uploading image to Supabase storage...');
-      const imageUrl = await uploadImage(file);
-      console.log('Image uploaded successfully:', imageUrl);
       
-      // Validate that the image contains decor/furniture
-      let validation;
-      try {
-        console.log('Validating image content...');
-        validation = await validateDecorImage(imageUrl);
-        console.log('Validation result:', validation);
-      } catch (validationError) {
-        console.error('Validation error (treating as valid):', validationError);
-        validation = { is_valid: true, confidence: 0.5, reason: 'Validation error, allowing by default' };
-      }
-      
-      // Check if image is valid
-      if (validation.is_valid === false) {
-        toast.error("We couldn't detect decor in this image.");
-        setUploading(false);
-        return;
-      }
-      
-      // Create board with style name
-      console.log('Creating board...');
-      const board = await createBoard(selectedStyleName, imageUrl);
+      // Create board with style name using the CDN URL directly
+      console.log('Creating board with CDN image...');
+      const board = await createBoard(selectedStyleName, selectedStyleImage);
       console.log('Board created successfully:', board.id);
       
       // Navigate to analyzing page
