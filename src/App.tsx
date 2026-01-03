@@ -22,6 +22,8 @@ import SpecsForm from './pages/SpecsForm';
 import SpecsResults from './pages/SpecsResults';
 import TemplateResults from './pages/TemplateResults';
 import DesignSpaceAnalyze from './pages/DesignSpaceAnalyze';
+import DesignSpaceOptions from './pages/DesignSpaceOptions';
+import DesignSpaceItems from './pages/DesignSpaceItems';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -73,6 +75,8 @@ const App = () => (
           <Route path="/item-detection/:boardId" element={<ItemDetection />} />
           {/* Design Space flow routes - PUBLIC */}
           <Route path="/design-space/analyze" element={<DesignSpaceAnalyze />} />
+          <Route path="/design-space/options" element={<DesignSpaceOptions />} />
+          <Route path="/design-space/items" element={<DesignSpaceItems />} />
           {/* Specs flow routes - PUBLIC */}
           <Route path="/specs/:categoryId" element={<SpecsForm />} />
           <Route path="/specs-results" element={<SpecsResults />} />

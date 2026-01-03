@@ -1,5 +1,11 @@
 import { supabase } from './supabase';
 
+export interface ExistingFurniture {
+  item: string;
+  position: string;
+  category: string;
+}
+
 export interface VisionAnalysisResult {
   roomType: string;
   walls: number;
@@ -11,9 +17,39 @@ export interface VisionAnalysisResult {
   };
   blockedZones: string[];
   walkableZones: string[];
+  existingFurniture?: ExistingFurniture[];
   confidence: 'high' | 'medium' | 'low';
+  detectedColors?: string[];
   rawAnalysis: string;
 }
+
+// Template ID to image URL mapping
+const TEMPLATE_IMAGES: Record<string, string> = {
+  'living-room': 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/d0d966e8-188f-4d04-a96d-426b17fd2c45.png',
+  'bedroom': 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/440cd2b1-4463-4154-adc6-9b80782a0131.png',
+  'dining-room': 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/9a416eec-cc75-47d0-bfa6-80faeb568e7d.png',
+  'home-office': '/assets/office-with-furniture.png'
+};
+
+// Template metadata to seed Vision analysis
+const TEMPLATE_METADATA: Record<string, { roomType: string; knownStructure: string }> = {
+  'living-room': {
+    roomType: 'Living Room',
+    knownStructure: 'Standard living room with 4 walls, 1 door, 2 windows'
+  },
+  'bedroom': {
+    roomType: 'Bedroom',
+    knownStructure: 'Standard bedroom with 4 walls, 1 door, 1 window'
+  },
+  'dining-room': {
+    roomType: 'Dining Room',
+    knownStructure: 'Standard dining room with 4 walls, 1 door, 1 window'
+  },
+  'home-office': {
+    roomType: 'Home Office',
+    knownStructure: 'Home office with desk, chair, bookshelf, and credenza. 4 walls, 1 door, 1 window'
+  }
+};
 
 /**
  * Analyze room using OpenAI Vision API
@@ -21,13 +57,15 @@ export interface VisionAnalysisResult {
  */
 export async function analyzeRoomWithVision(
   imageUrl: string,
-  unknownDimensions: boolean = false
+  unknownDimensions: boolean = false,
+  templateMetadata?: { roomType: string; knownStructure: string }
 ): Promise<VisionAnalysisResult> {
   try {
     const { data, error } = await supabase.functions.invoke('app_8574c59127_analyze_room', {
       body: {
         imageUrl,
-        unknownDimensions
+        unknownDimensions,
+        templateMetadata // Seed Vision with template context if provided
       }
     });
 
@@ -48,69 +86,19 @@ export async function analyzeRoomWithVision(
 }
 
 /**
- * Analyze room template (no Vision API needed)
+ * Analyze room template using Vision API (UNIFIED PIPELINE)
+ * Templates now call Vision analysis on their images instead of using static data
  */
-export function analyzeRoomTemplate(templateId: string): VisionAnalysisResult {
-  const templates: Record<string, VisionAnalysisResult> = {
-    'living-room': {
-      roomType: 'Living Room',
-      walls: 4,
-      doors: 1,
-      windows: 2,
-      proportions: {
-        width: '12-15 feet',
-        depth: '15-18 feet'
-      },
-      blockedZones: ['door swing area', 'window wall'],
-      walkableZones: ['center area', 'along walls'],
-      confidence: 'high',
-      rawAnalysis: 'Standard living room template with typical proportions'
-    },
-    'bedroom': {
-      roomType: 'Bedroom',
-      walls: 4,
-      doors: 1,
-      windows: 1,
-      proportions: {
-        width: '10-12 feet',
-        depth: '12-14 feet'
-      },
-      blockedZones: ['door swing area', 'closet area'],
-      walkableZones: ['center area', 'foot of bed area'],
-      confidence: 'high',
-      rawAnalysis: 'Standard bedroom template with typical proportions'
-    },
-    'dining-room': {
-      roomType: 'Dining Room',
-      walls: 4,
-      doors: 1,
-      windows: 1,
-      proportions: {
-        width: '10-12 feet',
-        depth: '12-15 feet'
-      },
-      blockedZones: ['door swing area', 'window area'],
-      walkableZones: ['around table perimeter', 'entry area'],
-      confidence: 'high',
-      rawAnalysis: 'Standard dining room template with typical proportions'
-    },
-    'home-office': {
-      roomType: 'Home Office',
-      walls: 4,
-      doors: 1,
-      windows: 1,
-      proportions: {
-        width: '8-10 feet',
-        depth: '10-12 feet'
-      },
-      blockedZones: ['door swing area', 'window wall'],
-      walkableZones: ['center area', 'desk approach area'],
-      confidence: 'high',
-      rawAnalysis: 'Standard home office template with typical proportions'
-    }
-  };
+export async function analyzeRoomTemplate(templateId: string): Promise<VisionAnalysisResult> {
+  const templateImageUrl = TEMPLATE_IMAGES[templateId];
+  const metadata = TEMPLATE_METADATA[templateId];
 
-  return templates[templateId] || templates['living-room'];
+  if (!templateImageUrl || !metadata) {
+    throw new Error(`Unknown template: ${templateId}`);
+  }
+
+  // Call Vision API with template image and metadata to seed the analysis
+  return analyzeRoomWithVision(templateImageUrl, false, metadata);
 }
 
 /**

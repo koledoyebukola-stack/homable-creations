@@ -1,216 +1,210 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': '*',
-};
+const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')!;
 
-interface AnalyzeRoomRequest {
-  imageUrl: string;
-  unknownDimensions?: boolean;
+interface ExistingFurniture {
+  item: string;
+  position: string;
+  category: string;
 }
 
 Deno.serve(async (req) => {
-  const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] Request started:`, req.method, req.url);
-
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': '*'
+      }
+    });
   }
 
+  const requestId = crypto.randomUUID();
+  console.log(`[${requestId}] Room Analysis Started`);
+
   try {
-    // Parse request body
-    let body: AnalyzeRoomRequest;
+    let requestBody;
     try {
-      body = await req.json();
-    } catch (e) {
-      console.error(`[${requestId}] Failed to parse request body:`, e);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Invalid request body' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      const bodyText = await req.text();
+      requestBody = bodyText ? JSON.parse(bodyText) : {};
+    } catch (parseError) {
+      console.error(`[${requestId}] Failed to parse request body:`, parseError);
+      throw new Error('Invalid request body');
     }
 
-    const { imageUrl, unknownDimensions = false } = body;
+    const { imageUrl, unknownDimensions = false, templateMetadata } = requestBody;
 
     if (!imageUrl) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'imageUrl is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      throw new Error('Missing required field: imageUrl');
     }
 
-    console.log(`[${requestId}] Analyzing room image:`, imageUrl);
-    console.log(`[${requestId}] Unknown dimensions:`, unknownDimensions);
-
-    // Get OpenAI API key from environment
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openaiApiKey) {
-      console.error(`[${requestId}] OPENAI_API_KEY not configured`);
-      return new Response(
-        JSON.stringify({ success: false, error: 'OpenAI API key not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    console.log(`[${requestId}] Analyzing image: ${imageUrl}`);
+    if (templateMetadata) {
+      console.log(`[${requestId}] Template context: ${templateMetadata.roomType}`);
     }
 
-    // Prepare Vision API prompt
-    const prompt = unknownDimensions
-      ? `Analyze this room image and provide a structured assessment. Focus on:
+    // Build system prompt with optional template seeding
+    const systemPrompt = templateMetadata
+      ? `You are an expert interior design analyst. Analyze this ${templateMetadata.roomType} image.
 
-1. Room Type: Identify the room type (living room, bedroom, dining room, home office, etc.)
-2. Structural Features: Count visible walls, doors, and windows
-3. Proportions: Estimate relative width vs depth (e.g., "appears wider than deep" or "roughly square")
-4. Blocked Zones: Identify areas that should not have furniture (door swing areas, window walls, built-in features)
-5. Walkable Zones: Identify clear circulation paths and usable floor areas
-6. Confidence: Rate your confidence in this analysis (high/medium/low)
+TEMPLATE CONTEXT (use as seed, but analyze the actual image):
+${templateMetadata.knownStructure}
 
-Provide your response in this JSON format:
+Your analysis must be based on what you SEE in the image, not just the template context.`
+      : `You are an expert interior design analyst. Analyze this room image in detail.`;
+
+    const userPrompt = unknownDimensions
+      ? `Analyze this room image. The room dimensions are unknown - estimate based on visible furniture scale and typical room proportions.
+
+Focus on:
+1. Room type and purpose
+2. Structural elements (walls, doors, windows)
+3. EXISTING FURNITURE (list ALL items with positions and categories)
+4. Dominant colors and finishes
+5. Layout density and proportions
+6. Blocked zones and walkable areas
+
+Return ONLY valid JSON with this structure:
 {
-  "roomType": "string",
-  "walls": number,
-  "doors": number,
-  "windows": number,
+  "roomType": "Room Type",
+  "walls": 4,
+  "doors": 1,
+  "windows": 2,
   "proportions": {
-    "width": "descriptive estimate",
-    "depth": "descriptive estimate"
+    "width": "estimated width range",
+    "depth": "estimated depth range"
   },
-  "blockedZones": ["array", "of", "zones"],
-  "walkableZones": ["array", "of", "zones"],
+  "blockedZones": ["zone1", "zone2"],
+  "walkableZones": ["zone1", "zone2"],
+  "existingFurniture": [
+    {
+      "item": "Furniture Name",
+      "position": "location description",
+      "category": "seating|tables|storage|lighting|decor|beds"
+    }
+  ],
+  "detectedColors": ["#hex1", "#hex2", "#hex3"],
   "confidence": "high|medium|low",
-  "rawAnalysis": "brief explanation of your assessment"
+  "rawAnalysis": "brief summary"
 }`
-      : `Analyze this room image and provide a structured assessment. The user may have some knowledge of dimensions. Focus on:
+      : `Analyze this room image with known approximate dimensions.
 
-1. Room Type: Identify the room type (living room, bedroom, dining room, home office, etc.)
-2. Structural Features: Count visible walls, doors, and windows
-3. Proportions: Estimate approximate dimensions in feet (e.g., "12-15 feet wide, 15-18 feet deep")
-4. Blocked Zones: Identify areas that should not have furniture (door swing areas, window walls, built-in features)
-5. Walkable Zones: Identify clear circulation paths and usable floor areas
-6. Confidence: Rate your confidence in this analysis (high/medium/low)
+Focus on:
+1. Room type and purpose
+2. Structural elements (walls, doors, windows)
+3. EXISTING FURNITURE (list ALL items with positions and categories)
+4. Dominant colors and finishes
+5. Precise proportions and measurements
+6. Blocked zones and walkable areas
 
-Provide your response in this JSON format:
+Return ONLY valid JSON with this structure:
 {
-  "roomType": "string",
-  "walls": number,
-  "doors": number,
-  "windows": number,
+  "roomType": "Room Type",
+  "walls": 4,
+  "doors": 1,
+  "windows": 2,
   "proportions": {
-    "width": "X-Y feet",
-    "depth": "X-Y feet"
+    "width": "width measurement",
+    "depth": "depth measurement"
   },
-  "blockedZones": ["array", "of", "zones"],
-  "walkableZones": ["array", "of", "zones"],
+  "blockedZones": ["zone1", "zone2"],
+  "walkableZones": ["zone1", "zone2"],
+  "existingFurniture": [
+    {
+      "item": "Furniture Name",
+      "position": "location description",
+      "category": "seating|tables|storage|lighting|decor|beds"
+    }
+  ],
+  "detectedColors": ["#hex1", "#hex2", "#hex3"],
   "confidence": "high|medium|low",
-  "rawAnalysis": "brief explanation of your assessment"
+  "rawAnalysis": "brief summary"
 }`;
 
-    // Call OpenAI Vision API
-    console.log(`[${requestId}] Calling OpenAI Vision API`);
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${openaiApiKey}`,
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model: 'gpt-4o',
         messages: [
           {
+            role: 'system',
+            content: systemPrompt
+          },
+          {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: prompt,
+                text: userPrompt
               },
               {
                 type: 'image_url',
                 image_url: {
-                  url: imageUrl,
-                },
-              },
-            ],
-          },
+                  url: imageUrl
+                }
+              }
+            ]
+          }
         ],
-        max_tokens: 1000,
-        temperature: 0.3,
-      }),
+        max_tokens: 1500,
+        temperature: 0.3
+      })
     });
 
-    if (!openaiResponse.ok) {
-      const errorText = await openaiResponse.text();
-      console.error(`[${requestId}] OpenAI API error:`, openaiResponse.status, errorText);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: `OpenAI API error: ${openaiResponse.status}` 
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[${requestId}] OpenAI error:`, errorText);
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
 
-    const openaiData = await openaiResponse.json();
-    console.log(`[${requestId}] OpenAI response received`);
+    const data = await response.json();
+    let content = data.choices[0].message.content;
 
-    // Extract and parse the analysis
-    const content = openaiData.choices[0]?.message?.content;
-    if (!content) {
-      console.error(`[${requestId}] No content in OpenAI response`);
-      return new Response(
-        JSON.stringify({ success: false, error: 'No analysis content received' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Try to parse JSON from the response
+    // Parse the JSON response
     let analysis;
     try {
-      // Remove markdown code blocks if present
-      const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      analysis = JSON.parse(cleanContent);
-    } catch (e) {
-      console.error(`[${requestId}] Failed to parse OpenAI response as JSON:`, e);
-      console.error(`[${requestId}] Raw content:`, content);
-      
-      // Fallback: return a default analysis with low confidence
-      analysis = {
-        roomType: 'Unknown Room',
-        walls: 4,
-        doors: 1,
-        windows: 1,
-        proportions: {
-          width: 'unable to determine',
-          depth: 'unable to determine'
-        },
-        blockedZones: ['door area'],
-        walkableZones: ['center area'],
-        confidence: 'low',
-        rawAnalysis: 'Unable to parse detailed analysis. Please try with a clearer image.'
-      };
+      content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      analysis = JSON.parse(content);
+    } catch (parseError) {
+      console.error(`[${requestId}] JSON parse error:`, parseError);
+      console.error(`[${requestId}] Content:`, content);
+      throw new Error('Failed to parse Vision API response');
     }
 
-    console.log(`[${requestId}] Analysis completed successfully`);
+    console.log(`[${requestId}] Analysis complete: ${analysis.roomType}, ${analysis.existingFurniture?.length || 0} furniture items`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        analysis,
+        analysis
       }),
       {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
       }
     );
   } catch (error) {
-    console.error(`[${requestId}] Unexpected error:`, error);
+    console.error(`[${requestId}] Error:`, error);
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        requestId
       }),
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
       }
     );
   }
