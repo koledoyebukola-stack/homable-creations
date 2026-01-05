@@ -286,10 +286,10 @@ export default function Upload() {
         return;
       }
       
-      // Create board with appropriate name
+      // Create board with appropriate name and test_country if present
       const boardName = isSampleImage ? sampleImageAlt : 'Untitled inspiration';
       console.log('Creating board...');
-      const board = await createBoard(boardName, imageUrl);
+      const board = await createBoard(boardName, imageUrl, testCountry || undefined);
       console.log('Board created successfully:', board.id);
       
       // Clean up preview URL
@@ -297,12 +297,9 @@ export default function Upload() {
         URL.revokeObjectURL(previewUrl);
       }
       
-      // Navigate to analyzing page with test_country parameter if present
+      // Navigate to analyzing page (no need to pass test_country as it's already in the board)
       console.log('Navigating to analyzing page...');
-      const analyzeUrl = testCountry 
-        ? `/analyzing/${board.id}?test_country=${testCountry}`
-        : `/analyzing/${board.id}`;
-      navigate(analyzeUrl);
+      navigate(`/analyzing/${board.id}`);
     } catch (error) {
       console.error('Upload error details:', error);
       
@@ -435,17 +432,14 @@ export default function Upload() {
         return;
       }
       
-      // Create board with style name
+      // Create board with style name and test_country if present
       console.log('Creating board...');
-      const board = await createBoard(selectedStyleName, imageUrl);
+      const board = await createBoard(selectedStyleName, imageUrl, testCountry || undefined);
       console.log('Board created successfully:', board.id);
       
-      // Navigate to analyzing page with test_country parameter if present
+      // Navigate to analyzing page (no need to pass test_country as it's already in the board)
       console.log('Navigating to analyzing page...');
-      const analyzeUrl = testCountry 
-        ? `/analyzing/${board.id}?test_country=${testCountry}`
-        : `/analyzing/${board.id}`;
-      navigate(analyzeUrl);
+      navigate(`/analyzing/${board.id}`);
     } catch (error) {
       console.error('Style analysis error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to analyze style';

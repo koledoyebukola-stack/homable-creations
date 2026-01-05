@@ -1,19 +1,15 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { analyzeImage, updateBoardName, generateBoardName } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 
 export default function Analyzing() {
   const { boardId } = useParams<{ boardId: string }>();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [progressMessage, setProgressMessage] = useState('Our AI is identifying decor items and styles...');
   const [boardImageUrl, setBoardImageUrl] = useState<string | null>(null);
-
-  // Get test_country parameter for testing
-  const testCountry = searchParams.get('test_country');
 
   useEffect(() => {
     // Timer to track elapsed time and update progress messages
@@ -47,9 +43,6 @@ export default function Analyzing() {
 
       try {
         console.log('Starting analysis for board:', boardId);
-        if (testCountry) {
-          console.log('Testing mode: simulating country', testCountry);
-        }
 
         // Get board details
         const { data: board, error: boardError } = await supabase
@@ -65,24 +58,14 @@ export default function Analyzing() {
 
         console.log('Board fetched:', board);
         
+        // Check if board has test country set
+        if (board.country) {
+          console.log('Board has test country set:', board.country);
+        }
+        
         // Set the board image URL for preview
         const imageUrl = board.source_image_url || board.cover_image_url;
         setBoardImageUrl(imageUrl);
-
-        // If test_country is provided, update the board with the test country
-        if (testCountry) {
-          console.log('Updating board with test country:', testCountry);
-          const { error: updateError } = await supabase
-            .from('boards')
-            .update({ country: testCountry })
-            .eq('id', boardId);
-
-          if (updateError) {
-            console.error('Failed to update board with test country:', updateError);
-          } else {
-            console.log('Board updated with test country successfully');
-          }
-        }
 
         // Run AI analysis (no auth check here - let the edge function handle it)
         console.log('Calling analyzeImage...');
@@ -123,7 +106,7 @@ export default function Analyzing() {
     };
 
     runAnalysis();
-  }, [boardId, navigate, testCountry]);
+  }, [boardId, navigate]);
 
   if (error) {
     return (
@@ -193,11 +176,6 @@ export default function Analyzing() {
           <p className="text-lg text-gray-600">
             {progressMessage}
           </p>
-          {testCountry && (
-            <p className="text-sm text-purple-600 font-medium">
-              Testing mode: Simulating {testCountry}
-            </p>
-          )}
           {elapsedTime >= 10 && (
             <p className="text-sm text-gray-500 mt-2">
               This is taking a bit longer than usual, but we're still working on it...

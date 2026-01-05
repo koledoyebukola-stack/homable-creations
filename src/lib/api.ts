@@ -133,18 +133,32 @@ export async function validateDecorImage(imageUrl: string): Promise<{
   return data;
 }
 
-export async function createBoard(name: string, sourceImageUrl: string): Promise<Board> {
+export async function createBoard(name: string, sourceImageUrl: string, testCountry?: string): Promise<Board> {
   const { data: { user } } = await supabase.auth.getUser();
   const userId = user?.id || null;
 
+  const boardData: {
+    user_id: string | null;
+    name: string;
+    source_image_url: string;
+    cover_image_url: string;
+    country?: string;
+  } = {
+    user_id: userId,
+    name,
+    source_image_url: sourceImageUrl,
+    cover_image_url: sourceImageUrl,
+  };
+
+  // If test_country is provided, set it in the board data
+  if (testCountry) {
+    boardData.country = testCountry;
+    console.log('Creating board with test country:', testCountry);
+  }
+
   const { data, error } = await supabase
     .from('boards')
-    .insert({
-      user_id: userId,
-      name,
-      source_image_url: sourceImageUrl,
-      cover_image_url: sourceImageUrl,
-    })
+    .insert(boardData)
     .select()
     .single();
 
