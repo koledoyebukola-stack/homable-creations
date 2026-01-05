@@ -6,12 +6,28 @@ export interface Board {
   source_image_url?: string;
   status: string;
   detected_items_count: number;
+  country?: string; // ISO 3166-1 alpha-2 country code (e.g., 'NG' for Nigeria)
   room_materials?: {
     walls?: string;
     floors?: string;
   };
   created_at: string;
   updated_at: string;
+}
+
+export interface CarpenterSpec {
+  dimensions: {
+    width_cm: number;
+    depth_cm: number;
+    height_cm: number;
+    notes?: string;
+  };
+  material: string;
+  material_reasoning: string;
+  finish: string;
+  construction_features: string[];
+  estimated_cost_range: string;
+  build_time: string;
 }
 
 export interface DetectedItem {
@@ -32,6 +48,7 @@ export interface DetectedItem {
   description?: string;
   confidence?: number;
   position?: Record<string, number | string | boolean>;
+  carpenter_spec?: CarpenterSpec; // Nigeria-specific carpenter specifications
   created_at: string;
 }
 

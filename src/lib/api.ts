@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Board, DetectedItem, Product, Checklist, ChecklistItem, ChecklistWithItems, HistoryItem, SpecsHistory } from './types';
+import type { Board, DetectedItem, Product, Checklist, ChecklistItem, ChecklistWithItems, HistoryItem, SpecsHistory, CarpenterSpec } from './types';
 
 interface RoomMaterials {
   walls?: string;
@@ -191,6 +191,27 @@ export async function seeMoreItems(boardId: string): Promise<{ detected_items: D
   }
 
   return data;
+}
+
+// Generate carpenter specifications for Nigeria users (on-demand)
+export async function generateCarpenterSpec(item: DetectedItem): Promise<CarpenterSpec> {
+  const { data, error } = await supabase.functions.invoke('app_8574c59127_generate_carpenter_specs', {
+    body: {
+      item_id: item.id,
+      item_name: item.item_name,
+      category: item.category,
+      style: item.style,
+      description: item.description,
+      color: item.dominant_color,
+    },
+  });
+
+  if (error) {
+    console.error('Carpenter spec generation error:', error);
+    throw error;
+  }
+
+  return data.carpenter_spec;
 }
 
 export function generateBoardName(detectedItems: DetectedItem[]): string {

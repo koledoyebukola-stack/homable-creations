@@ -5,10 +5,10 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { getProductsForItem, searchProducts, getDetectedItems, createChecklist } from '@/lib/api';
-import { Product, DetectedItem } from '@/lib/types';
+import { getProductsForItem, searchProducts, getDetectedItems, createChecklist, getBoardById, generateCarpenterSpec } from '@/lib/api';
+import { Product, DetectedItem, CarpenterSpec } from '@/lib/types';
 import { toast } from 'sonner';
-import { ExternalLink, Star, Upload, ListChecks, Search } from 'lucide-react';
+import { ExternalLink, Star, Upload, ListChecks, Search, Ruler, Hammer, Package } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { 
   getAmazonSearchUrl, 
@@ -129,6 +129,9 @@ export default function ProductMatches() {
   const [searching, setSearching] = useState(false);
   const [savingChecklist, setSavingChecklist] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isNigeria, setIsNigeria] = useState(false);
+  const [carpenterSpec, setCarpenterSpec] = useState<CarpenterSpec | null>(null);
+  const [generatingSpec, setGeneratingSpec] = useState(false);
 
   useEffect(() => {
     // Check authentication status
@@ -142,13 +145,34 @@ export default function ProductMatches() {
 
     const loadData = async () => {
       try {
+        // Check if user is from Nigeria
+        const board = await getBoardById(boardId);
+        const userIsNigeria = board?.country === 'NG';
+        setIsNigeria(userIsNigeria);
+
         const items = await getDetectedItems(boardId);
         const currentItem = items.find((i) => i.id === itemId);
         if (currentItem) {
           setItem(currentItem);
+
+          // If Nigeria user, generate carpenter spec instead of searching products
+          if (userIsNigeria) {
+            setGeneratingSpec(true);
+            try {
+              const spec = await generateCarpenterSpec(currentItem);
+              setCarpenterSpec(spec);
+            } catch (error) {
+              console.error('Failed to generate carpenter spec:', error);
+              toast.error('Failed to generate carpenter specifications');
+            } finally {
+              setGeneratingSpec(false);
+            }
+            setLoading(false);
+            return;
+          }
         }
 
-        // Try to get existing products first
+        // For non-Nigeria users, continue with product search
         const existingProducts = await getProductsForItem(itemId);
         
         if (existingProducts.length > 0) {
@@ -203,14 +227,18 @@ export default function ProductMatches() {
     }
   };
 
-  if (loading || searching) {
+  if (loading || searching || generatingSpec) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
         <Header />
         <main className="container mx-auto px-4 py-16">
           <LoadingSpinner
             message={
-              searching ? 'Finding the best deals...' : 'Loading products...'
+              generatingSpec 
+                ? 'Generating carpenter specifications...' 
+                : searching 
+                ? 'Finding the best deals...' 
+                : 'Loading products...'
             }
           />
         </main>
@@ -218,6 +246,135 @@ export default function ProductMatches() {
     );
   }
 
+  // Nigeria-specific carpenter spec view
+  if (isNigeria && carpenterSpec) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
+        <Header />
+
+        <main className="container mx-auto px-4 py-16">
+          <div className="max-w-4xl mx-auto">
+            <div className="mb-8">
+              <Button
+                variant="ghost"
+                onClick={() => navigate(`/item-detection/${boardId}`)}
+                className="text-[#555555] hover:text-[#C89F7A]"
+              >
+                ← Back to Results
+              </Button>
+            </div>
+
+            {item && (
+              <div className="text-center mb-12">
+                <h1 className="text-4xl font-bold mb-4 text-[#111111]">{item.item_name}</h1>
+                <div className="flex justify-center gap-2 flex-wrap">
+                  <Badge className="bg-[#C89F7A] text-white">{item.category}</Badge>
+                  {item.style && <Badge variant="outline" className="border-[#C89F7A] text-[#C89F7A]">{item.style}</Badge>}
+                  {item.dominant_color && <Badge variant="outline">{item.dominant_color}</Badge>}
+                </div>
+                {item.description && (
+                  <p className="text-[#555555] mt-4 max-w-2xl mx-auto">{item.description}</p>
+                )}
+              </div>
+            )}
+
+            {/* Carpenter Specification Card */}
+            <Card className="overflow-hidden border-2 border-[#C89F7A] shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-[#C89F7A] to-[#B5896C] text-white p-6">
+                <div className="flex items-center gap-3">
+                  <Hammer className="h-6 w-6" />
+                  <h2 className="text-2xl font-bold">Custom Fabrication Specifications</h2>
+                </div>
+                <p className="text-sm mt-2 text-white/90">
+                  Ready-to-build specifications for local Nigerian carpenters
+                </p>
+              </CardHeader>
+
+              <CardContent className="p-6 space-y-6">
+                {/* Dimensions */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Ruler className="h-5 w-5 text-[#C89F7A]" />
+                    <h3 className="text-lg font-semibold text-[#111111]">Dimensions</h3>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm text-[#555555]">Width</p>
+                      <p className="text-xl font-bold text-[#111111]">{carpenterSpec.dimensions.width_cm} cm</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-[#555555]">Depth</p>
+                      <p className="text-xl font-bold text-[#111111]">{carpenterSpec.dimensions.depth_cm} cm</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-[#555555]">Height</p>
+                      <p className="text-xl font-bold text-[#111111]">{carpenterSpec.dimensions.height_cm} cm</p>
+                    </div>
+                  </div>
+                  {carpenterSpec.dimensions.notes && (
+                    <p className="text-sm text-[#666666] mt-3 italic">{carpenterSpec.dimensions.notes}</p>
+                  )}
+                </div>
+
+                {/* Material */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Package className="h-5 w-5 text-[#C89F7A]" />
+                    <h3 className="text-lg font-semibold text-[#111111]">Recommended Material</h3>
+                  </div>
+                  <p className="text-2xl font-bold text-[#C89F7A] mb-2">{carpenterSpec.material}</p>
+                  <p className="text-sm text-[#555555]">{carpenterSpec.material_reasoning}</p>
+                </div>
+
+                {/* Finish */}
+                <div>
+                  <h3 className="text-lg font-semibold text-[#111111] mb-2">Finish</h3>
+                  <p className="text-base text-[#555555] bg-gray-50 rounded-lg p-3">{carpenterSpec.finish}</p>
+                </div>
+
+                {/* Construction Features */}
+                <div>
+                  <h3 className="text-lg font-semibold text-[#111111] mb-3">Construction Features</h3>
+                  <ul className="space-y-2">
+                    {carpenterSpec.construction_features.map((feature, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <span className="text-[#C89F7A] mt-1">•</span>
+                        <span className="text-[#555555]">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Cost & Time Estimates */}
+                <div className="grid md:grid-cols-2 gap-4 pt-4 border-t">
+                  <div>
+                    <p className="text-sm text-[#555555] mb-1">Estimated Cost Range</p>
+                    <p className="text-xl font-bold text-[#111111]">{carpenterSpec.estimated_cost_range}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-[#555555] mb-1">Build Time</p>
+                    <p className="text-xl font-bold text-[#111111]">{carpenterSpec.build_time}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="text-center mt-12">
+              <Button
+                size="lg"
+                onClick={() => navigate(`/item-detection/${boardId}`)}
+                className="bg-[#111111] hover:bg-[#333333] text-white rounded-full px-8"
+              >
+                Back to All Results
+              </Button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Default view for non-Nigeria users (existing product search)
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
       <Header />

@@ -23,6 +23,10 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Extract country from Cloudflare CF-IPCountry header
+    const country = req.headers.get('CF-IPCountry') || 'US'; // Default to US if not available
+    console.log(`[${requestId}] Detected country:`, country);
+
     // Parse request body
     let body;
     try {
@@ -194,11 +198,12 @@ No comments, no extra text, no trailing commas.`,
     if (parsedResponse.is_decor === false) {
       console.log(`[${requestId}] Image rejected: not decor`);
       
-      // Update board status to indicate validation failure
+      // Update board status to indicate validation failure (with country)
       await supabase
         .from('boards')
         .update({
           status: 'validation_failed',
+          country: country,
           updated_at: new Date().toISOString(),
         })
         .eq('id', board_id);
@@ -228,6 +233,7 @@ No comments, no extra text, no trailing commas.`,
         .from('boards')
         .update({
           status: 'analyzed',
+          country: country,
           detected_items_count: 0,
           updated_at: new Date().toISOString(),
         })
@@ -290,12 +296,13 @@ No comments, no extra text, no trailing commas.`,
       insertedItems?.length
     );
 
-    // Update board status - no room_materials in initial scan
+    // Update board status with country - no room_materials in initial scan
     const boardUpdateStart = performance.now();
     await supabase
       .from('boards')
       .update({
         status: 'analyzed',
+        country: country,
         detected_items_count: insertedItems?.length || 0,
         updated_at: new Date().toISOString(),
       })
