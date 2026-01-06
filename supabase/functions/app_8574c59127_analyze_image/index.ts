@@ -24,8 +24,8 @@ Deno.serve(async (req) => {
 
   try {
     // Extract country from Cloudflare CF-IPCountry header
-    const country = req.headers.get('CF-IPCountry') || 'US'; // Default to US if not available
-    console.log(`[${requestId}] Detected country:`, country);
+    const detectedCountry = req.headers.get('CF-IPCountry') || 'US'; // Default to US if not available
+    console.log(`[${requestId}] Detected country from header:`, detectedCountry);
 
     // Parse request body
     let body;
@@ -68,6 +68,22 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     console.log(`[${requestId}] Analyzing image for board:`, board_id);
+
+    // CRITICAL: Check if board already has a country value (from test_country parameter)
+    const { data: existingBoard, error: boardFetchError } = await supabase
+      .from('boards')
+      .select('country')
+      .eq('id', board_id)
+      .single();
+
+    if (boardFetchError) {
+      console.error(`[${requestId}] Failed to fetch board:`, boardFetchError);
+      throw new Error('Failed to fetch board data');
+    }
+
+    // Use existing country if present (from test_country), otherwise use detected country
+    const country = existingBoard.country || detectedCountry;
+    console.log(`[${requestId}] Final country to use:`, country, existingBoard.country ? '(from test_country)' : '(from CF-IPCountry header)');
 
     // Initialize OpenAI client
     const apiKey = Deno.env.get('OPENAI_API_KEY');
@@ -120,7 +136,7 @@ RULES:
 - Focus on shoppable furniture and decor
 - Skip small accessories or hard-to-see details
 - NO room materials (walls, floors)
-- NO dimensions or materials
+- INCLUDE estimated dimensions in format "W x D x H" (e.g., "180cm x 90cm x 75cm")
 
 ITEM CATEGORIES (priority order):
 1. Major furniture (sofas, beds, tables, chairs)
@@ -130,11 +146,32 @@ ITEM CATEGORIES (priority order):
 5. Statement pieces (vases, sculptures)
 6. Event decor (centerpieces, backdrops, table settings)
 
+CRITICAL: INTENT CLASSIFICATION
+For each item, assign EXACTLY ONE intent_class based on structural nature:
+
+- "buildable_furniture": Structural items a carpenter can build (bed frames, tables, chairs, cabinets, shelves, desks, dressers, wardrobes, benches, stools, dining sets, coffee tables, side tables, bookcases, TV stands, console tables)
+- "soft_goods": Textiles and fabrics (bedding, pillows, cushions, throws, blankets, rugs, carpets, curtains, drapes, towels, linens, upholstery fabric)
+- "lighting": Light fixtures and lamps (table lamps, floor lamps, chandeliers, pendant lights, wall sconces, ceiling lights, desk lamps, string lights)
+- "decor": Decorative accessories (wall art, paintings, mirrors, vases, plants, sculptures, clocks, picture frames, candles, decorative bowls)
+- "electronics": Electronic devices (TVs, speakers, computers, tablets, gaming consoles, smart home devices)
+
+EXAMPLES:
+- "brown wooden bed frame" → buildable_furniture (structural frame)
+- "upholstered dining chair" → buildable_furniture (chair structure is buildable)
+- "modern nightstand" → buildable_furniture (storage furniture)
+- "table lamp" → lighting (NOT buildable_furniture, even though it has "table")
+- "decorative throw pillow" → soft_goods (textile)
+- "bed linens" → soft_goods (NOT buildable_furniture, even though it has "bed")
+- "area rug" → soft_goods (textile)
+- "wall art" → decor (decorative item)
+
 For each item:
 - "name": COLOR + description (e.g., "grey modern linen sofa", "gold balloon arch")
 - "category": item type (e.g., "sofa", "coffee table", "centerpiece")
+- "intent_class": ONE OF: buildable_furniture, soft_goods, lighting, decor, electronics
 - "style": aesthetic (e.g., "modern", "elegant", "festive")
 - "color": dominant color (e.g., "grey", "gold", "white")
+- "dimensions": estimated size in "W x D x H" format (e.g., "180cm x 90cm x 75cm")
 - "tags": key descriptors array (e.g., ["linen", "three-seater"])
 - "description": 1 short sentence
 - "confidence": 0 to 1
@@ -147,8 +184,10 @@ Output ONLY valid minified JSON:
     {
       "name": "...",
       "category": "...",
+      "intent_class": "buildable_furniture",
       "style": "...",
       "color": "...",
+      "dimensions": "...",
       "tags": ["..."],
       "description": "...",
       "confidence": 0.0
@@ -168,7 +207,7 @@ No comments, no extra text, no trailing commas.`,
           ],
         },
       ],
-      max_tokens: 800,
+      max_tokens: 1000,
       temperature: 0.3,
     });
     const openaiEnd = performance.now();
@@ -198,13 +237,12 @@ No comments, no extra text, no trailing commas.`,
     if (parsedResponse.is_decor === false) {
       console.log(`[${requestId}] Image rejected: not decor`);
       
-      // Update board status to indicate validation failure (with country)
+      // Update board status to indicate validation failure (preserve existing country)
       await supabase
         .from('boards')
         .update({
           status: 'validation_failed',
           country: country,
-          updated_at: new Date().toISOString(),
         })
         .eq('id', board_id);
 
@@ -235,7 +273,6 @@ No comments, no extra text, no trailing commas.`,
           status: 'analyzed',
           country: country,
           detected_items_count: 0,
-          updated_at: new Date().toISOString(),
         })
         .eq('id', board_id);
 
@@ -253,22 +290,30 @@ No comments, no extra text, no trailing commas.`,
       );
     }
 
-    // Map OpenAI items to database schema - no materials, no dimensions
+    // Map OpenAI items to database schema - now includes intent_class and dimensions
     const mappingStart = performance.now();
     const detectedItems = items.map((item: any) => ({
       board_id,
       item_name: item.name || 'Unknown Item',
       category: item.category || 'Decor',
+      intent_class: item.intent_class || null, // Single source of truth for buildability
       style: item.style || 'Modern',
       dominant_color: item.color || null,
       materials: null,
-      dimensions: null,
+      dimensions: item.dimensions || null,
       tags: item.tags || [],
       description: item.description || null,
       confidence: item.confidence || 0.5,
     }));
     const mappingEnd = performance.now();
     console.log(`[${requestId}] ⏱️ TIMING: Data mapping: ${(mappingEnd - mappingStart).toFixed(2)}ms`);
+
+    // Log intent classification summary
+    const intentSummary = detectedItems.reduce((acc: any, item: any) => {
+      acc[item.intent_class || 'unclassified'] = (acc[item.intent_class || 'unclassified'] || 0) + 1;
+      return acc;
+    }, {});
+    console.log(`[${requestId}] Intent classification summary:`, intentSummary);
 
     console.log(
       `[${requestId}] Inserting ${detectedItems.length} detected items into database`
@@ -296,7 +341,7 @@ No comments, no extra text, no trailing commas.`,
       insertedItems?.length
     );
 
-    // Update board status with country - no room_materials in initial scan
+    // Update board status with country - preserve existing country if present
     const boardUpdateStart = performance.now();
     await supabase
       .from('boards')
@@ -304,7 +349,6 @@ No comments, no extra text, no trailing commas.`,
         status: 'analyzed',
         country: country,
         detected_items_count: insertedItems?.length || 0,
-        updated_at: new Date().toISOString(),
       })
       .eq('id', board_id);
     const boardUpdateEnd = performance.now();

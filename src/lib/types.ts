@@ -30,11 +30,21 @@ export interface CarpenterSpec {
   build_time: string;
 }
 
+// Intent classification for detected items
+// Determines the structural nature and buildability of an item
+export type IntentClass = 
+  | 'buildable_furniture'  // Carpenter-appropriate: bed frames, tables, cabinets, chairs, etc.
+  | 'soft_goods'           // Textiles: bedding, pillows, rugs, curtains, towels
+  | 'lighting'             // Lamps, fixtures, chandeliers, sconces
+  | 'decor'                // Art, vases, plants, mirrors, clocks, decorative items
+  | 'electronics';         // TVs, speakers, appliances, devices
+
 export interface DetectedItem {
   id: string;
   board_id: string;
   item_name: string;
   category: string;
+  intent_class?: IntentClass; // Single source of truth for item buildability
   style?: string;
   dominant_color?: string;
   materials?: string[];

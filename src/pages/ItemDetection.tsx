@@ -6,15 +6,16 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import Auth from '@/components/AuthModal';
 import ShareModal from '@/components/ShareModal';
 import VisualSearchModal from '@/components/VisualSearchModal';
+import VendorShareModal from '@/components/VendorShareModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getDetectedItems, getBoardById, getBoards, searchProducts, getProductsForItem, getRandomSeedProducts, logAnalysis, createChecklist, getChecklistByBoardId, seeMoreItems } from '@/lib/api';
-import { DetectedItem, Product, Board, Checklist } from '@/lib/types';
+import { getDetectedItems, getBoardById, getBoards, searchProducts, getProductsForItem, getRandomSeedProducts, logAnalysis, createChecklist, getChecklistByBoardId, seeMoreItems, generateCarpenterSpec } from '@/lib/api';
+import { DetectedItem, Product, Board, Checklist, CarpenterSpec } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { ExternalLink, Star, Share2, Upload, Search, ListChecks, Eye, Camera } from 'lucide-react';
+import { ExternalLink, Star, Share2, Upload, Search, ListChecks, Eye, Camera, Hammer, Ruler, Package, Send } from 'lucide-react';
 import { 
   getAmazonSearchUrl, 
   getWalmartSearchUrl, 
@@ -74,6 +75,53 @@ async function handleRetailerClick(getUrlFn: (query: string) => Promise<string>,
   }
 }
 
+// Helper function to determine if an item is buildable furniture (carpenter-appropriate)
+// Uses intent_class from database as single source of truth
+function isBuildableFurniture(item: DetectedItem): boolean {
+  // Primary check: Use intent_class from database if available
+  if (item.intent_class) {
+    const isBuildable = item.intent_class === 'buildable_furniture';
+    console.log(`[intent_class] "${item.item_name}": ${item.intent_class} -> ${isBuildable ? '✓ Buildable' : '✗ Not buildable'}`);
+    return isBuildable;
+  }
+  
+  // Fallback: If intent_class is missing, log warning and return false
+  console.warn(`[intent_class] Missing for "${item.item_name}" (${item.category}) - defaulting to NOT buildable`);
+  return false;
+}
+
+// Helper function to determine if Western retailers should be shown
+// For Nigerian users with non-furniture items (soft_goods, lighting, decor, electronics), hide Western retailers
+function shouldShowWesternRetailers(isNigeria: boolean, item: DetectedItem): boolean {
+  if (!isNigeria) return true; // Non-Nigerian users always see Western retailers
+  
+  // Nigerian users: check intent_class
+  const nigerianNonFurnitureClasses = ['soft_goods', 'lighting', 'decor', 'electronics'];
+  
+  if (item.intent_class && nigerianNonFurnitureClasses.includes(item.intent_class)) {
+    console.log(`[Nigerian Non-Furniture] "${item.item_name}" (${item.intent_class}) - hiding Western retailers`);
+    return false;
+  }
+  
+  return true; // Show for buildable_furniture or other intent classes
+}
+
+// Helper function to determine if "Share with a vendor" should be shown
+// For Nigerian users with non-furniture items only
+function shouldShowVendorShare(isNigeria: boolean, item: DetectedItem): boolean {
+  if (!isNigeria) return false; // Only for Nigerian users
+  
+  // Show for non-furniture items (soft_goods, lighting, decor, electronics)
+  const nigerianNonFurnitureClasses = ['soft_goods', 'lighting', 'decor', 'electronics'];
+  
+  if (item.intent_class && nigerianNonFurnitureClasses.includes(item.intent_class)) {
+    console.log(`[Nigerian Non-Furniture] "${item.item_name}" (${item.intent_class}) - showing vendor share`);
+    return true;
+  }
+  
+  return false;
+}
+
 export default function ItemDetection() {
   const { boardId } = useParams<{ boardId: string }>();
   const navigate = useNavigate();
@@ -98,6 +146,15 @@ export default function ItemDetection() {
     isOpen: boolean;
     item: DetectedItem | null;
   }>({ isOpen: false, item: null });
+  const [vendorShareModal, setVendorShareModal] = useState<{
+    isOpen: boolean;
+    item: DetectedItem | null;
+  }>({ isOpen: false, item: null });
+  
+  // Nigeria-specific state
+  const [isNigeria, setIsNigeria] = useState(false);
+  const [carpenterSpecs, setCarpenterSpecs] = useState<Record<string, CarpenterSpec>>({});
+  const [generatingSpecs, setGeneratingSpecs] = useState<Record<string, boolean>>({});
   
   // Refs for scrolling to item sections
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -134,10 +191,14 @@ export default function ItemDetection() {
     const loadData = async () => {
       try {
         // Load board info
-        // Load board info directly by boardId (works for both authenticated and non-authenticated users)
         const currentBoard = await getBoardById(boardId);
         if (currentBoard) {
           setBoard(currentBoard);
+          // Check if user is from Nigeria
+          const userIsNigeria = currentBoard.country === 'NG';
+          setIsNigeria(userIsNigeria);
+          console.log('Board country:', currentBoard.country, 'Is Nigeria:', userIsNigeria);
+          
           // Set room materials if available
           if (currentBoard.room_materials) {
             setRoomMaterials(currentBoard.room_materials);
@@ -147,6 +208,15 @@ export default function ItemDetection() {
         // Load detected items
         const detectedItems = await getDetectedItems(boardId);
         setItems(detectedItems);
+        
+        // Debug: Log all items with their intent_class classification
+        console.log('=== INTENT_CLASS CLASSIFICATION ===');
+        detectedItems.forEach(item => {
+          const isBuildable = isBuildableFurniture(item);
+          console.log(`${isBuildable ? '✓' : '✗'} "${item.item_name}" (${item.category}) - intent_class: ${item.intent_class || 'MISSING'}`);
+        });
+        console.log('====================================');
+        
         setLoading(false);
 
         // Check authentication status
@@ -447,6 +517,27 @@ export default function ItemDetection() {
     }
   };
 
+  // Handle generating carpenter spec for a specific item
+  const handleGenerateCarpenterSpec = async (item: DetectedItem) => {
+    if (!isAuthenticated) {
+      toast.error('Please sign in to generate carpenter specifications');
+      setShowAuthModal(true);
+      return;
+    }
+
+    try {
+      setGeneratingSpecs(prev => ({ ...prev, [item.id]: true }));
+      const spec = await generateCarpenterSpec(item);
+      setCarpenterSpecs(prev => ({ ...prev, [item.id]: spec }));
+      toast.success('Carpenter specifications generated!');
+    } catch (error) {
+      console.error('Failed to generate carpenter spec:', error);
+      toast.error('Failed to generate carpenter specifications');
+    } finally {
+      setGeneratingSpecs(prev => ({ ...prev, [item.id]: false }));
+    }
+  };
+
   const calculateTotalCost = () => {
     const allProducts = Object.values(products).filter(r => !r.message).flatMap(r => r.products).flat();
     if (allProducts.length === 0) return null;
@@ -736,7 +827,7 @@ export default function ItemDetection() {
           )}
 
           {/* Budget Overview */}
-          {totalCost && !loadingProducts && isAuthenticated && (
+          {totalCost && !loadingProducts && isAuthenticated && !isNigeria && (
             <div className="flex justify-center mb-12">
               <Card className="w-full md:w-auto bg-gradient-to-br from-[#C89F7A]/10 to-[#C89F7A]/5 border-[#C89F7A]/30">
                 <CardContent className="p-4 md:p-6">
@@ -757,7 +848,7 @@ export default function ItemDetection() {
             </div>
           )}
 
-          {/* SECTION 4: Item Detail Sections (Redesigned with Desktop-Only Compact Layout) */}
+          {/* SECTION 4: Item Detail Sections */}
           {items.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-[#555555] mb-4">
@@ -812,6 +903,11 @@ export default function ItemDetection() {
                   const itemResult = products[item.id];
                   const itemProducts = itemResult?.products || [];
                   const customMessage = itemResult?.message;
+                  const itemCarpenterSpec = carpenterSpecs[item.id];
+                  const isGeneratingSpec = generatingSpecs[item.id];
+                  const showCarpenterButton = isNigeria && isBuildableFurniture(item);
+                  const showWesternRetailers = shouldShowWesternRetailers(isNigeria, item);
+                  const showVendorShare = shouldShowVendorShare(isNigeria, item);
 
                   return (
                     <div 
@@ -840,77 +936,246 @@ export default function ItemDetection() {
                           </div>
                         </div>
 
-                        {customMessage || itemProducts.length === 0 ? (
+                        {/* Nigeria: Show carpenter spec button AND Google Search for furniture items */}
+                        {showCarpenterButton && (
+                          <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200 shadow-sm">
+                            <CardContent className="p-6 space-y-4">
+                              <div className="text-center">
+                                <h3 className="text-sm font-bold text-[#111111] mb-2 uppercase tracking-wide">
+                                  EXECUTION OPTIONS
+                                </h3>
+                                <p className="text-xs text-[#666666] mb-4">
+                                  Choose how you want to get this item
+                                </p>
+                              </div>
+
+                              {/* Primary: Get Carpenter Specifications */}
+                              {!itemCarpenterSpec && (
+                                <Button
+                                  onClick={() => handleGenerateCarpenterSpec(item)}
+                                  disabled={isGeneratingSpec}
+                                  className="w-full bg-gradient-to-r from-[#C89F7A] to-[#B5896C] hover:from-[#B5896C] hover:to-[#C89F7A] text-white rounded-full font-semibold shadow-lg"
+                                  size="lg"
+                                >
+                                  <Hammer className="h-5 w-5 mr-2" />
+                                  {isGeneratingSpec ? 'Generating...' : 'Get Carpenter Specifications'}
+                                </Button>
+                              )}
+
+                              {/* Divider */}
+                              <div className="relative">
+                                <div className="absolute inset-0 flex items-center">
+                                  <div className="w-full border-t border-gray-300"></div>
+                                </div>
+                                <div className="relative flex justify-center text-xs">
+                                  <span className="bg-white px-2 text-[#666666]">OR</span>
+                                </div>
+                              </div>
+
+                              {/* Secondary: Google Search */}
+                              <div className="space-y-2">
+                                <h4 className="text-xs font-bold text-[#111111] text-center">
+                                  Search online
+                                </h4>
+                                <Button
+                                  onClick={() => window.open(getGoogleSearchUrl(buildRetailerQuery(item)), '_blank')}
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full bg-white hover:bg-gray-50 text-[#111111] border-gray-300 font-medium"
+                                >
+                                  <Search className="mr-2 h-4 w-4" />
+                                  Search the web (Google)
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {/* Nigeria: Display carpenter spec if generated */}
+                        {itemCarpenterSpec && (
+                          <Card className="overflow-hidden border-2 border-[#C89F7A] shadow-lg">
+                            <div className="bg-gradient-to-r from-[#C89F7A] to-[#B5896C] text-white p-4">
+                              <div className="flex items-center gap-2">
+                                <Hammer className="h-5 w-5" />
+                                <h3 className="text-lg font-bold">Custom Fabrication Specifications</h3>
+                              </div>
+                              <p className="text-xs mt-1 text-white/90">
+                                Ready-to-build specifications for local Nigerian carpenters
+                              </p>
+                            </div>
+
+                            <CardContent className="p-4 space-y-4">
+                              {/* Dimensions */}
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Ruler className="h-4 w-4 text-[#C89F7A]" />
+                                  <h4 className="text-sm font-semibold text-[#111111]">Dimensions</h4>
+                                </div>
+                                <div className="grid grid-cols-3 gap-3">
+                                  <div>
+                                    <p className="text-xs text-[#555555]">Width</p>
+                                    <p className="text-lg font-bold text-[#111111]">{itemCarpenterSpec.dimensions.width_cm} cm</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-[#555555]">Depth</p>
+                                    <p className="text-lg font-bold text-[#111111]">{itemCarpenterSpec.dimensions.depth_cm} cm</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-[#555555]">Height</p>
+                                    <p className="text-lg font-bold text-[#111111]">{itemCarpenterSpec.dimensions.height_cm} cm</p>
+                                  </div>
+                                </div>
+                                {itemCarpenterSpec.dimensions.notes && (
+                                  <p className="text-xs text-[#666666] mt-2 italic">{itemCarpenterSpec.dimensions.notes}</p>
+                                )}
+                              </div>
+
+                              {/* Material */}
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Package className="h-4 w-4 text-[#C89F7A]" />
+                                  <h4 className="text-sm font-semibold text-[#111111]">Recommended Material</h4>
+                                </div>
+                                <p className="text-lg font-bold text-[#C89F7A] mb-1">{itemCarpenterSpec.material}</p>
+                                <p className="text-xs text-[#555555]">{itemCarpenterSpec.material_reasoning}</p>
+                              </div>
+
+                              {/* Finish */}
+                              <div>
+                                <h4 className="text-sm font-semibold text-[#111111] mb-1">Finish</h4>
+                                <p className="text-sm text-[#555555] bg-gray-50 rounded-lg p-2">{itemCarpenterSpec.finish}</p>
+                              </div>
+
+                              {/* Construction Features */}
+                              <div>
+                                <h4 className="text-sm font-semibold text-[#111111] mb-2">Construction Features</h4>
+                                <ul className="space-y-1">
+                                  {itemCarpenterSpec.construction_features.map((feature, idx) => (
+                                    <li key={idx} className="flex items-start gap-2">
+                                      <span className="text-[#C89F7A] mt-0.5">•</span>
+                                      <span className="text-xs text-[#555555]">{feature}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+
+                              {/* Cost & Time */}
+                              <div className="grid grid-cols-2 gap-3 pt-3 border-t">
+                                <div>
+                                  <p className="text-xs text-[#555555] mb-0.5">Estimated Cost</p>
+                                  <p className="text-base font-bold text-[#111111]">{itemCarpenterSpec.estimated_cost_range}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-[#555555] mb-0.5">Build Time</p>
+                                  <p className="text-base font-bold text-[#111111]">{itemCarpenterSpec.build_time}</p>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {/* Nigeria: Show "Share with a vendor" for non-furniture items */}
+                        {showVendorShare && (
+                          <Card className="bg-gradient-to-br from-[#C89F7A]/5 to-white border-[#C89F7A]/20 shadow-sm">
+                            <CardContent className="p-6 space-y-4">
+                              <div className="text-center">
+                                <h3 className="text-sm font-bold text-[#111111] mb-2 uppercase tracking-wide">
+                                  SHARE WITH VENDORS
+                                </h3>
+                                <p className="text-xs text-[#666666] mb-4">
+                                  Generate a shareable image for Instagram or WhatsApp
+                                </p>
+                              </div>
+
+                              <Button
+                                onClick={() => setVendorShareModal({ isOpen: true, item })}
+                                className="w-full bg-gradient-to-r from-[#C89F7A] to-[#B5896C] hover:from-[#B5896C] hover:to-[#C89F7A] text-white rounded-full font-semibold shadow-lg"
+                                size="lg"
+                              >
+                                <Send className="h-5 w-5 mr-2" />
+                                Share with a vendor
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {/* For non-Nigeria OR non-furniture items: show product search */}
+                        {(!isNigeria || !isBuildableFurniture(item)) && (customMessage || itemProducts.length === 0) && (
                           <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200 shadow-sm">
                             <CardContent className="p-6 md:p-8 space-y-4">
-                              {/* SEARCH ON Section */}
-                              <div className="space-y-3">
-                                <h3 className="text-sm font-bold text-[#111111] uppercase tracking-wide">
-                                  SEARCH ON
-                                </h3>
-                                
-                                <div className="grid grid-cols-3 gap-2">
-                                  <Button
-                                    onClick={() => handleRetailerClick(getWayfairSearchUrl, item)}
-                                    variant="outline"
-                                    size="sm"
-                                    className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
-                                  >
-                                    Wayfair
-                                    <ExternalLink className="ml-1.5 h-3 w-3" />
-                                  </Button>
+                              {/* Show Western retailers only if allowed */}
+                              {showWesternRetailers && (
+                                <>
+                                  {/* SEARCH ON Section */}
+                                  <div className="space-y-3">
+                                    <h3 className="text-sm font-bold text-[#111111] uppercase tracking-wide">
+                                      SEARCH ON
+                                    </h3>
+                                    
+                                    <div className="grid grid-cols-3 gap-2">
+                                      <Button
+                                        onClick={() => handleRetailerClick(getWayfairSearchUrl, item)}
+                                        variant="outline"
+                                        size="sm"
+                                        className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
+                                      >
+                                        Wayfair
+                                        <ExternalLink className="ml-1.5 h-3 w-3" />
+                                      </Button>
 
-                                  <Button
-                                    onClick={() => handleRetailerClick(getAmazonSearchUrl, item)}
-                                    variant="outline"
-                                    size="sm"
-                                    className="rounded-full bg-white border border-[#FF9900] text-[#111111] hover:bg-[#FF9900]/10 font-medium"
-                                  >
-                                    Amazon
-                                    <ExternalLink className="ml-1.5 h-3 w-3" />
-                                  </Button>
+                                      <Button
+                                        onClick={() => handleRetailerClick(getAmazonSearchUrl, item)}
+                                        variant="outline"
+                                        size="sm"
+                                        className="rounded-full bg-white border border-[#FF9900] text-[#111111] hover:bg-[#FF9900]/10 font-medium"
+                                      >
+                                        Amazon
+                                        <ExternalLink className="ml-1.5 h-3 w-3" />
+                                      </Button>
 
-                                  <Button
-                                    onClick={() => handleRetailerClick(getWalmartSearchUrl, item)}
-                                    variant="outline"
-                                    size="sm"
-                                    className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
-                                  >
-                                    Walmart
-                                    <ExternalLink className="ml-1.5 h-3 w-3" />
-                                  </Button>
-                                </div>
-                              </div>
+                                      <Button
+                                        onClick={() => handleRetailerClick(getWalmartSearchUrl, item)}
+                                        variant="outline"
+                                        size="sm"
+                                        className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
+                                      >
+                                        Walmart
+                                        <ExternalLink className="ml-1.5 h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
 
-                              {/* More stores Section */}
-                              <div className="space-y-2">
-                                <h3 className="text-sm font-bold text-[#111111]">
-                                  More stores
-                                </h3>
-                                <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
-                                  <Button
-                                    onClick={() => handleRetailerClick(getTemuSearchUrl, item)}
-                                    variant="outline"
-                                    size="sm"
-                                    className="rounded-full bg-white border border-[#FF7A00] text-[#555555] hover:bg-[#FF7A00]/10"
-                                  >
-                                    Temu
-                                    <ExternalLink className="ml-1.5 h-3 w-3" />
-                                  </Button>
+                                  {/* More stores Section */}
+                                  <div className="space-y-2">
+                                    <h3 className="text-sm font-bold text-[#111111]">
+                                      More stores
+                                    </h3>
+                                    <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
+                                      <Button
+                                        onClick={() => handleRetailerClick(getTemuSearchUrl, item)}
+                                        variant="outline"
+                                        size="sm"
+                                        className="rounded-full bg-white border border-[#FF7A00] text-[#555555] hover:bg-[#FF7A00]/10"
+                                      >
+                                        Temu
+                                        <ExternalLink className="ml-1.5 h-3 w-3" />
+                                      </Button>
 
-                                  <Button
-                                    onClick={() => handleRetailerClick(getSheinSearchUrl, item)}
-                                    variant="outline"
-                                    size="sm"
-                                    className="rounded-full bg-white border border-[#000000] text-[#555555] hover:bg-[#000000]/10"
-                                  >
-                                    Shein
-                                    <ExternalLink className="ml-1.5 h-3 w-3" />
-                                  </Button>
-                                </div>
-                              </div>
+                                      <Button
+                                        onClick={() => handleRetailerClick(getSheinSearchUrl, item)}
+                                        variant="outline"
+                                        size="sm"
+                                        className="rounded-full bg-white border border-[#000000] text-[#555555] hover:bg-[#000000]/10"
+                                      >
+                                        Shein
+                                        <ExternalLink className="ml-1.5 h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </>
+                              )}
 
-                              {/* Google Search Section */}
+                              {/* Google Search Section - Always show */}
                               <Button
                                 onClick={() => window.open(getGoogleSearchUrl(buildRetailerQuery(item)), '_blank')}
                                 variant="ghost"
@@ -941,7 +1206,9 @@ export default function ItemDetection() {
                               </div>
                             </CardContent>
                           </Card>
-                        ) : (
+                        )}
+
+                        {(!isNigeria || !isBuildableFurniture(item)) && itemProducts.length > 0 && (
                           <>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                               {itemProducts.map((product) => (
@@ -1023,67 +1290,71 @@ export default function ItemDetection() {
                                 Need more options? Find similar items below
                               </p>
                               
-                              <p className="text-xs font-medium text-[#555555] uppercase tracking-wide">
-                                Search on:
-                              </p>
-                              
-                              {/* PRIMARY: Retailer Buttons */}
-                              <div className="grid grid-cols-3 gap-2 max-w-md mx-auto">
-                                <Button
-                                  onClick={() => handleRetailerClick(getWayfairSearchUrl, item)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
-                                >
-                                  Wayfair
-                                  <ExternalLink className="ml-1.5 h-3 w-3" />
-                                </Button>
+                              {showWesternRetailers && (
+                                <>
+                                  <p className="text-xs font-medium text-[#555555] uppercase tracking-wide">
+                                    Search on:
+                                  </p>
+                                  
+                                  {/* PRIMARY: Retailer Buttons */}
+                                  <div className="grid grid-cols-3 gap-2 max-w-md mx-auto">
+                                    <Button
+                                      onClick={() => handleRetailerClick(getWayfairSearchUrl, item)}
+                                      variant="outline"
+                                      size="sm"
+                                      className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
+                                    >
+                                      Wayfair
+                                      <ExternalLink className="ml-1.5 h-3 w-3" />
+                                    </Button>
 
-                                <Button
-                                  onClick={() => handleRetailerClick(getAmazonSearchUrl, item)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full bg-white border border-[#FF9900] text-[#111111] hover:bg-[#FF9900]/10 font-medium"
-                                >
-                                  Amazon
-                                  <ExternalLink className="ml-1.5 h-3 w-3" />
-                                </Button>
+                                    <Button
+                                      onClick={() => handleRetailerClick(getAmazonSearchUrl, item)}
+                                      variant="outline"
+                                      size="sm"
+                                      className="rounded-full bg-white border border-[#FF9900] text-[#111111] hover:bg-[#FF9900]/10 font-medium"
+                                    >
+                                      Amazon
+                                      <ExternalLink className="ml-1.5 h-3 w-3" />
+                                    </Button>
 
-                                <Button
-                                  onClick={() => handleRetailerClick(getWalmartSearchUrl, item)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
-                                >
-                                  Walmart
-                                  <ExternalLink className="ml-1.5 h-3 w-3" />
-                                </Button>
-                              </div>
+                                    <Button
+                                      onClick={() => handleRetailerClick(getWalmartSearchUrl, item)}
+                                      variant="outline"
+                                      size="sm"
+                                      className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
+                                    >
+                                      Walmart
+                                      <ExternalLink className="ml-1.5 h-3 w-3" />
+                                    </Button>
+                                  </div>
 
-                              {/* SECONDARY: Temu & Shein Buttons */}
-                              <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
-                                <Button
-                                  onClick={() => handleRetailerClick(getTemuSearchUrl, item)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full bg-white border border-[#FF7A00] text-[#555555] hover:bg-[#FF7A00]/10"
-                                >
-                                  Temu
-                                  <ExternalLink className="ml-1.5 h-3 w-3" />
-                                </Button>
+                                  {/* SECONDARY: Temu & Shein Buttons */}
+                                  <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
+                                    <Button
+                                      onClick={() => handleRetailerClick(getTemuSearchUrl, item)}
+                                      variant="outline"
+                                      size="sm"
+                                      className="rounded-full bg-white border border-[#FF7A00] text-[#555555] hover:bg-[#FF7A00]/10"
+                                    >
+                                      Temu
+                                      <ExternalLink className="ml-1.5 h-3 w-3" />
+                                    </Button>
 
-                                <Button
-                                  onClick={() => handleRetailerClick(getSheinSearchUrl, item)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full bg-white border border-[#000000] text-[#555555] hover:bg-[#000000]/10"
-                                >
-                                  Shein
-                                  <ExternalLink className="ml-1.5 h-3 w-3" />
-                                </Button>
-                              </div>
+                                    <Button
+                                      onClick={() => handleRetailerClick(getSheinSearchUrl, item)}
+                                      variant="outline"
+                                      size="sm"
+                                      className="rounded-full bg-white border border-[#000000] text-[#555555] hover:bg-[#000000]/10"
+                                    >
+                                      Shein
+                                      <ExternalLink className="ml-1.5 h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </>
+                              )}
 
-                              {/* SECONDARY: Google Search Button */}
+                              {/* SECONDARY: Google Search Button - Always show */}
                               <Button
                                 onClick={() => window.open(getGoogleSearchUrl(buildRetailerQuery(item)), '_blank')}
                                 variant="ghost"
@@ -1369,6 +1640,15 @@ export default function ItemDetection() {
           itemName={visualSearchModal.item.item_name}
           imageUrl={board?.source_image_url || ''}
           croppedImageUrl={visualSearchModal.item.position?.cropped_image_url as string | undefined}
+        />
+      )}
+
+      {vendorShareModal.item && board?.source_image_url && (
+        <VendorShareModal
+          isOpen={vendorShareModal.isOpen}
+          onClose={() => setVendorShareModal({ isOpen: false, item: null })}
+          item={vendorShareModal.item}
+          inspirationImageUrl={board.source_image_url}
         />
       )}
 
