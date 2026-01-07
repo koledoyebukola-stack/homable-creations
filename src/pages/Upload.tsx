@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { AlertCircle, Info, ChevronLeft, ChevronRight, TestTube } from 'lucide-react';
 import SpecsCategorySelection from '@/components/specs/SpecsCategorySelection';
 import { trackPageView, trackAction, EVENTS } from '@/lib/analytics';
+import { getSelectedCountry } from '@/components/LocationSelector';
 
 // Sample images organized by category - REMOVED HOLIDAY LOOKS
 const SAMPLE_CATEGORIES = [
@@ -286,10 +287,14 @@ export default function Upload() {
         return;
       }
       
-      // Create board with appropriate name and test_country if present
+      // Get selected country from LocationSelector
+      const selectedCountry = getSelectedCountry();
+      console.log('[Upload] Using selected country:', selectedCountry);
+      
+      // Create board with appropriate name and selected country (or test_country if present)
       const boardName = isSampleImage ? sampleImageAlt : 'Untitled inspiration';
       console.log('Creating board...');
-      const board = await createBoard(boardName, imageUrl, testCountry || undefined);
+      const board = await createBoard(boardName, imageUrl, testCountry || selectedCountry);
       console.log('Board created successfully:', board.id);
       
       // Clean up preview URL
@@ -297,7 +302,7 @@ export default function Upload() {
         URL.revokeObjectURL(previewUrl);
       }
       
-      // Navigate to analyzing page (no need to pass test_country as it's already in the board)
+      // Navigate to analyzing page
       console.log('Navigating to analyzing page...');
       navigate(`/analyzing/${board.id}`);
     } catch (error) {
@@ -405,7 +410,7 @@ export default function Upload() {
       let validation;
       try {
         console.log('Validating image content...');
-        validation = await validateDecorImage(imageUrl);
+        validation = await validateDecorImage(selectedStyleImage);
         console.log('Validation result:', validation);
       } catch (validationError) {
         console.error('Validation error (treating as valid):', validationError);
@@ -419,12 +424,16 @@ export default function Upload() {
         return;
       }
       
-      // Create board with style name and test_country if present
+      // Get selected country from LocationSelector
+      const selectedCountry = getSelectedCountry();
+      console.log('[Upload] Using selected country:', selectedCountry);
+      
+      // Create board with style name and selected country (or test_country if present)
       console.log('Creating board...');
-      const board = await createBoard(selectedStyleName, imageUrl, testCountry || undefined);
+      const board = await createBoard(selectedStyleName, selectedStyleImage, testCountry || selectedCountry);
       console.log('Board created successfully:', board.id);
       
-      // Navigate to analyzing page (no need to pass test_country as it's already in the board)
+      // Navigate to analyzing page
       console.log('Navigating to analyzing page...');
       navigate(`/analyzing/${board.id}`);
     } catch (error) {

@@ -8,6 +8,7 @@ import ShareModal from '@/components/ShareModal';
 import VisualSearchModal from '@/components/VisualSearchModal';
 import VendorShareModal from '@/components/VendorShareModal';
 import { Button } from '@/components/ui/button';
+import CarpenterSpecModal from '@/components/CarpenterSpecModal';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,7 +16,7 @@ import { getDetectedItems, getBoardById, getBoards, searchProducts, getProductsF
 import { DetectedItem, Product, Board, Checklist, CarpenterSpec } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { ExternalLink, Star, Share2, Upload, Search, ListChecks, Eye, Camera, Hammer, Ruler, Package, Send } from 'lucide-react';
+import { ExternalLink, Star, Share2, Upload, Search, ListChecks, Eye, Camera, Hammer, Ruler, Package, Send, Copy, Instagram } from 'lucide-react';
 import { 
   getAmazonSearchUrl, 
   getWalmartSearchUrl, 
@@ -27,6 +28,51 @@ import {
 } from '@/lib/retailer-utils';
 
 import { trackPageView, trackAction, EVENTS } from '@/lib/analytics';
+
+// Resilient clipboard copy function
+const copyToClipboard = async (text: string): Promise<boolean> => {
+  // Method 1: Try modern Clipboard API first
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (err) {
+      console.warn('Clipboard API failed, trying fallback method:', err);
+    }
+  }
+
+  // Method 2: Fallback using execCommand
+  try {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.top = '0';
+    textArea.style.left = '0';
+    textArea.style.opacity = '0';
+    
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    const successful = document.execCommand('copy');
+    document.body.removeChild(textArea);
+    
+    if (successful) {
+      return true;
+    }
+  } catch (err) {
+    console.warn('execCommand fallback failed:', err);
+  }
+
+  return false;
+};
+
+// Helper function to get Instagram search URL
+const getInstagramSearchUrl = (itemName: string): string => {
+  const encodedQuery = encodeURIComponent(itemName);
+  return `https://www.instagram.com/explore/search/keyword/?q=${encodedQuery}`;
+};
+
 // 1. Define the interface for the full Search Response object (assumed to be the return type of searchProducts)
 interface SearchResponse {
   products: Product[];
@@ -106,6 +152,22 @@ function shouldShowWesternRetailers(isNigeria: boolean, item: DetectedItem): boo
   return true; // Show for buildable_furniture or other intent classes
 }
 
+// Helper function to determine if Instagram search should be shown
+// For Nigerian users with non-furniture items only
+function shouldShowInstagramSearch(isNigeria: boolean, item: DetectedItem): boolean {
+  if (!isNigeria) return false; // Only for Nigerian users
+  
+  // Show for non-furniture items (soft_goods, lighting, decor, electronics)
+  const nigerianNonFurnitureClasses = ['soft_goods', 'lighting', 'decor', 'electronics'];
+  
+  if (item.intent_class && nigerianNonFurnitureClasses.includes(item.intent_class)) {
+    console.log(`[Nigerian Non-Furniture] "${item.item_name}" (${item.intent_class}) - showing Instagram search`);
+    return true;
+  }
+  
+  return false;
+}
+
 // Helper function to determine if "Share with a vendor" should be shown
 // For Nigerian users with non-furniture items only
 function shouldShowVendorShare(isNigeria: boolean, item: DetectedItem): boolean {
@@ -121,6 +183,22 @@ function shouldShowVendorShare(isNigeria: boolean, item: DetectedItem): boolean 
   
   return false;
 }
+
+// Helper function to copy item name to clipboard
+const handleCopyItemName = async (itemName: string) => {
+  const success = await copyToClipboard(itemName);
+  
+  if (success) {
+    toast.success('Search text copied. Paste in Instagram.', {
+      duration: 3000,
+    });
+  } else {
+    toast.info(`Search for: ${itemName}`, {
+      duration: 5000,
+      description: 'Copy this text to search on Instagram',
+    });
+  }
+};
 
 export default function ItemDetection() {
   const { boardId } = useParams<{ boardId: string }>();
@@ -150,6 +228,11 @@ export default function ItemDetection() {
     isOpen: boolean;
     item: DetectedItem | null;
   }>({ isOpen: false, item: null });
+  const [carpenterSpecModal, setCarpenterSpecModal] = useState<{
+    isOpen: boolean;
+    item: DetectedItem | null;
+    spec: CarpenterSpec | null;
+  }>({ isOpen: false, item: null, spec: null });
   
   // Nigeria-specific state
   const [isNigeria, setIsNigeria] = useState(false);
@@ -528,6 +611,10 @@ export default function ItemDetection() {
     try {
       setGeneratingSpecs(prev => ({ ...prev, [item.id]: true }));
       const spec = await generateCarpenterSpec(item);
+      
+      // Open the modal with the generated spec and reference image
+      const referenceImageUrl = item.position?.cropped_image_url || board?.source_image_url;
+      setCarpenterSpecModal({ isOpen: true, item, spec });
       setCarpenterSpecs(prev => ({ ...prev, [item.id]: spec }));
       toast.success('Carpenter specifications generated!');
     } catch (error) {
@@ -907,6 +994,7 @@ export default function ItemDetection() {
                   const isGeneratingSpec = generatingSpecs[item.id];
                   const showCarpenterButton = isNigeria && isBuildableFurniture(item);
                   const showWesternRetailers = shouldShowWesternRetailers(isNigeria, item);
+                  const showInstagramSearch = shouldShowInstagramSearch(isNigeria, item);
                   const showVendorShare = shouldShowVendorShare(isNigeria, item);
 
                   return (
@@ -917,9 +1005,23 @@ export default function ItemDetection() {
                     >
                       <div className="space-y-6 lg:bg-[#fafafa] lg:rounded-xl lg:p-6">
                         <div className="text-center">
-                          <h2 className="text-2xl md:text-3xl font-bold text-[#111111] mb-2">
-                            {item.item_name}
-                          </h2>
+                          <div className="flex items-center justify-center gap-2 mb-2">
+                            <h2 className="text-2xl md:text-3xl font-bold text-[#111111]">
+                              {item.item_name}
+                            </h2>
+                            {/* Copy to clipboard icon for Nigerian non-furniture items */}
+                            {showInstagramSearch && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleCopyItemName(item.item_name)}
+                                className="text-[#C89F7A] hover:text-[#C89F7A] hover:bg-[#C89F7A]/10"
+                                title="Copy search text"
+                              >
+                                <Copy className="h-5 w-5" />
+                              </Button>
+                            )}
+                          </div>
                           {item.description && (
                             <p className="text-sm md:text-base text-[#555555] mb-2">{item.description}</p>
                           )}
@@ -950,17 +1052,15 @@ export default function ItemDetection() {
                               </div>
 
                               {/* Primary: Get Carpenter Specifications */}
-                              {!itemCarpenterSpec && (
-                                <Button
-                                  onClick={() => handleGenerateCarpenterSpec(item)}
-                                  disabled={isGeneratingSpec}
-                                  className="w-full bg-gradient-to-r from-[#C89F7A] to-[#B5896C] hover:from-[#B5896C] hover:to-[#C89F7A] text-white rounded-full font-semibold shadow-lg"
-                                  size="lg"
-                                >
-                                  <Hammer className="h-5 w-5 mr-2" />
-                                  {isGeneratingSpec ? 'Generating...' : 'Get Carpenter Specifications'}
-                                </Button>
-                              )}
+                              <Button
+                                onClick={() => handleGenerateCarpenterSpec(item)}
+                                disabled={isGeneratingSpec}
+                                className="w-full bg-black hover:bg-black/90 text-white rounded-full font-semibold shadow-lg"
+                                size="lg"
+                              >
+                                <Hammer className="h-5 w-5 mr-2" />
+                                {isGeneratingSpec ? 'Generating...' : 'Get Carpenter Specifications'}
+                              </Button>
 
                               {/* Divider */}
                               <div className="relative">
@@ -991,85 +1091,27 @@ export default function ItemDetection() {
                           </Card>
                         )}
 
-                        {/* Nigeria: Display carpenter spec if generated */}
-                        {itemCarpenterSpec && (
-                          <Card className="overflow-hidden border-2 border-[#C89F7A] shadow-lg">
-                            <div className="bg-gradient-to-r from-[#C89F7A] to-[#B5896C] text-white p-4">
-                              <div className="flex items-center gap-2">
-                                <Hammer className="h-5 w-5" />
-                                <h3 className="text-lg font-bold">Custom Fabrication Specifications</h3>
-                              </div>
-                              <p className="text-xs mt-1 text-white/90">
-                                Ready-to-build specifications for local Nigerian carpenters
-                              </p>
-                            </div>
-
-                            <CardContent className="p-4 space-y-4">
-                              {/* Dimensions */}
-                              <div className="bg-gray-50 rounded-lg p-3">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Ruler className="h-4 w-4 text-[#C89F7A]" />
-                                  <h4 className="text-sm font-semibold text-[#111111]">Dimensions</h4>
-                                </div>
-                                <div className="grid grid-cols-3 gap-3">
-                                  <div>
-                                    <p className="text-xs text-[#555555]">Width</p>
-                                    <p className="text-lg font-bold text-[#111111]">{itemCarpenterSpec.dimensions.width_cm} cm</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-[#555555]">Depth</p>
-                                    <p className="text-lg font-bold text-[#111111]">{itemCarpenterSpec.dimensions.depth_cm} cm</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-[#555555]">Height</p>
-                                    <p className="text-lg font-bold text-[#111111]">{itemCarpenterSpec.dimensions.height_cm} cm</p>
-                                  </div>
-                                </div>
-                                {itemCarpenterSpec.dimensions.notes && (
-                                  <p className="text-xs text-[#666666] mt-2 italic">{itemCarpenterSpec.dimensions.notes}</p>
-                                )}
+                        {/* Nigeria: Show Instagram search for non-furniture items */}
+                        {showInstagramSearch && (
+                          <Card className="bg-gradient-to-br from-[#C89F7A]/5 to-white border-[#C89F7A]/20 shadow-sm">
+                            <CardContent className="p-6 space-y-4">
+                              <div className="text-center">
+                                <h3 className="text-sm font-bold text-[#111111] mb-2 uppercase tracking-wide">
+                                  FIND ON INSTAGRAM
+                                </h3>
+                                <p className="text-xs text-[#666666] mb-4">
+                                  Search for this item on Instagram
+                                </p>
                               </div>
 
-                              {/* Material */}
-                              <div className="bg-gray-50 rounded-lg p-3">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Package className="h-4 w-4 text-[#C89F7A]" />
-                                  <h4 className="text-sm font-semibold text-[#111111]">Recommended Material</h4>
-                                </div>
-                                <p className="text-lg font-bold text-[#C89F7A] mb-1">{itemCarpenterSpec.material}</p>
-                                <p className="text-xs text-[#555555]">{itemCarpenterSpec.material_reasoning}</p>
-                              </div>
-
-                              {/* Finish */}
-                              <div>
-                                <h4 className="text-sm font-semibold text-[#111111] mb-1">Finish</h4>
-                                <p className="text-sm text-[#555555] bg-gray-50 rounded-lg p-2">{itemCarpenterSpec.finish}</p>
-                              </div>
-
-                              {/* Construction Features */}
-                              <div>
-                                <h4 className="text-sm font-semibold text-[#111111] mb-2">Construction Features</h4>
-                                <ul className="space-y-1">
-                                  {itemCarpenterSpec.construction_features.map((feature, idx) => (
-                                    <li key={idx} className="flex items-start gap-2">
-                                      <span className="text-[#C89F7A] mt-0.5">•</span>
-                                      <span className="text-xs text-[#555555]">{feature}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-
-                              {/* Cost & Time */}
-                              <div className="grid grid-cols-2 gap-3 pt-3 border-t">
-                                <div>
-                                  <p className="text-xs text-[#555555] mb-0.5">Estimated Cost</p>
-                                  <p className="text-base font-bold text-[#111111]">{itemCarpenterSpec.estimated_cost_range}</p>
-                                </div>
-                                <div>
-                                  <p className="text-xs text-[#555555] mb-0.5">Build Time</p>
-                                  <p className="text-base font-bold text-[#111111]">{itemCarpenterSpec.build_time}</p>
-                                </div>
-                              </div>
+                              <Button
+                                onClick={() => window.open(getInstagramSearchUrl(item.item_name), '_blank')}
+                                className="w-full bg-black hover:bg-black/90 text-white rounded-full font-semibold shadow-lg"
+                                size="lg"
+                              >
+                                <Instagram className="h-5 w-5 mr-2" />
+                                Find on Instagram
+                              </Button>
                             </CardContent>
                           </Card>
                         )}
@@ -1089,7 +1131,7 @@ export default function ItemDetection() {
 
                               <Button
                                 onClick={() => setVendorShareModal({ isOpen: true, item })}
-                                className="w-full bg-gradient-to-r from-[#C89F7A] to-[#B5896C] hover:from-[#B5896C] hover:to-[#C89F7A] text-white rounded-full font-semibold shadow-lg"
+                                className="w-full bg-black hover:bg-black/90 text-white rounded-full font-semibold shadow-lg"
                                 size="lg"
                               >
                                 <Send className="h-5 w-5 mr-2" />
@@ -1618,6 +1660,16 @@ export default function ItemDetection() {
           )}
         </div>
       </main>
+
+      {carpenterSpecModal.item && carpenterSpecModal.spec && (
+        <CarpenterSpecModal
+          isOpen={carpenterSpecModal.isOpen}
+          onClose={() => setCarpenterSpecModal({ isOpen: false, item: null, spec: null })}
+          itemName={carpenterSpecModal.item.item_name}
+          spec={carpenterSpecModal.spec}
+          referenceImageUrl={carpenterSpecModal.item.position?.cropped_image_url || board?.source_image_url}
+        />
+      )}
 
       {showAuthModal && !isAuthenticated && (
         <Auth onSuccess={handleAuthSuccess} redirectPath={`/item-detection/${boardId}`} />

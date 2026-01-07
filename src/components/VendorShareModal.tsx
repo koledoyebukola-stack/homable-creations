@@ -12,6 +12,14 @@ interface VendorShareModalProps {
   inspirationImageUrl: string;
 }
 
+interface DimensionsObject {
+  width?: string;
+  depth?: string;
+  length?: string;
+  height?: string;
+  diameter?: string;
+}
+
 export default function VendorShareModal({ isOpen, onClose, item, inspirationImageUrl }: VendorShareModalProps) {
   const [generatingImage, setGeneratingImage] = useState(false);
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
@@ -27,7 +35,7 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
     
     // If dimensions is an object, format it
     if (item.dimensions && typeof item.dimensions === 'object') {
-      const dims = item.dimensions as any;
+      const dims = item.dimensions as DimensionsObject;
       const parts: string[] = [];
       
       if (dims.width) parts.push(`W: ${dims.width}`);

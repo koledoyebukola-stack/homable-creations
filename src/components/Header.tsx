@@ -10,7 +10,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
-import { Upload, History, LogOut, LogIn, UserPlus } from 'lucide-react';
+import { Upload, History, LogOut, LogIn, UserPlus, ShoppingCart } from 'lucide-react';
+import LocationSelector from './LocationSelector';
 
 export default function Header() {
   const navigate = useNavigate();
@@ -49,8 +50,11 @@ export default function Header() {
               Homable Creations
             </button>
 
-            {/* Right: Auth Buttons */}
+            {/* Right: Location Selector + Auth Buttons */}
             <nav className="flex items-center gap-3">
+              {/* Location Selector */}
+              <LocationSelector />
+              
               {user ? (
                 <>
                   <Button
@@ -101,7 +105,7 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Mobile Layout: Brand + Shopping List + Menu */}
+        {/* Mobile Layout */}
         <div className="md:hidden flex items-center justify-between">
           <button
             onClick={() => navigate('/')}
@@ -110,48 +114,51 @@ export default function Header() {
             Homable Creations
           </button>
 
-          <nav className="flex items-center gap-2">
+          <nav className="flex items-center gap-3">
+            {/* Location Selector - Mobile */}
+            <LocationSelector />
+            
             {user ? (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate('/checklists')}
-                  className="text-white hover:text-white/80 hover:bg-white/10 text-xs px-2"
-                >
-                  Shopping List
-                </Button>
-                
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-white hover:text-white/80 hover:bg-white/10 h-9 w-9 p-0"
-                    >
-                      <img 
-                        src="/assets/menu-icon.png" 
-                        alt="Menu" 
-                        className="h-8 w-8"
-                      />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={() => navigate('/upload')}>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Upload Inspiration
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/history')}>
-                      <History className="mr-2 h-4 w-4" />
-                      My History
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleSignOut}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Sign Out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white hover:text-white/80 hover:bg-white/10 h-9 w-9 p-0"
+                  >
+                    <img 
+                      src="/assets/menu-icon.png" 
+                      alt="Menu" 
+                      className="h-8 w-8"
+                    />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => navigate('/upload')}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload Inspiration
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/checklists')}>
+                    <ShoppingCart className="mr-2 h-4 w-4" />
+                    <span className="flex items-center gap-2">
+                      Shopping List
+                      <Badge 
+                        className="bg-[#E0E0E0] text-[#333333] text-[10px] px-1.5 py-0.5 h-auto rounded-xl font-normal"
+                      >
+                        New
+                      </Badge>
+                    </span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/history')}>
+                    <History className="mr-2 h-4 w-4" />
+                    My History
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
