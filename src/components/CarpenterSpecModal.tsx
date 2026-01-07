@@ -17,17 +17,20 @@ interface CarpenterSpecModalProps {
   referenceImageUrl?: string;
 }
 
-// Helper function to convert remote image URL to blob URL
+// Helper function to convert remote image URL to blob URL using proxy
 async function imageUrlToBlobUrl(imageUrl: string): Promise<string> {
   console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Fetching image from:', imageUrl);
-  console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Image URL type:', imageUrl.startsWith('http') ? 'HTTP URL' : imageUrl.startsWith('blob:') ? 'Blob URL' : 'Unknown');
   
   try {
-    const response = await fetch(imageUrl, { mode: 'cors' });
-    console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Fetch response status:', response.status, response.statusText);
+    // Use the Supabase Edge Function proxy to fetch images with CORS
+    const proxyUrl = `https://jvbrrgqepuhabwddufby.supabase.co/functions/v1/app_8574c59127_proxy_image?url=${encodeURIComponent(imageUrl)}`;
+    console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Using proxy URL:', proxyUrl);
+    
+    const response = await fetch(proxyUrl);
+    console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Proxy response status:', response.status, response.statusText);
     
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText} - URL: ${imageUrl}`);
+      throw new Error(`HTTP ${response.status}: ${response.statusText} - Proxy URL: ${proxyUrl}`);
     }
     
     const blob = await response.blob();
@@ -84,12 +87,12 @@ export default function CarpenterSpecModal({
         format: 'a4'
       });
 
-      // Load the CORRECT Homable brand logo from Supabase
+      // Load the Homable brand logo from Supabase
       console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Loading brand logo from Supabase');
       const logoImg = new Image();
       logoImg.crossOrigin = 'anonymous';
       
-      // Use the new Supabase logo URL
+      // Use the proxy for the Supabase logo URL
       const logoBlobUrl = await imageUrlToBlobUrl('https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/images/image.png');
       createdBlobUrls.push(logoBlobUrl);
       

@@ -20,17 +20,20 @@ interface DimensionsObject {
   diameter?: string;
 }
 
-// Helper function to convert remote image URL to blob URL
+// Helper function to convert remote image URL to blob URL using proxy
 async function imageUrlToBlobUrl(imageUrl: string): Promise<string> {
   console.log('[VendorShareModal] PRODUCTION DEBUG - Fetching image from:', imageUrl);
-  console.log('[VendorShareModal] PRODUCTION DEBUG - Image URL type:', imageUrl.startsWith('http') ? 'HTTP URL' : imageUrl.startsWith('blob:') ? 'Blob URL' : 'Unknown');
   
   try {
-    const response = await fetch(imageUrl, { mode: 'cors' });
-    console.log('[VendorShareModal] PRODUCTION DEBUG - Fetch response status:', response.status, response.statusText);
+    // Use the Supabase Edge Function proxy to fetch images with CORS
+    const proxyUrl = `https://jvbrrgqepuhabwddufby.supabase.co/functions/v1/app_8574c59127_proxy_image?url=${encodeURIComponent(imageUrl)}`;
+    console.log('[VendorShareModal] PRODUCTION DEBUG - Using proxy URL:', proxyUrl);
+    
+    const response = await fetch(proxyUrl);
+    console.log('[VendorShareModal] PRODUCTION DEBUG - Proxy response status:', response.status, response.statusText);
     
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText} - URL: ${imageUrl}`);
+      throw new Error(`HTTP ${response.status}: ${response.statusText} - Proxy URL: ${proxyUrl}`);
     }
     
     const blob = await response.blob();
@@ -106,12 +109,12 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, size, size);
 
-      // Convert inspiration image URL to blob URL first
+      // Convert inspiration image URL to blob URL using proxy
       console.log('[VendorShareModal] PRODUCTION DEBUG - Converting inspiration image to blob...');
       const inspirationBlobUrl = await imageUrlToBlobUrl(inspirationImageUrl);
       blobUrlsRef.current.push(inspirationBlobUrl);
 
-      // Load inspiration image from blob URL (no CORS issues)
+      // Load inspiration image from blob URL
       console.log('[VendorShareModal] PRODUCTION DEBUG - Loading inspiration image from blob URL...');
       const inspirationImg = new Image();
       inspirationImg.crossOrigin = 'anonymous';
@@ -238,7 +241,7 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
       ctx.fillText('Quantity: 1', textX, textY);
       textY += 60;
 
-      // Load and draw the CORRECT brand logo from Supabase
+      // Load and draw the brand logo from Supabase using proxy
       console.log('[VendorShareModal] PRODUCTION DEBUG - Loading brand logo from Supabase');
       const logoBlobUrl = await imageUrlToBlobUrl('https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/images/image.png');
       blobUrlsRef.current.push(logoBlobUrl);
@@ -297,7 +300,7 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
     if (!imageDataUrl) return;
 
     const link = document.createElement('a');
-    const fileName = `${item.item_name.replace(/\s+/g, '-').toLowerCase()}/images/photo1767785902.jpg`;
+    const fileName = `${item.item_name.replace(/\s+/g, '-').toLowerCase()}/images/photo1767786483.jpg`;
     link.download = fileName;
     link.href = imageDataUrl;
     document.body.appendChild(link);
