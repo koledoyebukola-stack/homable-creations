@@ -22,23 +22,27 @@ interface DimensionsObject {
 
 // Helper function to convert remote image URL to blob URL
 async function imageUrlToBlobUrl(imageUrl: string): Promise<string> {
-  console.log('[imageUrlToBlobUrl] Fetching image from:', imageUrl);
+  console.log('[VendorShareModal] PRODUCTION DEBUG - Fetching image from:', imageUrl);
+  console.log('[VendorShareModal] PRODUCTION DEBUG - Image URL type:', imageUrl.startsWith('http') ? 'HTTP URL' : imageUrl.startsWith('blob:') ? 'Blob URL' : 'Unknown');
   
   try {
     const response = await fetch(imageUrl);
+    console.log('[VendorShareModal] PRODUCTION DEBUG - Fetch response status:', response.status, response.statusText);
+    
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(`HTTP ${response.status}: ${response.statusText} - URL: ${imageUrl}`);
     }
     
     const blob = await response.blob();
-    console.log('[imageUrlToBlobUrl] Blob created, size:', blob.size, 'type:', blob.type);
+    console.log('[VendorShareModal] PRODUCTION DEBUG - Blob created, size:', blob.size, 'type:', blob.type);
     
     const blobUrl = URL.createObjectURL(blob);
-    console.log('[imageUrlToBlobUrl] Blob URL created:', blobUrl);
+    console.log('[VendorShareModal] PRODUCTION DEBUG - Blob URL created:', blobUrl);
     
     return blobUrl;
   } catch (error) {
-    console.error('[imageUrlToBlobUrl] Failed to convert image to blob:', error);
+    console.error('[VendorShareModal] PRODUCTION ERROR - Failed to convert image to blob:', error);
+    console.error('[VendorShareModal] PRODUCTION ERROR - Original URL was:', imageUrl);
     throw error;
   }
 }
@@ -72,7 +76,8 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
   };
 
   const generateVendorImage = useCallback(async () => {
-    console.log('[VendorShareModal] Starting image generation...');
+    console.log('[VendorShareModal] PRODUCTION DEBUG - Starting image generation...');
+    console.log('[VendorShareModal] PRODUCTION DEBUG - Inspiration image URL:', inspirationImageUrl);
     setGeneratingImage(true);
     
     try {
@@ -80,7 +85,7 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
       
       const canvas = canvasRef.current;
       if (!canvas) {
-        console.error('[VendorShareModal] Canvas ref is null');
+        console.error('[VendorShareModal] PRODUCTION ERROR - Canvas ref is null');
         setGeneratingImage(false);
         toast.error('Canvas not ready. Please try again.');
         return;
@@ -88,7 +93,7 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
 
       const ctx = canvas.getContext('2d');
       if (!ctx) {
-        console.error('[VendorShareModal] Failed to get 2D context');
+        console.error('[VendorShareModal] PRODUCTION ERROR - Failed to get 2D context');
         setGeneratingImage(false);
         toast.error('Failed to initialize canvas context');
         return;
@@ -102,21 +107,21 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
       ctx.fillRect(0, 0, size, size);
 
       // Convert inspiration image URL to blob URL first
-      console.log('[VendorShareModal] Converting inspiration image to blob...');
+      console.log('[VendorShareModal] PRODUCTION DEBUG - Converting inspiration image to blob...');
       const inspirationBlobUrl = await imageUrlToBlobUrl(inspirationImageUrl);
       blobUrlsRef.current.push(inspirationBlobUrl);
 
       // Load inspiration image from blob URL (no CORS issues)
-      console.log('[VendorShareModal] Loading inspiration image from blob URL...');
+      console.log('[VendorShareModal] PRODUCTION DEBUG - Loading inspiration image from blob URL...');
       const inspirationImg = new Image();
       
       await new Promise((resolve, reject) => {
         inspirationImg.onload = () => {
-          console.log('[VendorShareModal] Inspiration image loaded successfully');
+          console.log('[VendorShareModal] PRODUCTION DEBUG - Inspiration image loaded successfully');
           resolve(null);
         };
         inspirationImg.onerror = (error) => {
-          console.error('[VendorShareModal] Failed to load inspiration image:', error);
+          console.error('[VendorShareModal] PRODUCTION ERROR - Failed to load inspiration image:', error);
           reject(new Error('Failed to load inspiration image'));
         };
         inspirationImg.src = inspirationBlobUrl;
@@ -232,13 +237,20 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
       ctx.fillText('Quantity: 1', textX, textY);
       textY += 60;
 
-      // Load and draw logo
+      // Load and draw the CORRECT brand logo
+      console.log('[VendorShareModal] PRODUCTION DEBUG - Loading brand logo from /assets/homable-logo.png');
       const logoImg = new Image();
       const logoSize = 50;
       
       await new Promise((resolve, reject) => {
-        logoImg.onload = resolve;
-        logoImg.onerror = reject;
+        logoImg.onload = () => {
+          console.log('[VendorShareModal] PRODUCTION DEBUG - Brand logo loaded successfully');
+          resolve(null);
+        };
+        logoImg.onerror = (error) => {
+          console.error('[VendorShareModal] PRODUCTION ERROR - Failed to load brand logo:', error);
+          reject(error);
+        };
         logoImg.src = '/assets/homable-logo.png';
       });
 
@@ -254,10 +266,10 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
       setImageDataUrl(dataUrl);
       setGeneratingImage(false);
       hasGeneratedRef.current = true;
-      console.log('[VendorShareModal] Image generation completed successfully');
+      console.log('[VendorShareModal] PRODUCTION DEBUG - Image generation completed successfully');
     } catch (error) {
-      console.error('[VendorShareModal] Failed to generate vendor image:', error);
-      toast.error('Failed to generate image. Please try again.');
+      console.error('[VendorShareModal] PRODUCTION ERROR - Failed to generate vendor image:', error);
+      toast.error('Failed to generate image. Please check console for details.');
       setGeneratingImage(false);
     }
   }, [item, inspirationImageUrl]);
@@ -280,7 +292,7 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
     if (!imageDataUrl) return;
 
     const link = document.createElement('a');
-    const fileName = `${item.item_name.replace(/\s+/g, '-').toLowerCase()}/images/photo1767781872.jpg`;
+    const fileName = `${item.item_name.replace(/\s+/g, '-').toLowerCase()}/images/photo1767783599.jpg`;
     link.download = fileName;
     link.href = imageDataUrl;
     document.body.appendChild(link);

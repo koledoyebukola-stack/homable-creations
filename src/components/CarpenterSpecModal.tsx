@@ -19,23 +19,27 @@ interface CarpenterSpecModalProps {
 
 // Helper function to convert remote image URL to blob URL
 async function imageUrlToBlobUrl(imageUrl: string): Promise<string> {
-  console.log('[CarpenterSpecModal] Fetching image from:', imageUrl);
+  console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Fetching image from:', imageUrl);
+  console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Image URL type:', imageUrl.startsWith('http') ? 'HTTP URL' : imageUrl.startsWith('blob:') ? 'Blob URL' : 'Unknown');
   
   try {
     const response = await fetch(imageUrl);
+    console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Fetch response status:', response.status, response.statusText);
+    
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(`HTTP ${response.status}: ${response.statusText} - URL: ${imageUrl}`);
     }
     
     const blob = await response.blob();
-    console.log('[CarpenterSpecModal] Blob created, size:', blob.size, 'type:', blob.type);
+    console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Blob created, size:', blob.size, 'type:', blob.type);
     
     const blobUrl = URL.createObjectURL(blob);
-    console.log('[CarpenterSpecModal] Blob URL created:', blobUrl);
+    console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Blob URL created:', blobUrl);
     
     return blobUrl;
   } catch (error) {
-    console.error('[CarpenterSpecModal] Failed to convert image to blob:', error);
+    console.error('[CarpenterSpecModal] PRODUCTION ERROR - Failed to convert image to blob:', error);
+    console.error('[CarpenterSpecModal] PRODUCTION ERROR - Original URL was:', imageUrl);
     throw error;
   }
 }
@@ -80,18 +84,18 @@ export default function CarpenterSpecModal({
         format: 'a4'
       });
 
-      // Load Homable logo
-      console.log('[CarpenterSpecModal] Loading Homable logo...');
+      // Load the CORRECT Homable logo
+      console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Loading brand logo from /assets/homable-logo.png');
       const logoImg = new Image();
-      logoImg.src = 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2026-01-07/cb7c1b87-b33c-4a25-83a2-e0b7b149856f.png';
+      logoImg.src = 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2026-01-07/cee1450e-bde7-479b-92ee-44cbe86ea555.png';
       
       await new Promise((resolve, reject) => {
         logoImg.onload = () => {
-          console.log('[CarpenterSpecModal] Logo loaded successfully');
+          console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Brand logo loaded successfully');
           resolve(null);
         };
         logoImg.onerror = (error) => {
-          console.error('[CarpenterSpecModal] Failed to load logo:', error);
+          console.error('[CarpenterSpecModal] PRODUCTION ERROR - Failed to load brand logo:', error);
           reject(error);
         };
       });
@@ -114,20 +118,21 @@ export default function CarpenterSpecModal({
       // Main reference image
       if (referenceImageUrl) {
         try {
-          console.log('[CarpenterSpecModal] Converting reference image to blob...');
+          console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Converting reference image to blob...');
+          console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Reference image URL:', referenceImageUrl);
           const refBlobUrl = await imageUrlToBlobUrl(referenceImageUrl);
           createdBlobUrls.push(refBlobUrl);
           
-          console.log('[CarpenterSpecModal] Loading reference image from blob URL...');
+          console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Loading reference image from blob URL...');
           const refImg = new Image();
           
           await new Promise((resolve, reject) => {
             refImg.onload = () => {
-              console.log('[CarpenterSpecModal] Reference image loaded successfully');
+              console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Reference image loaded successfully');
               resolve(null);
             };
             refImg.onerror = (error) => {
-              console.error('[CarpenterSpecModal] Failed to load reference image:', error);
+              console.error('[CarpenterSpecModal] PRODUCTION ERROR - Failed to load reference image:', error);
               reject(error);
             };
             refImg.src = refBlobUrl;
@@ -149,9 +154,9 @@ export default function CarpenterSpecModal({
           const yPos = 85;
           
           doc.addImage(refImg, 'JPEG', xPos, yPos, imgWidth, imgHeight);
-          console.log('[CarpenterSpecModal] Reference image added to PDF');
+          console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Reference image added to PDF');
         } catch (error) {
-          console.error('[CarpenterSpecModal] Failed to load reference image:', error);
+          console.error('[CarpenterSpecModal] PRODUCTION ERROR - Failed to load reference image:', error);
         }
       }
 
@@ -278,10 +283,10 @@ export default function CarpenterSpecModal({
       setPdfUrl(url);
       setBlobUrls(createdBlobUrls);
       
-      console.log('[CarpenterSpecModal] PDF generated successfully');
+      console.log('[CarpenterSpecModal] PRODUCTION DEBUG - PDF generated successfully');
     } catch (error) {
-      console.error('[CarpenterSpecModal] Failed to generate PDF:', error);
-      alert('Failed to generate PDF. Please try again.');
+      console.error('[CarpenterSpecModal] PRODUCTION ERROR - Failed to generate PDF:', error);
+      alert('Failed to generate PDF. Please check console for details.');
       createdBlobUrls.forEach(url => URL.revokeObjectURL(url));
     } finally {
       setIsGenerating(false);
