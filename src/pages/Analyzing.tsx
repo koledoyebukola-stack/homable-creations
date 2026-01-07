@@ -58,6 +58,11 @@ export default function Analyzing() {
 
         console.log('Board fetched:', board);
         
+        // Check if board has test country set
+        if (board.country) {
+          console.log('Board has test country set:', board.country);
+        }
+        
         // Set the board image URL for preview
         const imageUrl = board.source_image_url || board.cover_image_url;
         setBoardImageUrl(imageUrl);

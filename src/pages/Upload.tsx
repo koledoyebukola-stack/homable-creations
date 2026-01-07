@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { uploadImage, createBoard, validateDecorImage } from '@/lib/api';
 import { toast } from 'sonner';
-import { AlertCircle, Info, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertCircle, Info, ChevronLeft, ChevronRight, TestTube } from 'lucide-react';
 import SpecsCategorySelection from '@/components/specs/SpecsCategorySelection';
 import { trackPageView, trackAction, EVENTS } from '@/lib/analytics';
 
@@ -183,6 +183,9 @@ export default function Upload() {
   const [selectedStyleImage, setSelectedStyleImage] = useState<string>('');
   const [selectedStyleName, setSelectedStyleName] = useState<string>('');
 
+  // Test country parameter for testing from different locations
+  const testCountry = searchParams.get('test_country');
+
   // Track homepage view on mount
   useEffect(() => {
     trackPageView(EVENTS.HOMEPAGE_VIEWED);
@@ -283,10 +286,10 @@ export default function Upload() {
         return;
       }
       
-      // Create board with appropriate name
+      // Create board with appropriate name and test_country if present
       const boardName = isSampleImage ? sampleImageAlt : 'Untitled inspiration';
       console.log('Creating board...');
-      const board = await createBoard(boardName, imageUrl);
+      const board = await createBoard(boardName, imageUrl, testCountry || undefined);
       console.log('Board created successfully:', board.id);
       
       // Clean up preview URL
@@ -294,7 +297,7 @@ export default function Upload() {
         URL.revokeObjectURL(previewUrl);
       }
       
-      // Navigate to analyzing page
+      // Navigate to analyzing page (no need to pass test_country as it's already in the board)
       console.log('Navigating to analyzing page...');
       navigate(`/analyzing/${board.id}`);
     } catch (error) {
@@ -398,12 +401,30 @@ export default function Upload() {
         source: 'explore_styles'
       });
       
-      // Create board with style name using the CDN URL directly
-      console.log('Creating board with CDN image...');
-      const board = await createBoard(selectedStyleName, selectedStyleImage);
+      // Validate that the image contains decor/furniture
+      let validation;
+      try {
+        console.log('Validating image content...');
+        validation = await validateDecorImage(imageUrl);
+        console.log('Validation result:', validation);
+      } catch (validationError) {
+        console.error('Validation error (treating as valid):', validationError);
+        validation = { is_valid: true, confidence: 0.5, reason: 'Validation error, allowing by default' };
+      }
+      
+      // Check if image is valid
+      if (validation.is_valid === false) {
+        toast.error("We couldn't detect decor in this image.");
+        setUploading(false);
+        return;
+      }
+      
+      // Create board with style name and test_country if present
+      console.log('Creating board...');
+      const board = await createBoard(selectedStyleName, imageUrl, testCountry || undefined);
       console.log('Board created successfully:', board.id);
       
-      // Navigate to analyzing page
+      // Navigate to analyzing page (no need to pass test_country as it's already in the board)
       console.log('Navigating to analyzing page...');
       navigate(`/analyzing/${board.id}`);
     } catch (error) {
@@ -450,6 +471,26 @@ export default function Upload() {
 
       <main className="flex-1 container mx-auto px-4 py-16">
         <div className="max-w-3xl mx-auto">
+          {/* Testing Mode Banner */}
+          {testCountry && (
+            <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-xl">
+              <div className="flex items-start gap-3">
+                <TestTube className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-purple-900">
+                    Testing Mode Active
+                  </p>
+                  <p className="text-xs text-purple-700 mt-1">
+                    Simulating country: <span className="font-mono font-bold">{testCountry}</span>
+                  </p>
+                  <p className="text-xs text-purple-600 mt-1">
+                    To disable, remove <code className="bg-purple-100 px-1 rounded">?test_country={testCountry}</code> from the URL
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Static Header */}
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-4 text-[#111111]">

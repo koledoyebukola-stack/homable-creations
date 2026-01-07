@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Board, DetectedItem, Product, Checklist, ChecklistItem, ChecklistWithItems, HistoryItem, SpecsHistory } from './types';
+import type { Board, DetectedItem, Product, Checklist, ChecklistItem, ChecklistWithItems, HistoryItem, SpecsHistory, CarpenterSpec } from './types';
 
 interface RoomMaterials {
   walls?: string;
@@ -133,18 +133,32 @@ export async function validateDecorImage(imageUrl: string): Promise<{
   return data;
 }
 
-export async function createBoard(name: string, sourceImageUrl: string): Promise<Board> {
+export async function createBoard(name: string, sourceImageUrl: string, testCountry?: string): Promise<Board> {
   const { data: { user } } = await supabase.auth.getUser();
   const userId = user?.id || null;
 
+  const boardData: {
+    user_id: string | null;
+    name: string;
+    source_image_url: string;
+    cover_image_url: string;
+    country?: string;
+  } = {
+    user_id: userId,
+    name,
+    source_image_url: sourceImageUrl,
+    cover_image_url: sourceImageUrl,
+  };
+
+  // If test_country is provided, set it in the board data
+  if (testCountry) {
+    boardData.country = testCountry;
+    console.log('Creating board with test country:', testCountry);
+  }
+
   const { data, error } = await supabase
     .from('boards')
-    .insert({
-      user_id: userId,
-      name,
-      source_image_url: sourceImageUrl,
-      cover_image_url: sourceImageUrl,
-    })
+    .insert(boardData)
     .select()
     .single();
 
@@ -191,6 +205,27 @@ export async function seeMoreItems(boardId: string): Promise<{ detected_items: D
   }
 
   return data;
+}
+
+// Generate carpenter specifications for Nigeria users (on-demand)
+export async function generateCarpenterSpec(item: DetectedItem): Promise<CarpenterSpec> {
+  const { data, error } = await supabase.functions.invoke('app_8574c59127_generate_carpenter_specs', {
+    body: {
+      item_id: item.id,
+      item_name: item.item_name,
+      category: item.category,
+      style: item.style,
+      description: item.description,
+      color: item.dominant_color,
+    },
+  });
+
+  if (error) {
+    console.error('Carpenter spec generation error:', error);
+    throw error;
+  }
+
+  return data.carpenter_spec;
 }
 
 export function generateBoardName(detectedItems: DetectedItem[]): string {

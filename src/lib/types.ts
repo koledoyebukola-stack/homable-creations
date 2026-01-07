@@ -6,6 +6,7 @@ export interface Board {
   source_image_url?: string;
   status: string;
   detected_items_count: number;
+  country?: string; // ISO 3166-1 alpha-2 country code (e.g., 'NG' for Nigeria)
   room_materials?: {
     walls?: string;
     floors?: string;
@@ -14,11 +15,36 @@ export interface Board {
   updated_at: string;
 }
 
+export interface CarpenterSpec {
+  dimensions: {
+    width_cm: number;
+    depth_cm: number;
+    height_cm: number;
+    notes?: string;
+  };
+  material: string;
+  material_reasoning: string;
+  finish: string;
+  construction_features: string[];
+  estimated_cost_range: string;
+  build_time: string;
+}
+
+// Intent classification for detected items
+// Determines the structural nature and buildability of an item
+export type IntentClass = 
+  | 'buildable_furniture'  // Carpenter-appropriate: bed frames, tables, cabinets, chairs, etc.
+  | 'soft_goods'           // Textiles: bedding, pillows, rugs, curtains, towels
+  | 'lighting'             // Lamps, fixtures, chandeliers, sconces
+  | 'decor'                // Art, vases, plants, mirrors, clocks, decorative items
+  | 'electronics';         // TVs, speakers, appliances, devices
+
 export interface DetectedItem {
   id: string;
   board_id: string;
   item_name: string;
   category: string;
+  intent_class?: IntentClass; // Single source of truth for item buildability
   style?: string;
   dominant_color?: string;
   materials?: string[];
@@ -32,6 +58,7 @@ export interface DetectedItem {
   description?: string;
   confidence?: number;
   position?: Record<string, number | string | boolean>;
+  carpenter_spec?: CarpenterSpec; // Nigeria-specific carpenter specifications
   created_at: string;
 }
 
