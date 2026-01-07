@@ -2,14 +2,13 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import VendorShareModal from '@/components/VendorShareModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { getProductsForItem, searchProducts, getDetectedItems, createChecklist, getBoardById, generateCarpenterSpec } from '@/lib/api';
 import { Product, DetectedItem, CarpenterSpec } from '@/lib/types';
 import { toast } from 'sonner';
-import { ExternalLink, Star, Upload, ListChecks, Search, Ruler, Hammer, Package, Send } from 'lucide-react';
+import { ExternalLink, Star, Upload, ListChecks, Search, Ruler, Hammer, Package } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { 
   getAmazonSearchUrl, 
@@ -148,22 +147,6 @@ function shouldShowWesternRetailers(isNigeria: boolean, item: DetectedItem): boo
   return true; // Show for buildable_furniture or other intent classes
 }
 
-// Helper function to determine if "Share with a vendor" should be shown
-// For Nigerian users with non-furniture items only
-function shouldShowVendorShare(isNigeria: boolean, item: DetectedItem): boolean {
-  if (!isNigeria) return false; // Only for Nigerian users
-  
-  // Show for non-furniture items (soft_goods, lighting, decor, electronics)
-  const nigerianNonFurnitureClasses = ['soft_goods', 'lighting', 'decor', 'electronics'];
-  
-  if (item.intent_class && nigerianNonFurnitureClasses.includes(item.intent_class)) {
-    console.log(`[Nigerian Non-Furniture] "${item.item_name}" (${item.intent_class}) - showing vendor share`);
-    return true;
-  }
-  
-  return false;
-}
-
 export default function ProductMatches() {
   const { boardId, itemId } = useParams<{ boardId: string; itemId: string }>();
   const navigate = useNavigate();
@@ -177,10 +160,6 @@ export default function ProductMatches() {
   const [isNigeria, setIsNigeria] = useState(false);
   const [carpenterSpec, setCarpenterSpec] = useState<CarpenterSpec | null>(null);
   const [generatingSpec, setGeneratingSpec] = useState(false);
-  const [vendorShareModal, setVendorShareModal] = useState<{
-    isOpen: boolean;
-    item: DetectedItem | null;
-  }>({ isOpen: false, item: null });
 
   useEffect(() => {
     // Check authentication status
@@ -214,8 +193,8 @@ export default function ProductMatches() {
         }
 
         // For Nigerian non-furniture items, skip product search entirely
-        // Just show vendor share options
-        if (userIsNigeria && currentItem && shouldShowVendorShare(userIsNigeria, currentItem)) {
+        // Just show Instagram search options
+        if (userIsNigeria && currentItem && !shouldShowWesternRetailers(userIsNigeria, currentItem)) {
           console.log(`[Nigerian Non-Furniture] Skipping product search for "${currentItem.item_name}"`);
           setProducts([]);
           setLoading(false);
@@ -309,7 +288,6 @@ export default function ProductMatches() {
 
   // Determine if Western retailers should be shown
   const showWesternRetailers = item ? shouldShowWesternRetailers(isNigeria, item) : true;
-  const showVendorShare = item ? shouldShowVendorShare(isNigeria, item) : false;
 
   // Nigeria-specific view for buildable furniture
   if (isNigeria && item && isBuildableFurniture(item)) {
@@ -574,31 +552,6 @@ export default function ProductMatches() {
                     Tap below to continue your search.
                   </p>
                   
-                  {/* Nigeria: Show "Share with a vendor" for non-furniture items */}
-                  {showVendorShare && item && (
-                    <Card className="bg-gradient-to-br from-[#C89F7A]/5 to-white border-[#C89F7A]/20 shadow-sm">
-                      <CardContent className="p-6 space-y-4">
-                        <div className="text-center">
-                          <h3 className="text-sm font-bold text-[#111111] mb-2 uppercase tracking-wide">
-                            SHARE WITH VENDORS
-                          </h3>
-                          <p className="text-xs text-[#666666] mb-4">
-                            Generate a shareable image for Instagram or WhatsApp
-                          </p>
-                        </div>
-
-                        <Button
-                          onClick={() => setVendorShareModal({ isOpen: true, item })}
-                          className="w-full bg-gradient-to-r from-[#C89F7A] to-[#B5896C] hover:from-[#B5896C] hover:to-[#C89F7A] text-white rounded-full font-semibold shadow-lg"
-                          size="lg"
-                        >
-                          <Send className="h-5 w-5 mr-2" />
-                          Share with a vendor
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  )}
-                  
                   {/* Primary Retailer Buttons - Only show if allowed */}
                   {item && (
                     <div className="space-y-3">
@@ -757,31 +710,6 @@ export default function ProductMatches() {
                         Need more options? Find similar items below
                       </p>
                       
-                      {/* Nigeria: Show "Share with a vendor" for non-furniture items */}
-                      {showVendorShare && (
-                        <Card className="bg-gradient-to-br from-[#C89F7A]/5 to-white border-[#C89F7A]/20 shadow-sm">
-                          <CardContent className="p-6 space-y-4">
-                            <div className="text-center">
-                              <h3 className="text-sm font-bold text-[#111111] mb-2 uppercase tracking-wide">
-                                SHARE WITH VENDORS
-                              </h3>
-                              <p className="text-xs text-[#666666] mb-4">
-                                Generate a shareable image for Instagram or WhatsApp
-                              </p>
-                            </div>
-
-                            <Button
-                              onClick={() => setVendorShareModal({ isOpen: true, item })}
-                              className="w-full bg-gradient-to-r from-[#C89F7A] to-[#B5896C] hover:from-[#B5896C] hover:to-[#C89F7A] text-white rounded-full font-semibold shadow-lg"
-                              size="lg"
-                            >
-                              <Send className="h-5 w-5 mr-2" />
-                              Share with a vendor
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      )}
-                      
                       {showWesternRetailers && (
                         <>
                           <p className="text-xs font-medium text-[#555555] uppercase tracking-wide">
@@ -804,7 +732,7 @@ export default function ProductMatches() {
                               onClick={() => handleRetailerClick(getWayfairSearchUrl, item.item_name)}
                               variant="outline"
                               size="sm"
-                              className="rounded-full bg-white border border-[#7B2CBF] text-[-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
+                              className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
                             >
                               Wayfair
                               <ExternalLink className="ml-1.5 h-3 w-3" />
@@ -874,15 +802,6 @@ export default function ProductMatches() {
           </div>
         </div>
       </main>
-
-      {vendorShareModal.item && board?.source_image_url && (
-        <VendorShareModal
-          isOpen={vendorShareModal.isOpen}
-          onClose={() => setVendorShareModal({ isOpen: false, item: null })}
-          item={vendorShareModal.item}
-          inspirationImageUrl={board.source_image_url}
-        />
-      )}
     </div>
   );
 }

@@ -6,7 +6,6 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import Auth from '@/components/AuthModal';
 import ShareModal from '@/components/ShareModal';
 import VisualSearchModal from '@/components/VisualSearchModal';
-import VendorShareModal from '@/components/VendorShareModal';
 import { Button } from '@/components/ui/button';
 import CarpenterSpecModal from '@/components/CarpenterSpecModal';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +15,7 @@ import { getDetectedItems, getBoardById, getBoards, searchProducts, getProductsF
 import { DetectedItem, Product, Board, Checklist, CarpenterSpec } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { ExternalLink, Star, Share2, Upload, Search, ListChecks, Eye, Camera, Hammer, Ruler, Package, Send, Copy, Instagram } from 'lucide-react';
+import { ExternalLink, Star, Share2, Upload, Search, ListChecks, Eye, Camera, Hammer, Ruler, Package, Copy, Instagram } from 'lucide-react';
 import { 
   getAmazonSearchUrl, 
   getWalmartSearchUrl, 
@@ -168,22 +167,6 @@ function shouldShowInstagramSearch(isNigeria: boolean, item: DetectedItem): bool
   return false;
 }
 
-// Helper function to determine if "Share with a vendor" should be shown
-// For Nigerian users with non-furniture items only
-function shouldShowVendorShare(isNigeria: boolean, item: DetectedItem): boolean {
-  if (!isNigeria) return false; // Only for Nigerian users
-  
-  // Show for non-furniture items (soft_goods, lighting, decor, electronics)
-  const nigerianNonFurnitureClasses = ['soft_goods', 'lighting', 'decor', 'electronics'];
-  
-  if (item.intent_class && nigerianNonFurnitureClasses.includes(item.intent_class)) {
-    console.log(`[Nigerian Non-Furniture] "${item.item_name}" (${item.intent_class}) - showing vendor share`);
-    return true;
-  }
-  
-  return false;
-}
-
 // Helper function to copy item name to clipboard
 const handleCopyItemName = async (itemName: string) => {
   const success = await copyToClipboard(itemName);
@@ -221,10 +204,6 @@ export default function ItemDetection() {
   const [savingChecklist, setSavingChecklist] = useState(false);
   const [loadingMoreItems, setLoadingMoreItems] = useState(false);
   const [visualSearchModal, setVisualSearchModal] = useState<{
-    isOpen: boolean;
-    item: DetectedItem | null;
-  }>({ isOpen: false, item: null });
-  const [vendorShareModal, setVendorShareModal] = useState<{
     isOpen: boolean;
     item: DetectedItem | null;
   }>({ isOpen: false, item: null });
@@ -995,7 +974,6 @@ export default function ItemDetection() {
                   const showCarpenterButton = isNigeria && isBuildableFurniture(item);
                   const showWesternRetailers = shouldShowWesternRetailers(isNigeria, item);
                   const showInstagramSearch = shouldShowInstagramSearch(isNigeria, item);
-                  const showVendorShare = shouldShowVendorShare(isNigeria, item);
 
                   return (
                     <div 
@@ -1111,31 +1089,6 @@ export default function ItemDetection() {
                               >
                                 <Instagram className="h-5 w-5 mr-2" />
                                 Find on Instagram
-                              </Button>
-                            </CardContent>
-                          </Card>
-                        )}
-
-                        {/* Nigeria: Show "Share with a vendor" for non-furniture items */}
-                        {showVendorShare && (
-                          <Card className="bg-gradient-to-br from-[#C89F7A]/5 to-white border-[#C89F7A]/20 shadow-sm">
-                            <CardContent className="p-6 space-y-4">
-                              <div className="text-center">
-                                <h3 className="text-sm font-bold text-[#111111] mb-2 uppercase tracking-wide">
-                                  SHARE WITH VENDORS
-                                </h3>
-                                <p className="text-xs text-[#666666] mb-4">
-                                  Generate a shareable image for Instagram or WhatsApp
-                                </p>
-                              </div>
-
-                              <Button
-                                onClick={() => setVendorShareModal({ isOpen: true, item })}
-                                className="w-full bg-black hover:bg-black/90 text-white rounded-full font-semibold shadow-lg"
-                                size="lg"
-                              >
-                                <Send className="h-5 w-5 mr-2" />
-                                Share with a vendor
                               </Button>
                             </CardContent>
                           </Card>
@@ -1692,15 +1645,6 @@ export default function ItemDetection() {
           itemName={visualSearchModal.item.item_name}
           imageUrl={board?.source_image_url || ''}
           croppedImageUrl={visualSearchModal.item.position?.cropped_image_url as string | undefined}
-        />
-      )}
-
-      {vendorShareModal.item && board?.source_image_url && (
-        <VendorShareModal
-          isOpen={vendorShareModal.isOpen}
-          onClose={() => setVendorShareModal({ isOpen: false, item: null })}
-          item={vendorShareModal.item}
-          inspirationImageUrl={board.source_image_url}
         />
       )}
 
