@@ -84,10 +84,10 @@ export default function CarpenterSpecModal({
         format: 'a4'
       });
 
-      // Load the CORRECT Homable logo
+      // Load the CORRECT Homable logo from local assets
       console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Loading brand logo from /assets/homable-logo.png');
       const logoImg = new Image();
-      logoImg.src = 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2026-01-07/cee1450e-bde7-479b-92ee-44cbe86ea555.png';
+      logoImg.src = 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2026-01-07/7420a719-712f-448e-b5ed-cd101a54edb3.png';
       
       await new Promise((resolve, reject) => {
         logoImg.onload = () => {
