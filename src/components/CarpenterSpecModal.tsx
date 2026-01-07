@@ -17,20 +17,30 @@ interface CarpenterSpecModalProps {
   referenceImageUrl?: string;
 }
 
-// Helper function to convert remote image URL to blob URL using proxy
+// Helper function to convert remote image URL to blob URL
 async function imageUrlToBlobUrl(imageUrl: string): Promise<string> {
   console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Fetching image from:', imageUrl);
   
   try {
-    // Use the Supabase Edge Function proxy to fetch images with CORS
-    const proxyUrl = `https://jvbrrgqepuhabwddufby.supabase.co/functions/v1/app_8574c59127_proxy_image?url=${encodeURIComponent(imageUrl)}`;
-    console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Using proxy URL:', proxyUrl);
+    // Check if it's an MGX CDN URL that needs proxying
+    const needsProxy = imageUrl.includes('mgx-backend-cdn.metadl.com');
     
-    const response = await fetch(proxyUrl);
-    console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Proxy response status:', response.status, response.statusText);
+    let fetchUrl: string;
+    if (needsProxy) {
+      // Use proxy for MGX CDN URLs
+      fetchUrl = `https://jvbrrgqepuhabwddufby.supabase.co/functions/v1/app_8574c59127_proxy_image?url=${encodeURIComponent(imageUrl)}`;
+      console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Using proxy for MGX CDN URL:', fetchUrl);
+    } else {
+      // Direct fetch for Supabase Storage URLs (they have CORS enabled)
+      fetchUrl = imageUrl;
+      console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Direct fetch for Supabase URL:', fetchUrl);
+    }
+    
+    const response = await fetch(fetchUrl);
+    console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Fetch response status:', response.status, response.statusText);
     
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText} - Proxy URL: ${proxyUrl}`);
+      throw new Error(`HTTP ${response.status}: ${response.statusText} - URL: ${fetchUrl}`);
     }
     
     const blob = await response.blob();
@@ -87,12 +97,11 @@ export default function CarpenterSpecModal({
         format: 'a4'
       });
 
-      // Load the Homable brand logo from Supabase
+      // Load the Homable brand logo from Supabase (no proxy needed - Supabase has CORS)
       console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Loading brand logo from Supabase');
       const logoImg = new Image();
       logoImg.crossOrigin = 'anonymous';
       
-      // Use the proxy for the Supabase logo URL
       const logoBlobUrl = await imageUrlToBlobUrl('https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/images/image.png');
       createdBlobUrls.push(logoBlobUrl);
       
@@ -123,7 +132,7 @@ export default function CarpenterSpecModal({
       doc.setFont('helvetica', 'italic');
       doc.text('Primary build reference. Follow shape, proportions, and visual details.', 105, 70, { align: 'center' });
 
-      // Main reference image
+      // Main reference image (will use proxy if it's MGX CDN URL)
       if (referenceImageUrl) {
         try {
           console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Converting reference image to blob...');

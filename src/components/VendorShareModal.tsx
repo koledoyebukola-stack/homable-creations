@@ -20,20 +20,30 @@ interface DimensionsObject {
   diameter?: string;
 }
 
-// Helper function to convert remote image URL to blob URL using proxy
+// Helper function to convert remote image URL to blob URL
 async function imageUrlToBlobUrl(imageUrl: string): Promise<string> {
   console.log('[VendorShareModal] PRODUCTION DEBUG - Fetching image from:', imageUrl);
   
   try {
-    // Use the Supabase Edge Function proxy to fetch images with CORS
-    const proxyUrl = `https://jvbrrgqepuhabwddufby.supabase.co/functions/v1/app_8574c59127_proxy_image?url=${encodeURIComponent(imageUrl)}`;
-    console.log('[VendorShareModal] PRODUCTION DEBUG - Using proxy URL:', proxyUrl);
+    // Check if it's an MGX CDN URL that needs proxying
+    const needsProxy = imageUrl.includes('mgx-backend-cdn.metadl.com');
     
-    const response = await fetch(proxyUrl);
-    console.log('[VendorShareModal] PRODUCTION DEBUG - Proxy response status:', response.status, response.statusText);
+    let fetchUrl: string;
+    if (needsProxy) {
+      // Use proxy for MGX CDN URLs
+      fetchUrl = `https://jvbrrgqepuhabwddufby.supabase.co/functions/v1/app_8574c59127_proxy_image?url=${encodeURIComponent(imageUrl)}`;
+      console.log('[VendorShareModal] PRODUCTION DEBUG - Using proxy for MGX CDN URL:', fetchUrl);
+    } else {
+      // Direct fetch for Supabase Storage URLs (they have CORS enabled)
+      fetchUrl = imageUrl;
+      console.log('[VendorShareModal] PRODUCTION DEBUG - Direct fetch for Supabase URL:', fetchUrl);
+    }
+    
+    const response = await fetch(fetchUrl);
+    console.log('[VendorShareModal] PRODUCTION DEBUG - Fetch response status:', response.status, response.statusText);
     
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText} - Proxy URL: ${proxyUrl}`);
+      throw new Error(`HTTP ${response.status}: ${response.statusText} - URL: ${fetchUrl}`);
     }
     
     const blob = await response.blob();
@@ -109,7 +119,7 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, size, size);
 
-      // Convert inspiration image URL to blob URL using proxy
+      // Convert inspiration image URL to blob URL (uses proxy if MGX CDN)
       console.log('[VendorShareModal] PRODUCTION DEBUG - Converting inspiration image to blob...');
       const inspirationBlobUrl = await imageUrlToBlobUrl(inspirationImageUrl);
       blobUrlsRef.current.push(inspirationBlobUrl);
@@ -241,7 +251,7 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
       ctx.fillText('Quantity: 1', textX, textY);
       textY += 60;
 
-      // Load and draw the brand logo from Supabase using proxy
+      // Load and draw the brand logo from Supabase (no proxy needed)
       console.log('[VendorShareModal] PRODUCTION DEBUG - Loading brand logo from Supabase');
       const logoBlobUrl = await imageUrlToBlobUrl('https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/images/image.png');
       blobUrlsRef.current.push(logoBlobUrl);
@@ -300,7 +310,7 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
     if (!imageDataUrl) return;
 
     const link = document.createElement('a');
-    const fileName = `${item.item_name.replace(/\s+/g, '-').toLowerCase()}/images/photo1767786483.jpg`;
+    const fileName = `${item.item_name.replace(/\s+/g, '-').toLowerCase()}/images/photo1767787161.jpg`;
     link.download = fileName;
     link.href = imageDataUrl;
     document.body.appendChild(link);
