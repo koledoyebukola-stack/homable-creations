@@ -20,20 +20,42 @@ interface DimensionsObject {
   diameter?: string;
 }
 
+// Helper function to convert remote image URL to blob URL
+async function imageUrlToBlobUrl(imageUrl: string): Promise<string> {
+  console.log('[imageUrlToBlobUrl] Fetching image from:', imageUrl);
+  
+  try {
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const blob = await response.blob();
+    console.log('[imageUrlToBlobUrl] Blob created, size:', blob.size, 'type:', blob.type);
+    
+    const blobUrl = URL.createObjectURL(blob);
+    console.log('[imageUrlToBlobUrl] Blob URL created:', blobUrl);
+    
+    return blobUrl;
+  } catch (error) {
+    console.error('[imageUrlToBlobUrl] Failed to convert image to blob:', error);
+    throw error;
+  }
+}
+
 export default function VendorShareModal({ isOpen, onClose, item, inspirationImageUrl }: VendorShareModalProps) {
   const [generatingImage, setGeneratingImage] = useState(false);
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hasGeneratedRef = useRef(false);
+  const blobUrlsRef = useRef<string[]>([]);
 
   // Helper function to format dimensions for display
   const formatDimensions = (item: DetectedItem): string | null => {
-    // If dimensions is a string (from database), use it directly
     if (typeof item.dimensions === 'string') {
       return item.dimensions;
     }
     
-    // If dimensions is an object, format it
     if (item.dimensions && typeof item.dimensions === 'object') {
       const dims = item.dimensions as DimensionsObject;
       const parts: string[] = [];
@@ -54,62 +76,56 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
     setGeneratingImage(true);
     
     try {
-      // Wait a bit for canvas to mount if needed
       await new Promise(resolve => setTimeout(resolve, 100));
       
       const canvas = canvasRef.current;
       if (!canvas) {
-        console.error('[VendorShareModal] Canvas ref is null - canvas not mounted yet');
+        console.error('[VendorShareModal] Canvas ref is null');
         setGeneratingImage(false);
         toast.error('Canvas not ready. Please try again.');
         return;
       }
-      console.log('[VendorShareModal] Canvas element found:', canvas);
 
       const ctx = canvas.getContext('2d');
       if (!ctx) {
-        console.error('[VendorShareModal] Failed to get 2D context from canvas');
+        console.error('[VendorShareModal] Failed to get 2D context');
         setGeneratingImage(false);
         toast.error('Failed to initialize canvas context');
         return;
       }
-      console.log('[VendorShareModal] Canvas 2D context obtained');
 
-      // Set canvas to square 1:1 ratio (1200x1200 for high quality)
       const size = 1200;
       canvas.width = size;
       canvas.height = size;
-      console.log('[VendorShareModal] Canvas dimensions set to', size, 'x', size);
 
-      // Fill white background
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, size, size);
-      console.log('[VendorShareModal] White background filled');
 
-      // Load inspiration image
-      console.log('[VendorShareModal] Loading inspiration image from:', inspirationImageUrl);
+      // Convert inspiration image URL to blob URL first
+      console.log('[VendorShareModal] Converting inspiration image to blob...');
+      const inspirationBlobUrl = await imageUrlToBlobUrl(inspirationImageUrl);
+      blobUrlsRef.current.push(inspirationBlobUrl);
+
+      // Load inspiration image from blob URL (no CORS issues)
+      console.log('[VendorShareModal] Loading inspiration image from blob URL...');
       const inspirationImg = new Image();
-      inspirationImg.crossOrigin = 'anonymous';
       
       await new Promise((resolve, reject) => {
         inspirationImg.onload = () => {
           console.log('[VendorShareModal] Inspiration image loaded successfully');
-          console.log('[VendorShareModal] Image dimensions:', inspirationImg.width, 'x', inspirationImg.height);
           resolve(null);
         };
         inspirationImg.onerror = (error) => {
           console.error('[VendorShareModal] Failed to load inspiration image:', error);
-          console.error('[VendorShareModal] Image URL:', inspirationImageUrl);
           reject(new Error('Failed to load inspiration image'));
         };
-        inspirationImg.src = inspirationImageUrl;
+        inspirationImg.src = inspirationBlobUrl;
       });
 
-      // Primary hero image takes top 60% of canvas (720px)
+      // Draw hero image (top 60%)
       const heroHeight = size * 0.60;
       const heroWidth = size;
       
-      // Use center crop with 1:1 aspect ratio for hero image
       const minDim = Math.min(inspirationImg.width, inspirationImg.height);
       const cropRegion = {
         x: Math.round((inspirationImg.width - minDim) / 2),
@@ -117,28 +133,22 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
         width: minDim,
         height: minDim
       };
-      
-      console.log('[VendorShareModal] Center crop region:', cropRegion);
 
-      // Draw the cropped hero image (square, top 60%)
       ctx.drawImage(
         inspirationImg,
         cropRegion.x, cropRegion.y, cropRegion.width, cropRegion.height,
         0, 0, heroWidth, heroHeight
       );
-      
-      console.log('[VendorShareModal] Hero image drawn');
 
-      // Content area starts at 60% (720px from top)
+      // Content area
       const contentY = heroHeight + 40;
       const contentPadding = 60;
 
-      // Draw secondary thumbnail (bottom right, "Seen in this room")
+      // Draw thumbnail
       const thumbnailSize = 280;
       const thumbnailX = size - thumbnailSize - contentPadding;
       const thumbnailY = contentY + 20;
       
-      // Calculate thumbnail crop (center of full image)
       const thumbAspect = inspirationImg.width / inspirationImg.height;
       let thumbCropW, thumbCropH, thumbCropX, thumbCropY;
       
@@ -154,7 +164,6 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
         thumbCropY = (inspirationImg.height - thumbCropH) / 2;
       }
       
-      // Draw thumbnail with border
       ctx.strokeStyle = '#E5E5E5';
       ctx.lineWidth = 2;
       ctx.strokeRect(thumbnailX, thumbnailY, thumbnailSize, thumbnailSize);
@@ -165,15 +174,12 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
         thumbnailX, thumbnailY, thumbnailSize, thumbnailSize
       );
       
-      // "Seen in this room" label
       ctx.fillStyle = '#888888';
       ctx.font = '20px "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('Seen in this room', thumbnailX + thumbnailSize / 2, thumbnailY + thumbnailSize + 30);
-      
-      console.log('[VendorShareModal] Thumbnail drawn');
 
-      // Item name (left side, bold, large)
+      // Item name
       const textX = contentPadding;
       let textY = contentY + 40;
       
@@ -182,9 +188,8 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
       ctx.textAlign = 'left';
       
       const itemName = item.item_name;
-      const maxTextWidth = thumbnailX - textX - 40; // Leave gap before thumbnail
+      const maxTextWidth = thumbnailX - textX - 40;
       
-      // Word wrap for item name
       const words = itemName.split(' ');
       let line = '';
       const lineHeight = 62;
@@ -204,25 +209,21 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
       ctx.fillText(line.trim(), textX, textY);
       textY += lineHeight + 20;
 
-      console.log('[VendorShareModal] Item name drawn:', itemName);
-
-      // Dominant color (if available)
+      // Dominant color
       if (item.dominant_color) {
         ctx.fillStyle = '#666666';
         ctx.font = '28px "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif';
         ctx.fillText(`Color: ${item.dominant_color}`, textX, textY);
         textY += 40;
-        console.log('[VendorShareModal] Dominant color drawn:', item.dominant_color);
       }
 
-      // Dimensions (if available) - handle both string and object formats
+      // Dimensions
       const formattedDimensions = formatDimensions(item);
       if (formattedDimensions) {
         ctx.fillStyle = '#666666';
         ctx.font = '28px "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif';
         ctx.fillText(`Size: ${formattedDimensions}`, textX, textY);
         textY += 40;
-        console.log('[VendorShareModal] Dimensions drawn:', formattedDimensions);
       }
 
       // Quantity
@@ -230,9 +231,8 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
       ctx.font = '28px "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif';
       ctx.fillText('Quantity: 1', textX, textY);
       textY += 60;
-      console.log('[VendorShareModal] Quantity drawn');
 
-      // Load and draw Homable logo
+      // Load and draw logo
       const logoImg = new Image();
       const logoSize = 50;
       
@@ -244,26 +244,19 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
 
       ctx.drawImage(logoImg, textX, textY, logoSize, logoSize);
       
-      // Footer text next to logo
       ctx.fillStyle = '#888888';
       ctx.font = '22px "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText('Generated by Homable Creations', textX + logoSize + 15, textY + 32);
-      
-      console.log('[VendorShareModal] Logo and footer drawn');
 
-      // Convert canvas to data URL
-      console.log('[VendorShareModal] Converting canvas to data URL...');
+      // Convert to data URL
       const dataUrl = canvas.toDataURL('image/png', 1.0);
-      console.log('[VendorShareModal] Data URL generated, length:', dataUrl.length);
-      
       setImageDataUrl(dataUrl);
       setGeneratingImage(false);
       hasGeneratedRef.current = true;
       console.log('[VendorShareModal] Image generation completed successfully');
     } catch (error) {
       console.error('[VendorShareModal] Failed to generate vendor image:', error);
-      console.error('[VendorShareModal] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       toast.error('Failed to generate image. Please try again.');
       setGeneratingImage(false);
     }
@@ -271,39 +264,38 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
 
   useEffect(() => {
     if (isOpen && !imageDataUrl && !hasGeneratedRef.current) {
-      console.log('[VendorShareModal] Modal opened, triggering image generation');
-      console.log('[VendorShareModal] Item:', item.item_name);
-      console.log('[VendorShareModal] Dominant color:', item.dominant_color);
-      console.log('[VendorShareModal] Dimensions:', item.dimensions);
-      console.log('[VendorShareModal] Inspiration URL:', inspirationImageUrl);
       generateVendorImage();
     }
-  }, [isOpen, imageDataUrl, generateVendorImage, item.item_name, inspirationImageUrl]);
+  }, [isOpen, imageDataUrl, generateVendorImage]);
+
+  // Cleanup blob URLs when modal closes
+  useEffect(() => {
+    return () => {
+      blobUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+      blobUrlsRef.current = [];
+    };
+  }, []);
 
   const handleDownload = () => {
-    if (!imageDataUrl) {
-      console.warn('[VendorShareModal] Download attempted but no image data URL available');
-      return;
-    }
+    if (!imageDataUrl) return;
 
-    console.log('[VendorShareModal] Starting download...');
     const link = document.createElement('a');
-    const fileName = `${item.item_name.replace(/\s+/g, '-').toLowerCase()}/images/photo1767665437.jpg`;
+    const fileName = `${item.item_name.replace(/\s+/g, '-').toLowerCase()}/images/photo1767781872.jpg`;
     link.download = fileName;
     link.href = imageDataUrl;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     
-    console.log('[VendorShareModal] Download triggered for:', fileName);
     toast.success('Image downloaded! Share it with vendors on Instagram or WhatsApp.');
   };
 
   const handleClose = () => {
-    console.log('[VendorShareModal] Modal closing, resetting state');
     setImageDataUrl(null);
     setGeneratingImage(false);
     hasGeneratedRef.current = false;
+    blobUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+    blobUrlsRef.current = [];
     onClose();
   };
 
@@ -326,7 +318,6 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
             </div>
           ) : imageDataUrl ? (
             <>
-              {/* Preview */}
               <div className="bg-gray-50 rounded-lg p-4">
                 <img 
                   src={imageDataUrl} 
@@ -335,7 +326,6 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
                 />
               </div>
 
-              {/* Instructions */}
               <div className="bg-[#C89F7A]/10 rounded-lg p-4">
                 <p className="text-sm text-[#111111] font-medium mb-2">
                   How to use:
@@ -347,7 +337,6 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
                 </ol>
               </div>
 
-              {/* Download button */}
               <Button
                 onClick={handleDownload}
                 className="w-full bg-[#C89F7A] hover:bg-[#B5896C] text-white rounded-full font-semibold"
@@ -373,7 +362,6 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
           )}
         </div>
 
-        {/* Hidden canvas for image generation */}
         <canvas ref={canvasRef} className="hidden" />
       </DialogContent>
     </Dialog>

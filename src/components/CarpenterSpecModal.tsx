@@ -17,6 +17,29 @@ interface CarpenterSpecModalProps {
   referenceImageUrl?: string;
 }
 
+// Helper function to convert remote image URL to blob URL
+async function imageUrlToBlobUrl(imageUrl: string): Promise<string> {
+  console.log('[CarpenterSpecModal] Fetching image from:', imageUrl);
+  
+  try {
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const blob = await response.blob();
+    console.log('[CarpenterSpecModal] Blob created, size:', blob.size, 'type:', blob.type);
+    
+    const blobUrl = URL.createObjectURL(blob);
+    console.log('[CarpenterSpecModal] Blob URL created:', blobUrl);
+    
+    return blobUrl;
+  } catch (error) {
+    console.error('[CarpenterSpecModal] Failed to convert image to blob:', error);
+    throw error;
+  }
+}
+
 export default function CarpenterSpecModal({
   isOpen,
   onClose,
@@ -28,6 +51,7 @@ export default function CarpenterSpecModal({
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [blobUrls, setBlobUrls] = useState<string[]>([]);
 
   useEffect(() => {
     if (isOpen && !pdfBlob) {
@@ -35,17 +59,19 @@ export default function CarpenterSpecModal({
     }
   }, [isOpen]);
 
-  // Cleanup PDF URL when modal closes
+  // Cleanup blob URLs and PDF URL when modal closes
   useEffect(() => {
     return () => {
       if (pdfUrl) {
         URL.revokeObjectURL(pdfUrl);
       }
+      blobUrls.forEach(url => URL.revokeObjectURL(url));
     };
-  }, [pdfUrl]);
+  }, [pdfUrl, blobUrls]);
 
   const generatePDF = async () => {
     setIsGenerating(true);
+    const createdBlobUrls: string[] = [];
     
     try {
       const doc = new jsPDF({
@@ -55,46 +81,58 @@ export default function CarpenterSpecModal({
       });
 
       // Load Homable logo
+      console.log('[CarpenterSpecModal] Loading Homable logo...');
       const logoImg = new Image();
-      logoImg.crossOrigin = 'anonymous';
-      logoImg.src = '/assets/homable-logo.png';
+      logoImg.src = 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2026-01-07/cb7c1b87-b33c-4a25-83a2-e0b7b149856f.png';
       
       await new Promise((resolve, reject) => {
-        logoImg.onload = resolve;
-        logoImg.onerror = reject;
+        logoImg.onload = () => {
+          console.log('[CarpenterSpecModal] Logo loaded successfully');
+          resolve(null);
+        };
+        logoImg.onerror = (error) => {
+          console.error('[CarpenterSpecModal] Failed to load logo:', error);
+          reject(error);
+        };
       });
 
-      // PAGE 1 - Primary Build Reference (Visual-First)
-      // Header with logo and brand name
+      // PAGE 1 - Primary Build Reference
       doc.addImage(logoImg, 'PNG', 15, 15, 25, 25);
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.text('HOMABLE CREATIONS', 45, 30);
 
-      // Item name (large, bold, uppercase) - centered
       doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
       const itemNameUpper = itemName.toUpperCase();
       doc.text(itemNameUpper, 105, 60, { align: 'center' });
 
-      // Critical instructional line
       doc.setFontSize(10);
       doc.setFont('helvetica', 'italic');
       doc.text('Primary build reference. Follow shape, proportions, and visual details.', 105, 70, { align: 'center' });
 
-      // Main reference image (large, centered)
+      // Main reference image
       if (referenceImageUrl) {
         try {
+          console.log('[CarpenterSpecModal] Converting reference image to blob...');
+          const refBlobUrl = await imageUrlToBlobUrl(referenceImageUrl);
+          createdBlobUrls.push(refBlobUrl);
+          
+          console.log('[CarpenterSpecModal] Loading reference image from blob URL...');
           const refImg = new Image();
-          refImg.crossOrigin = 'anonymous';
-          refImg.src = referenceImageUrl;
           
           await new Promise((resolve, reject) => {
-            refImg.onload = resolve;
-            refImg.onerror = reject;
+            refImg.onload = () => {
+              console.log('[CarpenterSpecModal] Reference image loaded successfully');
+              resolve(null);
+            };
+            refImg.onerror = (error) => {
+              console.error('[CarpenterSpecModal] Failed to load reference image:', error);
+              reject(error);
+            };
+            refImg.src = refBlobUrl;
           });
 
-          // Calculate dimensions to fit image (max 170mm width, max 170mm height)
           const maxWidth = 170;
           const maxHeight = 170;
           const imgAspectRatio = refImg.width / refImg.height;
@@ -107,16 +145,16 @@ export default function CarpenterSpecModal({
             imgWidth = maxHeight * imgAspectRatio;
           }
           
-          const xPos = (210 - imgWidth) / 2; // Center horizontally
+          const xPos = (210 - imgWidth) / 2;
           const yPos = 85;
           
           doc.addImage(refImg, 'JPEG', xPos, yPos, imgWidth, imgHeight);
+          console.log('[CarpenterSpecModal] Reference image added to PDF');
         } catch (error) {
-          console.error('Failed to load reference image:', error);
+          console.error('[CarpenterSpecModal] Failed to load reference image:', error);
         }
       }
 
-      // Footer
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.text('www.homablecreations.com', 105, 285, { align: 'center' });
@@ -124,7 +162,6 @@ export default function CarpenterSpecModal({
       // PAGE 2 - Build Guidance & Constraints
       doc.addPage();
 
-      // Header
       doc.addImage(logoImg, 'PNG', 15, 15, 25, 25);
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
@@ -132,7 +169,7 @@ export default function CarpenterSpecModal({
 
       let yPos = 55;
 
-      // Section 1: Preferred dimensions (guidance, not strict)
+      // Preferred dimensions
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
       doc.text('Preferred dimensions (to guide proportions)', 15, yPos);
@@ -157,7 +194,7 @@ export default function CarpenterSpecModal({
         yPos += notesLines.length * 5 + 3;
       }
 
-      // Section 2: Feasibility & Local Constraints
+      // Feasibility & Local Constraints
       yPos += 8;
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
@@ -171,13 +208,12 @@ export default function CarpenterSpecModal({
       doc.text(constraintLines, 15, yPos);
       yPos += constraintLines.length * 4.5 + 8;
 
-      // Section 3: Materials (two columns)
+      // Materials
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
       doc.text('Materials', 15, yPos);
       yPos += 8;
 
-      // Column headers
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text('External Materials', 15, yPos);
@@ -187,12 +223,10 @@ export default function CarpenterSpecModal({
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       
-      // External materials (left column)
       const leftColX = 15;
       doc.text(`• Wood type: ${spec.material}`, leftColX, yPos);
       doc.text(`• Finish: ${spec.finish}`, leftColX, yPos + 5);
       
-      // Internal materials (right column)
       const rightColX = 110;
       doc.text('• Foam: Medium-density foam', rightColX, yPos);
       doc.text('• Seat Support: Plywood base', rightColX, yPos + 5);
@@ -207,7 +241,7 @@ export default function CarpenterSpecModal({
       doc.text(materialNoteLines, 15, yPos);
       yPos += materialNoteLines.length * 4 + 8;
 
-      // Section 4: Approval Checkpoints
+      // Approval Checkpoints
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
       doc.text('Approval Checkpoints', 15, yPos);
@@ -216,7 +250,6 @@ export default function CarpenterSpecModal({
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       
-      // Standard approval checkpoints
       const checkpoints = [
         'Fabric approval before upholstery',
         'Foam type confirmation',
@@ -233,22 +266,23 @@ export default function CarpenterSpecModal({
       doc.setFontSize(8);
       doc.text('Client approval required before production', 15, yPos);
 
-      // Footer
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.text('www.homablecreations.com', 105, 285, { align: 'center' });
 
-      // Create blob instead of downloading
+      // Create blob and URL
       const blob = doc.output('blob');
       setPdfBlob(blob);
       
-      // Create object URL for preview
       const url = URL.createObjectURL(blob);
       setPdfUrl(url);
+      setBlobUrls(createdBlobUrls);
       
+      console.log('[CarpenterSpecModal] PDF generated successfully');
     } catch (error) {
-      console.error('Failed to generate PDF:', error);
+      console.error('[CarpenterSpecModal] Failed to generate PDF:', error);
       alert('Failed to generate PDF. Please try again.');
+      createdBlobUrls.forEach(url => URL.revokeObjectURL(url));
     } finally {
       setIsGenerating(false);
     }
@@ -261,18 +295,14 @@ export default function CarpenterSpecModal({
       const fileName = `homable-carpenter-spec-${itemName.toLowerCase().replace(/\s+/g, '-')}.pdf`;
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
-      // Check if Web Share API is available and supports files
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
           title: 'Carpenter Specifications',
         });
       } else {
-        // Fallback: Create WhatsApp URL (mobile only)
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         if (isMobile) {
-          // On mobile, we can't directly share files via WhatsApp URL
-          // So we'll trigger a download and show instructions
           const url = URL.createObjectURL(pdfBlob);
           const a = document.createElement('a');
           a.href = url;
@@ -284,7 +314,6 @@ export default function CarpenterSpecModal({
           
           alert('PDF downloaded! Please open WhatsApp and attach this file from your downloads.');
         } else {
-          // Desktop fallback: just download
           const url = URL.createObjectURL(pdfBlob);
           const a = document.createElement('a');
           a.href = url;
@@ -314,7 +343,6 @@ export default function CarpenterSpecModal({
           </DialogTitle>
         </DialogHeader>
 
-        {/* PDF Preview */}
         <div className="flex-1 overflow-y-auto bg-gray-100 rounded-lg p-4 my-4">
           {isGenerating ? (
             <div className="flex items-center justify-center h-full">
@@ -344,7 +372,6 @@ export default function CarpenterSpecModal({
           ) : null}
         </div>
 
-        {/* Action Buttons */}
         <div className="flex gap-3 flex-shrink-0">
           <Button
             onClick={handleShare}
