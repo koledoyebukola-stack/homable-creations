@@ -26,7 +26,7 @@ async function imageUrlToBlobUrl(imageUrl: string): Promise<string> {
   console.log('[VendorShareModal] PRODUCTION DEBUG - Image URL type:', imageUrl.startsWith('http') ? 'HTTP URL' : imageUrl.startsWith('blob:') ? 'Blob URL' : 'Unknown');
   
   try {
-    const response = await fetch(imageUrl);
+    const response = await fetch(imageUrl, { mode: 'cors' });
     console.log('[VendorShareModal] PRODUCTION DEBUG - Fetch response status:', response.status, response.statusText);
     
     if (!response.ok) {
@@ -114,6 +114,7 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
       // Load inspiration image from blob URL (no CORS issues)
       console.log('[VendorShareModal] PRODUCTION DEBUG - Loading inspiration image from blob URL...');
       const inspirationImg = new Image();
+      inspirationImg.crossOrigin = 'anonymous';
       
       await new Promise((resolve, reject) => {
         inspirationImg.onload = () => {
@@ -237,9 +238,13 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
       ctx.fillText('Quantity: 1', textX, textY);
       textY += 60;
 
-      // Load and draw the CORRECT brand logo
-      console.log('[VendorShareModal] PRODUCTION DEBUG - Loading brand logo from /assets/homable-logo.png');
+      // Load and draw the CORRECT brand logo from Supabase
+      console.log('[VendorShareModal] PRODUCTION DEBUG - Loading brand logo from Supabase');
+      const logoBlobUrl = await imageUrlToBlobUrl('https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/images/image.png');
+      blobUrlsRef.current.push(logoBlobUrl);
+      
       const logoImg = new Image();
+      logoImg.crossOrigin = 'anonymous';
       const logoSize = 50;
       
       await new Promise((resolve, reject) => {
@@ -251,7 +256,7 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
           console.error('[VendorShareModal] PRODUCTION ERROR - Failed to load brand logo:', error);
           reject(error);
         };
-        logoImg.src = '/assets/homable-logo.png';
+        logoImg.src = logoBlobUrl;
       });
 
       ctx.drawImage(logoImg, textX, textY, logoSize, logoSize);
@@ -292,7 +297,7 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
     if (!imageDataUrl) return;
 
     const link = document.createElement('a');
-    const fileName = `${item.item_name.replace(/\s+/g, '-').toLowerCase()}/images/photo1767783599.jpg`;
+    const fileName = `${item.item_name.replace(/\s+/g, '-').toLowerCase()}/images/photo1767785902.jpg`;
     link.download = fileName;
     link.href = imageDataUrl;
     document.body.appendChild(link);

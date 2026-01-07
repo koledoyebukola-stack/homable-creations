@@ -23,7 +23,7 @@ async function imageUrlToBlobUrl(imageUrl: string): Promise<string> {
   console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Image URL type:', imageUrl.startsWith('http') ? 'HTTP URL' : imageUrl.startsWith('blob:') ? 'Blob URL' : 'Unknown');
   
   try {
-    const response = await fetch(imageUrl);
+    const response = await fetch(imageUrl, { mode: 'cors' });
     console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Fetch response status:', response.status, response.statusText);
     
     if (!response.ok) {
@@ -84,10 +84,14 @@ export default function CarpenterSpecModal({
         format: 'a4'
       });
 
-      // Load the CORRECT Homable logo from local assets
-      console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Loading brand logo from /assets/homable-logo.png');
+      // Load the CORRECT Homable brand logo from Supabase
+      console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Loading brand logo from Supabase');
       const logoImg = new Image();
-      logoImg.src = 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2026-01-07/7420a719-712f-448e-b5ed-cd101a54edb3.png';
+      logoImg.crossOrigin = 'anonymous';
+      
+      // Use the new Supabase logo URL
+      const logoBlobUrl = await imageUrlToBlobUrl('https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/images/image.png');
+      createdBlobUrls.push(logoBlobUrl);
       
       await new Promise((resolve, reject) => {
         logoImg.onload = () => {
@@ -98,6 +102,7 @@ export default function CarpenterSpecModal({
           console.error('[CarpenterSpecModal] PRODUCTION ERROR - Failed to load brand logo:', error);
           reject(error);
         };
+        logoImg.src = logoBlobUrl;
       });
 
       // PAGE 1 - Primary Build Reference
@@ -125,6 +130,7 @@ export default function CarpenterSpecModal({
           
           console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Loading reference image from blob URL...');
           const refImg = new Image();
+          refImg.crossOrigin = 'anonymous';
           
           await new Promise((resolve, reject) => {
             refImg.onload = () => {
