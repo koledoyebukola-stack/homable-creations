@@ -55,20 +55,13 @@ export default function CarpenterSpecModal({
       });
 
       // Load Homable logo
-      console.log('[CarpenterSpecModal] Loading Homable logo...');
       const logoImg = new Image();
-      // Don't set crossOrigin for local files
-      logoImg.src = 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2026-01-07/d2c8ef2c-2a79-495a-be77-743ec5171935.png';
+      logoImg.crossOrigin = 'anonymous';
+      logoImg.src = '/assets/homable-logo.png';
       
       await new Promise((resolve, reject) => {
-        logoImg.onload = () => {
-          console.log('[CarpenterSpecModal] Logo loaded successfully');
-          resolve(null);
-        };
-        logoImg.onerror = (error) => {
-          console.error('[CarpenterSpecModal] Failed to load logo:', error);
-          reject(error);
-        };
+        logoImg.onload = resolve;
+        logoImg.onerror = reject;
       });
 
       // PAGE 1 - Primary Build Reference (Visual-First)
@@ -92,25 +85,13 @@ export default function CarpenterSpecModal({
       // Main reference image (large, centered)
       if (referenceImageUrl) {
         try {
-          console.log('[CarpenterSpecModal] Loading reference image from:', referenceImageUrl);
           const refImg = new Image();
-          // Only set crossOrigin for external URLs
-          if (referenceImageUrl.startsWith('http://') || referenceImageUrl.startsWith('https://')) {
-            refImg.crossOrigin = 'anonymous';
-          }
+          refImg.crossOrigin = 'anonymous';
           refImg.src = referenceImageUrl;
           
           await new Promise((resolve, reject) => {
-            refImg.onload = () => {
-              console.log('[CarpenterSpecModal] Reference image loaded successfully');
-              console.log('[CarpenterSpecModal] Image dimensions:', refImg.width, 'x', refImg.height);
-              resolve(null);
-            };
-            refImg.onerror = (error) => {
-              console.error('[CarpenterSpecModal] Failed to load reference image:', error);
-              console.error('[CarpenterSpecModal] Image URL:', referenceImageUrl);
-              reject(error);
-            };
+            refImg.onload = resolve;
+            refImg.onerror = reject;
           });
 
           // Calculate dimensions to fit image (max 170mm width, max 170mm height)
@@ -130,9 +111,8 @@ export default function CarpenterSpecModal({
           const yPos = 85;
           
           doc.addImage(refImg, 'JPEG', xPos, yPos, imgWidth, imgHeight);
-          console.log('[CarpenterSpecModal] Reference image added to PDF');
         } catch (error) {
-          console.error('[CarpenterSpecModal] Failed to load reference image:', error);
+          console.error('Failed to load reference image:', error);
         }
       }
 
@@ -266,9 +246,8 @@ export default function CarpenterSpecModal({
       const url = URL.createObjectURL(blob);
       setPdfUrl(url);
       
-      console.log('[CarpenterSpecModal] PDF generated successfully');
     } catch (error) {
-      console.error('[CarpenterSpecModal] Failed to generate PDF:', error);
+      console.error('Failed to generate PDF:', error);
       alert('Failed to generate PDF. Please try again.');
     } finally {
       setIsGenerating(false);

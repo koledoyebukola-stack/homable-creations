@@ -89,10 +89,7 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
       // Load inspiration image
       console.log('[VendorShareModal] Loading inspiration image from:', inspirationImageUrl);
       const inspirationImg = new Image();
-      // Only set crossOrigin for external URLs
-      if (inspirationImageUrl.startsWith('http://') || inspirationImageUrl.startsWith('https://')) {
-        inspirationImg.crossOrigin = 'anonymous';
-      }
+      inspirationImg.crossOrigin = 'anonymous';
       
       await new Promise((resolve, reject) => {
         inspirationImg.onload = () => {
@@ -241,11 +238,7 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
       
       await new Promise((resolve, reject) => {
         logoImg.onload = resolve;
-        logoImg.onerror = (error) => {
-          console.error('[VendorShareModal] Failed to load logo:', error);
-          reject(error);
-        };
-        // Don't set crossOrigin for local files
+        logoImg.onerror = reject;
         logoImg.src = '/assets/homable-logo.png';
       });
 
@@ -295,7 +288,7 @@ export default function VendorShareModal({ isOpen, onClose, item, inspirationIma
 
     console.log('[VendorShareModal] Starting download...');
     const link = document.createElement('a');
-    const fileName = `${item.item_name.replace(/\s+/g, '-').toLowerCase()}/images/photo1767780461.jpg`;
+    const fileName = `${item.item_name.replace(/\s+/g, '-').toLowerCase()}/images/photo1767665437.jpg`;
     link.download = fileName;
     link.href = imageDataUrl;
     document.body.appendChild(link);
