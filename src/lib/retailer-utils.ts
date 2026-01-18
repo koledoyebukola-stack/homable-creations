@@ -279,10 +279,11 @@ async function getUserCountryCode(): Promise<string> {
 /**
  * Get the appropriate retailer domain for user's location
  * @param retailer - Retailer name (amazon, walmart, wayfair, temu, shein)
+ * @param countryCode - Optional country code override (e.g., 'NG', 'US', 'CA'). If not provided, uses IP detection.
  * @returns Domain string (e.g., "amazon.ca", "walmart.com")
  */
-async function getRetailerDomain(retailer: string): Promise<string> {
-  const countryCode = await getUserCountryCode();
+async function getRetailerDomain(retailer: string, countryCode?: string): Promise<string> {
+  const effectiveCountryCode = countryCode || await getUserCountryCode();
   const domains = RETAILER_DOMAINS[retailer.toLowerCase()];
   
   if (!domains) {
@@ -291,7 +292,7 @@ async function getRetailerDomain(retailer: string): Promise<string> {
   }
   
   // Return country-specific domain or fall back to US/.com
-  return domains[countryCode] || domains.US || Object.values(domains)[0];
+  return domains[effectiveCountryCode] || domains.US || Object.values(domains)[0];
 }
 
 /**
@@ -394,9 +395,11 @@ export function buildRetailerQuery(item: DetectedItem): string {
 /**
  * Create Amazon search URL with IP-based location routing
  * Uses country-specific domain (e.g., amazon.ca for Canada)
+ * @param query - Search query string
+ * @param countryCode - Optional country code override
  */
-export async function getAmazonSearchUrl(query: string): Promise<string> {
-  const domain = await getRetailerDomain('amazon');
+export async function getAmazonSearchUrl(query: string, countryCode?: string): Promise<string> {
+  const domain = await getRetailerDomain('amazon', countryCode);
   const encodedQuery = encodeURIComponent(query);
   return `https://${domain}/s?k=${encodedQuery}`;
 }
@@ -404,9 +407,11 @@ export async function getAmazonSearchUrl(query: string): Promise<string> {
 /**
  * Create Walmart search URL with IP-based location routing
  * Uses country-specific domain (e.g., walmart.ca for Canada)
+ * @param query - Search query string
+ * @param countryCode - Optional country code override
  */
-export async function getWalmartSearchUrl(query: string): Promise<string> {
-  const domain = await getRetailerDomain('walmart');
+export async function getWalmartSearchUrl(query: string, countryCode?: string): Promise<string> {
+  const domain = await getRetailerDomain('walmart', countryCode);
   const encodedQuery = encodeURIComponent(query);
   return `https://${domain}/search?q=${encodedQuery}`;
 }
@@ -414,18 +419,22 @@ export async function getWalmartSearchUrl(query: string): Promise<string> {
 /**
  * Create Wayfair search URL with IP-based location routing
  * Uses country-specific domain (e.g., wayfair.ca for Canada)
+ * @param query - Search query string
+ * @param countryCode - Optional country code override
  */
-export async function getWayfairSearchUrl(query: string): Promise<string> {
-  const domain = await getRetailerDomain('wayfair');
+export async function getWayfairSearchUrl(query: string, countryCode?: string): Promise<string> {
+  const domain = await getRetailerDomain('wayfair', countryCode);
   const encodedQuery = encodeURIComponent(query);
   return `https://${domain}/keyword.php?keyword=${encodedQuery}`;
 }
 
 /**
  * Create Temu search URL with IP-based location routing
+ * @param query - Search query string
+ * @param countryCode - Optional country code override
  */
-export async function getTemuSearchUrl(query: string): Promise<string> {
-  const domain = await getRetailerDomain('temu');
+export async function getTemuSearchUrl(query: string, countryCode?: string): Promise<string> {
+  const domain = await getRetailerDomain('temu', countryCode);
   const encodedQuery = encodeURIComponent(query);
   return `https://${domain}/search_result.html?search_key=${encodedQuery}`;
 }
@@ -434,9 +443,11 @@ export async function getTemuSearchUrl(query: string): Promise<string> {
  * Create Shein search URL with IP-based location routing
  * Uses /pdsearch/ format to avoid 404 errors
  * Example: https://ca.shein.com/pdsearch/light%20blue%20console%20table/
+ * @param query - Search query string
+ * @param countryCode - Optional country code override
  */
-export async function getSheinSearchUrl(query: string): Promise<string> {
-  const domain = await getRetailerDomain('shein');
+export async function getSheinSearchUrl(query: string, countryCode?: string): Promise<string> {
+  const domain = await getRetailerDomain('shein', countryCode);
   const encodedQuery = encodeURIComponent(query);
   return `https://${domain}/pdsearch/${encodedQuery}/`;
 }

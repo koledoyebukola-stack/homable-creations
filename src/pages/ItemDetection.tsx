@@ -6,11 +6,19 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import Auth from '@/components/AuthModal';
 import ShareModal from '@/components/ShareModal';
 import VisualSearchModal from '@/components/VisualSearchModal';
+import CountryChangeConfirmationModal from '@/components/CountryChangeConfirmationModal';
 import { Button } from '@/components/ui/button';
 import CarpenterSpecModal from '@/components/CarpenterSpecModal';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Globe } from 'lucide-react';
 import { getDetectedItems, getBoardById, getBoards, searchProducts, getProductsForItem, getRandomSeedProducts, logAnalysis, createChecklist, getChecklistByBoardId, seeMoreItems, generateCarpenterSpec } from '@/lib/api';
 import { DetectedItem, Product, Board, Checklist, CarpenterSpec } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
@@ -109,10 +117,15 @@ function isValidProductUrl(url: string | undefined): boolean {
 }
 
 // Helper function to handle async retailer button clicks with normalized query
-async function handleRetailerClick(getUrlFn: (query: string) => Promise<string>, item: DetectedItem) {
+// Accepts effectiveCountry to pass to retailer URL functions
+async function handleRetailerClick(
+  getUrlFn: (query: string, countryCode?: string) => Promise<string>, 
+  item: DetectedItem,
+  effectiveCountry?: string | null
+) {
   try {
     const normalizedQuery = buildRetailerQuery(item);
-    const url = await getUrlFn(normalizedQuery);
+    const url = await getUrlFn(normalizedQuery, effectiveCountry || undefined);
     window.open(url, '_blank');
   } catch (error) {
     console.error('Failed to generate retailer URL:', error);
@@ -218,6 +231,14 @@ export default function ItemDetection() {
   const [carpenterSpecs, setCarpenterSpecs] = useState<Record<string, CarpenterSpec>>({});
   const [generatingSpecs, setGeneratingSpecs] = useState<Record<string, boolean>>({});
   
+  // Active market state (client-side override for board.country)
+  const [activeMarket, setActiveMarket] = useState<string | null>(null);
+  const [showCountryChangeModal, setShowCountryChangeModal] = useState(false);
+  const [pendingCountry, setPendingCountry] = useState<string | null>(null);
+  
+  // Compute effective country: activeMarket overrides board.country
+  const effectiveCountry = activeMarket ?? board?.country ?? null;
+  
   // Refs for scrolling to item sections
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -247,6 +268,15 @@ export default function ItemDetection() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Update isNigeria when effectiveCountry changes
+  useEffect(() => {
+    if (board) {
+      const effectiveCountryValue = activeMarket ?? board.country ?? null;
+      const userIsNigeria = effectiveCountryValue === 'NG';
+      setIsNigeria(userIsNigeria);
+    }
+  }, [activeMarket, board]);
+
   useEffect(() => {
     if (!boardId) return;
 
@@ -256,10 +286,16 @@ export default function ItemDetection() {
         const currentBoard = await getBoardById(boardId);
         if (currentBoard) {
           setBoard(currentBoard);
-          // Check if user is from Nigeria
-          const userIsNigeria = currentBoard.country === 'NG';
+          // Initialize activeMarket from board.country if not already set (only on first load)
+          setActiveMarket(prev => prev === null && currentBoard.country ? currentBoard.country : prev);
+          
+          // Use a local variable to compute effective country for this load cycle
+          // activeMarket state update is async, so we compute it here
+          const currentActiveMarket = activeMarket ?? (currentBoard.country || null);
+          const effectiveCountryValue = currentActiveMarket;
+          const userIsNigeria = effectiveCountryValue === 'NG';
           setIsNigeria(userIsNigeria);
-          console.log('Board country:', currentBoard.country, 'Is Nigeria:', userIsNigeria);
+          console.log('Board country:', currentBoard.country, 'Active market:', currentActiveMarket, 'Effective country:', effectiveCountryValue, 'Is Nigeria:', userIsNigeria);
           
           // Set room materials if available
           if (currentBoard.room_materials) {
@@ -299,10 +335,8 @@ export default function ItemDetection() {
 
         // Load products for each detected item (only if authenticated)
         if (detectedItems.length > 0 && userIsAuthenticated) {
-        // Track inspiration results viewed (only if authenticated)
-        if (detectedItems.length > 0 && userIsAuthenticated) {
+          // Track inspiration results viewed (only if authenticated)
           trackPageView(EVENTS.INSPIRATION_RESULTS_VIEWED);
-        }
 
           setLoadingProducts(true);
           const productsMap: Record<string, ItemProductResult> = {};
@@ -391,7 +425,7 @@ export default function ItemDetection() {
     };
 
     loadData();
-  }, [boardId, isAuthenticated]);
+  }, [boardId, isAuthenticated, activeMarket]);
 
   const handleAuthSuccess = async () => {
     setShowAuthModal(false);
@@ -641,6 +675,117 @@ export default function ItemDetection() {
     return itemResult && !itemResult.message && itemResult.products.length === 0;
   });
 
+  // Country selector options
+  const COUNTRY_OPTIONS = [
+    { code: 'NG', name: 'Nigeria', flag: '🇳🇬' },
+    { code: 'US', name: 'United States', flag: '🇺🇸' },
+    { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
+    { code: 'CA', name: 'Canada', flag: '🇨🇦' },
+  ];
+
+  const getCurrentCountryDisplay = () => {
+    const countryCode = effectiveCountry || 'US';
+    const country = COUNTRY_OPTIONS.find(c => c.code === countryCode) || COUNTRY_OPTIONS[1];
+    return country;
+  };
+
+  const handleCountrySelect = (newCountryCode: string) => {
+    const currentCountryCode = effectiveCountry || board?.country || 'US';
+    
+    if (newCountryCode === currentCountryCode) {
+      return; // No change needed
+    }
+    
+    // Show confirmation modal
+    setPendingCountry(newCountryCode);
+    setShowCountryChangeModal(true);
+  };
+
+  const handleCountryChangeConfirm = async () => {
+    if (!pendingCountry) return;
+    
+    // Set the new active market
+    setActiveMarket(pendingCountry);
+    setShowCountryChangeModal(false);
+    
+    // Update isNigeria based on new country
+    const newIsNigeria = pendingCountry === 'NG';
+    setIsNigeria(newIsNigeria);
+    
+    // Clear existing products and refetch
+    setProducts({});
+    setSeedProducts([]);
+    setAdditionalProducts([]);
+    setCarpenterSpecs({});
+    
+    if (isAuthenticated && items.length > 0) {
+      setLoadingProducts(true);
+      const productsMap: Record<string, ItemProductResult> = {};
+      
+      for (const item of items) {
+        try {
+          // Clear cache and trigger new search with new country context
+          const searchResult = await searchProducts(item.id);
+          let result: ItemProductResult = searchResult;
+          
+          // If no products, try category-matched seeds
+          if (!result.message && result.products.length === 0) {
+            const categorySeeds = await getRandomSeedProducts(item.item_name, item.category);
+            result.products = categorySeeds.slice(0, 3);
+          }
+          
+          // Filter products
+          if (!result.message) {
+            result.products = result.products.filter(p => isValidProductUrl(p.product_url));
+          }
+
+          productsMap[item.id] = result;
+        } catch (error) {
+          console.error(`Failed to load products for item ${item.id}:`, error);
+          productsMap[item.id] = { products: [], message: null, message_category_context: null };
+        }
+      }
+      
+      setProducts(productsMap);
+      setLoadingProducts(false);
+      
+      // Reload seed products
+      setLoadingSeedProducts(true);
+      try {
+        const randomSeeds = await getRandomSeedProducts();
+        const validSeedProducts = randomSeeds.filter(p => isValidProductUrl(p.product_url));
+        setSeedProducts(validSeedProducts);
+      } catch (error) {
+        console.error('Failed to load seed products:', error);
+      }
+      setLoadingSeedProducts(false);
+      
+      // Reload additional products
+      setLoadingAdditionalProducts(true);
+      try {
+        const matchedProductIds = new Set(
+          Object.values(productsMap)
+            .filter(r => !r.message)
+            .flatMap(r => r.products)
+            .map(p => p.id)
+        );
+
+        const allSeedProducts = await getRandomSeedProducts();
+        const uniqueAdditionalProducts = allSeedProducts.filter(
+          p => !matchedProductIds.has(p.id) && isValidProductUrl(p.product_url)
+        );
+
+        setAdditionalProducts(uniqueAdditionalProducts.slice(0, 10));
+      } catch (error) {
+        console.error('Failed to load additional products:', error);
+      }
+      setLoadingAdditionalProducts(false);
+    }
+    
+    setPendingCountry(null);
+    toast.success('Market location updated. Products refreshed.');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
@@ -676,9 +821,41 @@ export default function ItemDetection() {
               {/* Right Side Copy & CTAs */}
               <div className="flex-1 space-y-6">
                 <div>
-                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 text-[#111111]">
-                    We Found {items.length} Items in "{board?.name || 'Your Board'}"
-                  </h1>
+                  <div className="flex items-start justify-between mb-3">
+                    <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#111111]">
+                      We Found {items.length} Items in "{board?.name || 'Your Board'}"
+                    </h1>
+                    {/* Country Selector */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-9 px-3 rounded-full bg-white/90 hover:bg-white border-[#E5E5E5] text-[#555555] font-normal shrink-0 ml-4"
+                        >
+                          <Globe className="h-4 w-4 mr-2" />
+                          <span className="mr-1">{getCurrentCountryDisplay().flag}</span>
+                          <span className="hidden sm:inline">{getCurrentCountryDisplay().name}</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        {COUNTRY_OPTIONS.map((country) => (
+                          <DropdownMenuItem
+                            key={country.code}
+                            onClick={() => handleCountrySelect(country.code)}
+                            className={`cursor-pointer ${
+                              effectiveCountry === country.code
+                                ? 'bg-[#C89F7A]/10 text-[#C89F7A] font-medium'
+                                : ''
+                            }`}
+                          >
+                            <span className="mr-2">{country.flag}</span>
+                            <span>{country.name}</span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                   <p className="text-lg md:text-xl text-[#555555]">
                     Here are the key decor pieces identified in your inspiration photo.
                   </p>
@@ -1109,7 +1286,7 @@ export default function ItemDetection() {
                                     
                                     <div className="grid grid-cols-3 gap-2">
                                       <Button
-                                        onClick={() => handleRetailerClick(getWayfairSearchUrl, item)}
+                                        onClick={() => handleRetailerClick(getWayfairSearchUrl, item, effectiveCountry)}
                                         variant="outline"
                                         size="sm"
                                         className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
@@ -1119,7 +1296,7 @@ export default function ItemDetection() {
                                       </Button>
 
                                       <Button
-                                        onClick={() => handleRetailerClick(getAmazonSearchUrl, item)}
+                                        onClick={() => handleRetailerClick(getAmazonSearchUrl, item, effectiveCountry)}
                                         variant="outline"
                                         size="sm"
                                         className="rounded-full bg-white border border-[#FF9900] text-[#111111] hover:bg-[#FF9900]/10 font-medium"
@@ -1129,7 +1306,7 @@ export default function ItemDetection() {
                                       </Button>
 
                                       <Button
-                                        onClick={() => handleRetailerClick(getWalmartSearchUrl, item)}
+                                        onClick={() => handleRetailerClick(getWalmartSearchUrl, item, effectiveCountry)}
                                         variant="outline"
                                         size="sm"
                                         className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
@@ -1147,7 +1324,7 @@ export default function ItemDetection() {
                                     </h3>
                                     <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
                                       <Button
-                                        onClick={() => handleRetailerClick(getTemuSearchUrl, item)}
+                                        onClick={() => handleRetailerClick(getTemuSearchUrl, item, effectiveCountry)}
                                         variant="outline"
                                         size="sm"
                                         className="rounded-full bg-white border border-[#FF7A00] text-[#555555] hover:bg-[#FF7A00]/10"
@@ -1157,7 +1334,7 @@ export default function ItemDetection() {
                                       </Button>
 
                                       <Button
-                                        onClick={() => handleRetailerClick(getSheinSearchUrl, item)}
+                                        onClick={() => handleRetailerClick(getSheinSearchUrl, item, effectiveCountry)}
                                         variant="outline"
                                         size="sm"
                                         className="rounded-full bg-white border border-[#000000] text-[#555555] hover:bg-[#000000]/10"
@@ -1294,7 +1471,7 @@ export default function ItemDetection() {
                                   {/* PRIMARY: Retailer Buttons */}
                                   <div className="grid grid-cols-3 gap-2 max-w-md mx-auto">
                                     <Button
-                                      onClick={() => handleRetailerClick(getWayfairSearchUrl, item)}
+                                      onClick={() => handleRetailerClick(getWayfairSearchUrl, item, effectiveCountry)}
                                       variant="outline"
                                       size="sm"
                                       className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
@@ -1304,7 +1481,7 @@ export default function ItemDetection() {
                                     </Button>
 
                                     <Button
-                                      onClick={() => handleRetailerClick(getAmazonSearchUrl, item)}
+                                      onClick={() => handleRetailerClick(getAmazonSearchUrl, item, effectiveCountry)}
                                       variant="outline"
                                       size="sm"
                                       className="rounded-full bg-white border border-[#FF9900] text-[#111111] hover:bg-[#FF9900]/10 font-medium"
@@ -1314,7 +1491,7 @@ export default function ItemDetection() {
                                     </Button>
 
                                     <Button
-                                      onClick={() => handleRetailerClick(getWalmartSearchUrl, item)}
+                                      onClick={() => handleRetailerClick(getWalmartSearchUrl, item, effectiveCountry)}
                                       variant="outline"
                                       size="sm"
                                       className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
@@ -1327,7 +1504,7 @@ export default function ItemDetection() {
                                   {/* SECONDARY: Temu & Shein Buttons */}
                                   <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
                                     <Button
-                                      onClick={() => handleRetailerClick(getTemuSearchUrl, item)}
+                                      onClick={() => handleRetailerClick(getTemuSearchUrl, item, effectiveCountry)}
                                       variant="outline"
                                       size="sm"
                                       className="rounded-full bg-white border border-[#FF7A00] text-[#555555] hover:bg-[#FF7A00]/10"
@@ -1337,7 +1514,7 @@ export default function ItemDetection() {
                                     </Button>
 
                                     <Button
-                                      onClick={() => handleRetailerClick(getSheinSearchUrl, item)}
+                                      onClick={() => handleRetailerClick(getSheinSearchUrl, item, effectiveCountry)}
                                       variant="outline"
                                       size="sm"
                                       className="rounded-full bg-white border border-[#000000] text-[#555555] hover:bg-[#000000]/10"
@@ -1645,6 +1822,19 @@ export default function ItemDetection() {
           itemName={visualSearchModal.item.item_name}
           imageUrl={board?.source_image_url || ''}
           croppedImageUrl={visualSearchModal.item.position?.cropped_image_url as string | undefined}
+        />
+      )}
+
+      {showCountryChangeModal && pendingCountry && board && (
+        <CountryChangeConfirmationModal
+          isOpen={showCountryChangeModal}
+          onClose={() => {
+            setShowCountryChangeModal(false);
+            setPendingCountry(null);
+          }}
+          onConfirm={handleCountryChangeConfirm}
+          currentCountry={effectiveCountry || board.country || 'US'}
+          newCountry={pendingCountry}
         />
       )}
 
