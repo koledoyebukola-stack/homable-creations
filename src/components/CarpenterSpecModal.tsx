@@ -182,7 +182,7 @@ export default function CarpenterSpecModal({
       doc.setFont('helvetica', 'normal');
       doc.text('www.homablecreations.com', 105, 285, { align: 'center' });
 
-      // PAGE 2 - Build Guidance & Constraints
+      // PAGE 2 - Dimensions and 3D Interpretation
       doc.addPage();
 
       doc.addImage(logoImg, 'PNG', 15, 15, 25, 25);
@@ -261,24 +261,14 @@ export default function CarpenterSpecModal({
             }
           }
 
-          // Calculate image size to fit within remaining page space
-          // Leave room for constraints, materials, and approval sections (approx 120mm needed)
-          const availableHeight = 285 - yPos - 120; // Reserve space for remaining content
-          const maxHeight = Math.max(50, Math.min(70, availableHeight)); // Between 50-70mm
-          const maxWidth = 180;
+          // Fixed image height: 135mm (within 120-150mm range) for large, readable display
+          // Image takes up remainder of Page 2
+          const fixedImageHeight = 135;
           const imgAspectRatio = techImg.width / techImg.height;
-          
-          let imgWidth = maxWidth;
-          let imgHeight = maxWidth / imgAspectRatio;
-          
-          if (imgHeight > maxHeight) {
-            imgHeight = maxHeight;
-            imgWidth = maxHeight * imgAspectRatio;
-          }
+          const imgWidth = fixedImageHeight * imgAspectRatio;
           
           const xPos = (210 - imgWidth) / 2;
-          doc.addImage(techImg, 'PNG', xPos, yPos, imgWidth, imgHeight);
-          yPos += imgHeight + 5;
+          doc.addImage(techImg, 'PNG', xPos, yPos, imgWidth, fixedImageHeight);
           console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Technical image added to PDF');
         } catch (error) {
           console.error('[CarpenterSpecModal] PRODUCTION ERROR - Failed to load technical image:', error);
@@ -286,8 +276,21 @@ export default function CarpenterSpecModal({
         }
       }
 
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text('www.homablecreations.com', 105, 285, { align: 'center' });
+
+      // PAGE 3 - Build Guidance & Constraints
+      doc.addPage();
+
+      doc.addImage(logoImg, 'PNG', 15, 15, 25, 25);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('HOMABLE CREATIONS', 45, 30);
+
+      yPos = 55;
+
       // Feasibility & Local Constraints
-      yPos += 8;
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
       doc.text('Feasibility & Local Constraints', 15, yPos);
@@ -309,29 +312,15 @@ export default function CarpenterSpecModal({
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text('External Materials', 15, yPos);
-      doc.text('Internal Materials', 110, yPos);
       yPos += 6;
 
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       
-      const leftColX = 15;
-      doc.text(`• Wood type: ${spec.material}`, leftColX, yPos);
-      doc.text(`• Finish: ${spec.finish}`, leftColX, yPos + 5);
+      doc.text(`• Wood type: ${spec.material}`, 15, yPos);
+      doc.text(`• Finish: ${spec.finish}`, 15, yPos + 5);
       
-      const rightColX = 110;
-      doc.text('• Foam: Medium-density foam', rightColX, yPos);
-      doc.text('• Seat Support: Plywood base', rightColX, yPos + 5);
-      doc.text('• Frame: Hardwood (local)', rightColX, yPos + 10);
-      
-      yPos += 18;
-
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(8);
-      const materialNote = 'Internal materials affect comfort and durability. Final choice must be agreed before build.';
-      const materialNoteLines = doc.splitTextToSize(materialNote, 175);
-      doc.text(materialNoteLines, 15, yPos);
-      yPos += materialNoteLines.length * 4 + 8;
+      yPos += 12;
 
       // Approval Checkpoints
       doc.setFontSize(12);

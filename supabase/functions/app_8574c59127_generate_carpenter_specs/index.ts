@@ -108,9 +108,7 @@ Output ONLY valid JSON with this exact structure:
     "string (key construction detail 1)",
     "string (key construction detail 2)",
     "string (key construction detail 3)"
-  ],
-  "estimated_cost_range": "string (e.g., '₦50,000 - ₦80,000')",
-  "build_time": "string (e.g., '2-3 weeks')"
+  ]
 }
 
 No comments, no extra text.`,
@@ -171,15 +169,28 @@ Provide detailed fabrication specs suitable for a Nigerian carpenter.`,
       const material = carpenterSpec.material;
       const constructionFeatures = carpenterSpec.construction_features || [];
       
-      const imagePrompt = `Technical 3D illustration of a ${item_name} furniture piece. 
-Functional, buildable interpretation showing structural components clearly.
-Dimensions: ${dimensions.width_cm}cm width × ${dimensions.depth_cm}cm depth × ${dimensions.height_cm}cm height.
-Material: ${material} wood.
-Construction details: ${constructionFeatures.join(', ')}.
-Show structural parts with minimal labels: frame, legs, support rails, joints, and key construction elements.
-Technical drawing style, isometric or orthographic view, clean white background.
-No decorative elements, no aesthetic styling, purely functional and buildable design.
-Engineering drawing aesthetic, technical blueprint style, clear structural visualization.`;
+      const imagePrompt = `Generate an internal wooden framework that fits strictly inside the outer silhouette of the ${item_name} furniture piece. Do not add any external structure that is not visible in the reference image.
+
+CRITICAL CONSTRAINTS:
+- Show ONLY the internal wooden framework (internal skeleton/structure)
+- Framework must fit strictly inside the outer silhouette of the furniture
+- Framework must sit flush to the floor unless the reference image clearly shows external legs
+- Do NOT introduce new structures not present in the reference image:
+  * No external legs (unless visible in reference)
+  * No external frames
+  * No armrests or supports that are not visible in the reference
+
+Technical specifications:
+- Dimensions: ${dimensions.width_cm}cm width × ${dimensions.depth_cm}cm depth × ${dimensions.height_cm}cm height
+- Material: ${material} wood
+- Construction details: ${constructionFeatures.join(', ')}
+
+Visual style requirements:
+- Technical isometric line-drawing style
+- Clean white background
+- No shadows, textures, lighting effects, or decorative elements
+- No text, labels, measurements, or annotations inside the image
+- Purely functional internal framework visualization`;
 
       const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
