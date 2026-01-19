@@ -203,8 +203,61 @@ Engineering drawing aesthetic, technical blueprint style, clear structural visua
         technicalImageUrl = null;
       } else {
         const imageData = await imageResponse.json();
-        technicalImageUrl = imageData.data[0]?.url || null;
-        console.log(`[${requestId}] Successfully generated 3D technical illustration`);
+        const openaiImageUrl = imageData.data[0]?.url || null;
+        
+        if (openaiImageUrl) {
+          console.log(`[${requestId}] Successfully generated 3D technical illustration, uploading to Supabase Storage...`);
+          
+          try {
+            // Fetch the image bytes from OpenAI URL
+            const imageFetchResponse = await fetch(openaiImageUrl);
+            if (!imageFetchResponse.ok) {
+              throw new Error(`Failed to fetch image from OpenAI: ${imageFetchResponse.status}`);
+            }
+            
+            const imageBytes = await imageFetchResponse.arrayBuffer();
+            const imageBlob = new Blob([imageBytes], { type: 'image/png' });
+            
+            // Initialize Supabase client with service role key
+            const supabaseUrl = Deno.env.get('SUPABASE_URL');
+            const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+            
+            if (!supabaseUrl || !supabaseServiceKey) {
+              throw new Error('Supabase credentials not configured');
+            }
+            
+            const supabase = createClient(supabaseUrl, supabaseServiceKey);
+            
+            // Upload to Supabase Storage
+            const storagePath = `technical-drawings/${item_id}.png`;
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('images')
+              .upload(storagePath, imageBlob, {
+                contentType: 'image/png',
+                upsert: true, // Overwrite if exists
+              });
+            
+            if (uploadError) {
+              console.error(`[${requestId}] Failed to upload image to Supabase Storage:`, uploadError);
+              // Continue without image - don't fail the entire request
+              technicalImageUrl = null;
+            } else {
+              // Get public URL
+              const { data: { publicUrl } } = supabase.storage
+                .from('images')
+                .getPublicUrl(storagePath);
+              
+              technicalImageUrl = publicUrl;
+              console.log(`[${requestId}] Successfully uploaded technical image to Supabase Storage:`, technicalImageUrl);
+            }
+          } catch (uploadError) {
+            console.error(`[${requestId}] Error uploading image to Supabase Storage:`, uploadError);
+            // Continue without image - don't fail the entire request
+            technicalImageUrl = null;
+          }
+        } else {
+          technicalImageUrl = null;
+        }
       }
     } catch (imageError) {
       console.error(`[${requestId}] Error generating 3D illustration:`, imageError);

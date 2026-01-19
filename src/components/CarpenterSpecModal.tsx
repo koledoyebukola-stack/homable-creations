@@ -235,6 +235,7 @@ export default function CarpenterSpecModal({
           const techImg = new Image();
           techImg.crossOrigin = 'anonymous';
           
+          // Wait for image to load
           await new Promise((resolve, reject) => {
             techImg.onload = () => {
               console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Technical image loaded successfully');
@@ -246,6 +247,19 @@ export default function CarpenterSpecModal({
             };
             techImg.src = techBlobUrl;
           });
+
+          // CRITICAL: Wait for image to be fully decoded before adding to PDF
+          // In production, faster execution can cause doc.output() to run before image decoding completes.
+          // img.decode() ensures the image is fully decoded and ready for jsPDF to extract pixel data.
+          if (techImg.decode) {
+            await techImg.decode();
+            console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Technical image decoded successfully');
+          } else {
+            // Fallback for browsers without decode() support: ensure image is complete
+            if (!techImg.complete || techImg.naturalWidth === 0) {
+              throw new Error('Image failed to load completely');
+            }
+          }
 
           // Calculate image size to fit within remaining page space
           // Leave room for constraints, materials, and approval sections (approx 120mm needed)
