@@ -226,52 +226,87 @@ export default function CarpenterSpecModal({
         yPos += 10;
 
         try {
-          console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Converting technical image to blob...');
+          console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Loading technical blueprint...');
           console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Technical image URL:', spec.technical_image_url);
-          const techBlobUrl = await imageUrlToBlobUrl(spec.technical_image_url);
-          createdBlobUrls.push(techBlobUrl);
           
-          console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Loading technical image from blob URL...');
-          const techImg = new Image();
-          techImg.crossOrigin = 'anonymous';
-          
-          // Wait for image to load
-          await new Promise((resolve, reject) => {
-            techImg.onload = () => {
-              console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Technical image loaded successfully');
-              resolve(null);
-            };
-            techImg.onerror = (error) => {
-              console.error('[CarpenterSpecModal] PRODUCTION ERROR - Failed to load technical image:', error);
-              reject(error);
-            };
-            techImg.src = techBlobUrl;
-          });
+          // Check if it's an SVG data URL
+          if (spec.technical_image_url.startsWith('data:image/svg+xml')) {
+            // SVG data URL - convert to canvas then to image for PDF
+            const techImg = new Image();
+            techImg.crossOrigin = 'anonymous';
+            
+            await new Promise((resolve, reject) => {
+              techImg.onload = () => {
+                console.log('[CarpenterSpecModal] PRODUCTION DEBUG - SVG blueprint loaded successfully');
+                resolve(null);
+              };
+              techImg.onerror = (error) => {
+                console.error('[CarpenterSpecModal] PRODUCTION ERROR - Failed to load SVG blueprint:', error);
+                reject(error);
+              };
+              techImg.src = spec.technical_image_url!;
+            });
 
-          // CRITICAL: Wait for image to be fully decoded before adding to PDF
-          // In production, faster execution can cause doc.output() to run before image decoding completes.
-          // img.decode() ensures the image is fully decoded and ready for jsPDF to extract pixel data.
-          if (techImg.decode) {
-            await techImg.decode();
-            console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Technical image decoded successfully');
-          } else {
-            // Fallback for browsers without decode() support: ensure image is complete
-            if (!techImg.complete || techImg.naturalWidth === 0) {
-              throw new Error('Image failed to load completely');
+            // Convert SVG to canvas for better PDF rendering
+            const canvas = document.createElement('canvas');
+            canvas.width = 800; // High resolution for sharp rendering
+            canvas.height = 800;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(techImg, 0, 0, canvas.width, canvas.height);
+              const canvasDataUrl = canvas.toDataURL('image/png');
+              
+              // Fixed image height: 135mm (within 120-150mm range) for large, readable display
+              const fixedImageHeight = 135;
+              const imgAspectRatio = techImg.width / techImg.height;
+              const imgWidth = fixedImageHeight * imgAspectRatio;
+              
+              const xPos = (210 - imgWidth) / 2;
+              doc.addImage(canvasDataUrl, 'PNG', xPos, yPos, imgWidth, fixedImageHeight);
+              console.log('[CarpenterSpecModal] PRODUCTION DEBUG - SVG blueprint added to PDF');
+            } else {
+              throw new Error('Failed to create canvas context');
             }
-          }
+          } else {
+            // Legacy image URL - use existing blob conversion logic
+            const techBlobUrl = await imageUrlToBlobUrl(spec.technical_image_url);
+            createdBlobUrls.push(techBlobUrl);
+            
+            console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Loading technical image from blob URL...');
+            const techImg = new Image();
+            techImg.crossOrigin = 'anonymous';
+            
+            await new Promise((resolve, reject) => {
+              techImg.onload = () => {
+                console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Technical image loaded successfully');
+                resolve(null);
+              };
+              techImg.onerror = (error) => {
+                console.error('[CarpenterSpecModal] PRODUCTION ERROR - Failed to load technical image:', error);
+                reject(error);
+              };
+              techImg.src = techBlobUrl;
+            });
 
-          // Fixed image height: 135mm (within 120-150mm range) for large, readable display
-          // Image takes up remainder of Page 2
-          const fixedImageHeight = 135;
-          const imgAspectRatio = techImg.width / techImg.height;
-          const imgWidth = fixedImageHeight * imgAspectRatio;
-          
-          const xPos = (210 - imgWidth) / 2;
-          doc.addImage(techImg, 'PNG', xPos, yPos, imgWidth, fixedImageHeight);
-          console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Technical image added to PDF');
+            if (techImg.decode) {
+              await techImg.decode();
+              console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Technical image decoded successfully');
+            } else {
+              if (!techImg.complete || techImg.naturalWidth === 0) {
+                throw new Error('Image failed to load completely');
+              }
+            }
+
+            const fixedImageHeight = 135;
+            const imgAspectRatio = techImg.width / techImg.height;
+            const imgWidth = fixedImageHeight * imgAspectRatio;
+            
+            const xPos = (210 - imgWidth) / 2;
+            doc.addImage(techImg, 'PNG', xPos, yPos, imgWidth, fixedImageHeight);
+            console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Technical image added to PDF');
+          }
         } catch (error) {
-          console.error('[CarpenterSpecModal] PRODUCTION ERROR - Failed to load technical image:', error);
+          console.error('[CarpenterSpecModal] PRODUCTION ERROR - Failed to load technical blueprint:', error);
           // Continue without image if it fails to load
         }
       }
