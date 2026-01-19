@@ -217,6 +217,61 @@ export default function CarpenterSpecModal({
         yPos += notesLines.length * 5 + 3;
       }
 
+      // 3D Interpretation & Structural Breakdown (if technical image exists)
+      if (spec.technical_image_url) {
+        yPos += 8;
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('3D Interpretation & Structural Breakdown', 15, yPos);
+        yPos += 10;
+
+        try {
+          console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Converting technical image to blob...');
+          console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Technical image URL:', spec.technical_image_url);
+          const techBlobUrl = await imageUrlToBlobUrl(spec.technical_image_url);
+          createdBlobUrls.push(techBlobUrl);
+          
+          console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Loading technical image from blob URL...');
+          const techImg = new Image();
+          techImg.crossOrigin = 'anonymous';
+          
+          await new Promise((resolve, reject) => {
+            techImg.onload = () => {
+              console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Technical image loaded successfully');
+              resolve(null);
+            };
+            techImg.onerror = (error) => {
+              console.error('[CarpenterSpecModal] PRODUCTION ERROR - Failed to load technical image:', error);
+              reject(error);
+            };
+            techImg.src = techBlobUrl;
+          });
+
+          // Calculate image size to fit within remaining page space
+          // Leave room for constraints, materials, and approval sections (approx 120mm needed)
+          const availableHeight = 285 - yPos - 120; // Reserve space for remaining content
+          const maxHeight = Math.max(50, Math.min(70, availableHeight)); // Between 50-70mm
+          const maxWidth = 180;
+          const imgAspectRatio = techImg.width / techImg.height;
+          
+          let imgWidth = maxWidth;
+          let imgHeight = maxWidth / imgAspectRatio;
+          
+          if (imgHeight > maxHeight) {
+            imgHeight = maxHeight;
+            imgWidth = maxHeight * imgAspectRatio;
+          }
+          
+          const xPos = (210 - imgWidth) / 2;
+          doc.addImage(techImg, 'PNG', xPos, yPos, imgWidth, imgHeight);
+          yPos += imgHeight + 5;
+          console.log('[CarpenterSpecModal] PRODUCTION DEBUG - Technical image added to PDF');
+        } catch (error) {
+          console.error('[CarpenterSpecModal] PRODUCTION ERROR - Failed to load technical image:', error);
+          // Continue without image if it fails to load
+        }
+      }
+
       // Feasibility & Local Constraints
       yPos += 8;
       doc.setFontSize(12);
