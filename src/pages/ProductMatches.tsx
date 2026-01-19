@@ -450,17 +450,6 @@ export default function ProductMatches() {
                       </ul>
                     </div>
 
-                    {/* Cost & Time Estimates */}
-                    <div className="grid md:grid-cols-2 gap-4 pt-4 border-t">
-                      <div>
-                        <p className="text-sm text-[#555555] mb-1">Estimated Cost Range</p>
-                        <p className="text-xl font-bold text-[#111111]">{carpenterSpec.estimated_cost_range}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-[#555555] mb-1">Build Time</p>
-                        <p className="text-xl font-bold text-[#111111]">{carpenterSpec.build_time}</p>
-                      </div>
-                    </div>
                   </CardContent>
                 </Card>
 

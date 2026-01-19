@@ -108,9 +108,7 @@ Output ONLY valid JSON with this exact structure:
     "string (key construction detail 1)",
     "string (key construction detail 2)",
     "string (key construction detail 3)"
-  ],
-  "estimated_cost_range": "string (e.g., '₦50,000 - ₦80,000')",
-  "build_time": "string (e.g., '2-3 weeks')"
+  ]
 }
 
 No comments, no extra text.`,
@@ -171,15 +169,28 @@ Provide detailed fabrication specs suitable for a Nigerian carpenter.`,
       const material = carpenterSpec.material;
       const constructionFeatures = carpenterSpec.construction_features || [];
       
-      const imagePrompt = `Technical 3D illustration of a ${item_name} furniture piece. 
-Functional, buildable interpretation showing structural components clearly.
-Dimensions: ${dimensions.width_cm}cm width × ${dimensions.depth_cm}cm depth × ${dimensions.height_cm}cm height.
-Material: ${material} wood.
-Construction details: ${constructionFeatures.join(', ')}.
-Show structural parts with minimal labels: frame, legs, support rails, joints, and key construction elements.
-Technical drawing style, isometric or orthographic view, clean white background.
-No decorative elements, no aesthetic styling, purely functional and buildable design.
-Engineering drawing aesthetic, technical blueprint style, clear structural visualization.`;
+      const imagePrompt = `Generate an internal wooden framework that fits strictly inside the outer silhouette of the ${item_name} furniture piece. Do not add any external structure that is not visible in the reference image.
+
+CRITICAL CONSTRAINTS:
+- Show ONLY the internal wooden framework (internal skeleton/structure)
+- Framework must fit strictly inside the outer silhouette of the furniture
+- Framework must sit flush to the floor unless the reference image clearly shows external legs
+- Do NOT introduce new structures not present in the reference image:
+  * No external legs (unless visible in reference)
+  * No external frames
+  * No armrests or supports that are not visible in the reference
+
+Technical specifications:
+- Dimensions: ${dimensions.width_cm}cm width × ${dimensions.depth_cm}cm depth × ${dimensions.height_cm}cm height
+- Material: ${material} wood
+- Construction details: ${constructionFeatures.join(', ')}
+
+Visual style requirements:
+- Technical isometric line-drawing style
+- Clean white background
+- No shadows, textures, lighting effects, or decorative elements
+- No text, labels, measurements, or annotations inside the image
+- Purely functional internal framework visualization`;
 
       const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
@@ -203,8 +214,61 @@ Engineering drawing aesthetic, technical blueprint style, clear structural visua
         technicalImageUrl = null;
       } else {
         const imageData = await imageResponse.json();
-        technicalImageUrl = imageData.data[0]?.url || null;
-        console.log(`[${requestId}] Successfully generated 3D technical illustration`);
+        const openaiImageUrl = imageData.data[0]?.url || null;
+        
+        if (openaiImageUrl) {
+          console.log(`[${requestId}] Successfully generated 3D technical illustration, uploading to Supabase Storage...`);
+          
+          try {
+            // Fetch the image bytes from OpenAI URL
+            const imageFetchResponse = await fetch(openaiImageUrl);
+            if (!imageFetchResponse.ok) {
+              throw new Error(`Failed to fetch image from OpenAI: ${imageFetchResponse.status}`);
+            }
+            
+            const imageBytes = await imageFetchResponse.arrayBuffer();
+            const imageBlob = new Blob([imageBytes], { type: 'image/png' });
+            
+            // Initialize Supabase client with service role key
+            const supabaseUrl = Deno.env.get('SUPABASE_URL');
+            const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+            
+            if (!supabaseUrl || !supabaseServiceKey) {
+              throw new Error('Supabase credentials not configured');
+            }
+            
+            const supabase = createClient(supabaseUrl, supabaseServiceKey);
+            
+            // Upload to Supabase Storage
+            const storagePath = `technical-drawings/${item_id}.png`;
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('images')
+              .upload(storagePath, imageBlob, {
+                contentType: 'image/png',
+                upsert: true, // Overwrite if exists
+              });
+            
+            if (uploadError) {
+              console.error(`[${requestId}] Failed to upload image to Supabase Storage:`, uploadError);
+              // Continue without image - don't fail the entire request
+              technicalImageUrl = null;
+            } else {
+              // Get public URL
+              const { data: { publicUrl } } = supabase.storage
+                .from('images')
+                .getPublicUrl(storagePath);
+              
+              technicalImageUrl = publicUrl;
+              console.log(`[${requestId}] Successfully uploaded technical image to Supabase Storage:`, technicalImageUrl);
+            }
+          } catch (uploadError) {
+            console.error(`[${requestId}] Error uploading image to Supabase Storage:`, uploadError);
+            // Continue without image - don't fail the entire request
+            technicalImageUrl = null;
+          }
+        } else {
+          technicalImageUrl = null;
+        }
       }
     } catch (imageError) {
       console.error(`[${requestId}] Error generating 3D illustration:`, imageError);

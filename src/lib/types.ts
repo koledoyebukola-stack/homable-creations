@@ -26,8 +26,6 @@ export interface CarpenterSpec {
   material_reasoning: string;
   finish: string;
   construction_features: string[];
-  estimated_cost_range: string;
-  build_time: string;
   technical_image_url?: string; // AI-generated 3D technical interpretation image
 }
 
