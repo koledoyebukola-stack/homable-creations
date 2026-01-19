@@ -7,18 +7,12 @@ import Auth from '@/components/AuthModal';
 import ShareModal from '@/components/ShareModal';
 import VisualSearchModal from '@/components/VisualSearchModal';
 import CountryChangeConfirmationModal from '@/components/CountryChangeConfirmationModal';
+import { getSelectedCountry } from '@/components/LocationSelector';
 import { Button } from '@/components/ui/button';
 import CarpenterSpecModal from '@/components/CarpenterSpecModal';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Globe } from 'lucide-react';
 import { getDetectedItems, getBoardById, getBoards, searchProducts, getProductsForItem, getRandomSeedProducts, logAnalysis, createChecklist, getChecklistByBoardId, seeMoreItems, generateCarpenterSpec } from '@/lib/api';
 import { DetectedItem, Product, Board, Checklist, CarpenterSpec } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
@@ -276,6 +270,38 @@ export default function ItemDetection() {
       setIsNigeria(userIsNigeria);
     }
   }, [activeMarket, board]);
+
+  // Listen for global country changes from header LocationSelector
+  useEffect(() => {
+    const handleLocationChange = (event: CustomEvent) => {
+      // Only show confirmation if we have a board (results page)
+      if (!board || !boardId) {
+        return;
+      }
+
+      const newCountryCode = event.detail?.country;
+      if (!newCountryCode) {
+        return;
+      }
+
+      const currentCountryCode = effectiveCountry || board.country || 'US';
+      
+      // Don't show modal if it's the same country
+      if (newCountryCode === currentCountryCode) {
+        return;
+      }
+
+      // Show confirmation modal
+      setPendingCountry(newCountryCode);
+      setShowCountryChangeModal(true);
+    };
+
+    window.addEventListener('locationChanged', handleLocationChange as EventListener);
+
+    return () => {
+      window.removeEventListener('locationChanged', handleLocationChange as EventListener);
+    };
+  }, [board, boardId, effectiveCountry]);
 
   useEffect(() => {
     if (!boardId) return;
@@ -675,32 +701,6 @@ export default function ItemDetection() {
     return itemResult && !itemResult.message && itemResult.products.length === 0;
   });
 
-  // Country selector options
-  const COUNTRY_OPTIONS = [
-    { code: 'NG', name: 'Nigeria', flag: '🇳🇬' },
-    { code: 'US', name: 'United States', flag: '🇺🇸' },
-    { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
-    { code: 'CA', name: 'Canada', flag: '🇨🇦' },
-  ];
-
-  const getCurrentCountryDisplay = () => {
-    const countryCode = effectiveCountry || 'US';
-    const country = COUNTRY_OPTIONS.find(c => c.code === countryCode) || COUNTRY_OPTIONS[1];
-    return country;
-  };
-
-  const handleCountrySelect = (newCountryCode: string) => {
-    const currentCountryCode = effectiveCountry || board?.country || 'US';
-    
-    if (newCountryCode === currentCountryCode) {
-      return; // No change needed
-    }
-    
-    // Show confirmation modal
-    setPendingCountry(newCountryCode);
-    setShowCountryChangeModal(true);
-  };
-
   const handleCountryChangeConfirm = async () => {
     if (!pendingCountry) return;
     
@@ -821,41 +821,9 @@ export default function ItemDetection() {
               {/* Right Side Copy & CTAs */}
               <div className="flex-1 space-y-6">
                 <div>
-                  <div className="flex items-start justify-between mb-3">
-                    <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#111111]">
-                      We Found {items.length} Items in "{board?.name || 'Your Board'}"
-                    </h1>
-                    {/* Country Selector */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-9 px-3 rounded-full bg-white/90 hover:bg-white border-[#E5E5E5] text-[#555555] font-normal shrink-0 ml-4"
-                        >
-                          <Globe className="h-4 w-4 mr-2" />
-                          <span className="mr-1">{getCurrentCountryDisplay().flag}</span>
-                          <span className="hidden sm:inline">{getCurrentCountryDisplay().name}</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        {COUNTRY_OPTIONS.map((country) => (
-                          <DropdownMenuItem
-                            key={country.code}
-                            onClick={() => handleCountrySelect(country.code)}
-                            className={`cursor-pointer ${
-                              effectiveCountry === country.code
-                                ? 'bg-[#C89F7A]/10 text-[#C89F7A] font-medium'
-                                : ''
-                            }`}
-                          >
-                            <span className="mr-2">{country.flag}</span>
-                            <span>{country.name}</span>
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 text-[#111111]">
+                    We Found {items.length} Items in "{board?.name || 'Your Board'}"
+                  </h1>
                   <p className="text-lg md:text-xl text-[#555555]">
                     Here are the key decor pieces identified in your inspiration photo.
                   </p>
