@@ -28,6 +28,7 @@ export interface CarpenterSpec {
   construction_features: string[];
   estimated_cost_range: string;
   build_time: string;
+  technical_image_url?: string; // AI-generated 3D technical interpretation image
 }
 
 // Intent classification for detected items

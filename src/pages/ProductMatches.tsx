@@ -345,6 +345,13 @@ export default function ProductMatches() {
                     {generatingSpec ? 'Generating...' : 'Get Carpenter Specifications'}
                   </Button>
 
+                  {/* Loading message */}
+                  {generatingSpec && (
+                    <p className="text-xs text-[#666666] text-center mt-2">
+                      Interpreting design and generating build drawings…
+                    </p>
+                  )}
+
                   {/* Divider */}
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">

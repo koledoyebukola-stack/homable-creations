@@ -160,13 +160,71 @@ Provide detailed fabrication specs suitable for a Nigerian carpenter.`,
 
     console.log(`[${requestId}] Successfully generated carpenter spec`);
 
+    // Generate 3D technical interpretation image
+    console.log(`[${requestId}] Generating 3D technical illustration...`);
+    const imageGenStart = performance.now();
+    
+    let technicalImageUrl: string | null = null;
+    try {
+      // Build technical image prompt using the generated spec
+      const dimensions = carpenterSpec.dimensions;
+      const material = carpenterSpec.material;
+      const constructionFeatures = carpenterSpec.construction_features || [];
+      
+      const imagePrompt = `Technical 3D illustration of a ${item_name} furniture piece. 
+Functional, buildable interpretation showing structural components clearly.
+Dimensions: ${dimensions.width_cm}cm width × ${dimensions.depth_cm}cm depth × ${dimensions.height_cm}cm height.
+Material: ${material} wood.
+Construction details: ${constructionFeatures.join(', ')}.
+Show structural parts with minimal labels: frame, legs, support rails, joints, and key construction elements.
+Technical drawing style, isometric or orthographic view, clean white background.
+No decorative elements, no aesthetic styling, purely functional and buildable design.
+Engineering drawing aesthetic, technical blueprint style, clear structural visualization.`;
+
+      const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'dall-e-3',
+          prompt: imagePrompt,
+          n: 1,
+          size: '1024x1024',
+          quality: 'standard'
+        })
+      });
+
+      if (!imageResponse.ok) {
+        const errorText = await imageResponse.text();
+        console.error(`[${requestId}] DALL-E image generation failed:`, errorText);
+        // Continue without image - don't fail the entire request
+        technicalImageUrl = null;
+      } else {
+        const imageData = await imageResponse.json();
+        technicalImageUrl = imageData.data[0]?.url || null;
+        console.log(`[${requestId}] Successfully generated 3D technical illustration`);
+      }
+    } catch (imageError) {
+      console.error(`[${requestId}] Error generating 3D illustration:`, imageError);
+      // Continue without image - don't fail the entire request
+      technicalImageUrl = null;
+    }
+
+    const imageGenEnd = performance.now();
+    console.log(`[${requestId}] ⏱️ TIMING: Image generation: ${(imageGenEnd - imageGenStart).toFixed(2)}ms`);
+
     const totalTime = performance.now() - startTime;
     console.log(`[${requestId}] ⏱️ TIMING: TOTAL END-TO-END: ${totalTime.toFixed(2)}ms`);
 
     return new Response(
       JSON.stringify({
         item_id,
-        carpenter_spec: carpenterSpec,
+        carpenter_spec: {
+          ...carpenterSpec,
+          technical_image_url: technicalImageUrl,
+        },
       }),
       {
         status: 200,
