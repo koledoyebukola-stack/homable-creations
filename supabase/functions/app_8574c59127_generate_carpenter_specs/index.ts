@@ -38,6 +38,70 @@ const NIGERIAN_MATERIALS = [
 const ISO_COS = 0.866;
 const ISO_SIN = 0.5;
 
+/**
+ * BlueprintType enum - Strict blueprint template types
+ * Used for deterministic template selection
+ */
+enum BlueprintType {
+  CHAIR_SINGLE = 'CHAIR_SINGLE',
+  SOFA_MULTI = 'SOFA_MULTI',
+  TABLE_RECT = 'TABLE_RECT',
+  TABLE_ROUND = 'TABLE_ROUND',
+  BENCH = 'BENCH',
+  STORAGE_BOX = 'STORAGE_BOX'
+}
+
+/**
+ * Resolve blueprint type deterministically
+ * First matching rule wins - no ambiguity
+ * @param itemName - Item name string
+ * @param category - Category string (optional)
+ * @param width_cm - Width in centimeters
+ * @param depth_cm - Depth in centimeters
+ * @returns BlueprintType enum value
+ */
+function resolveBlueprintType(
+  itemName: string,
+  category: string | undefined,
+  width_cm: number,
+  depth_cm: number
+): BlueprintType {
+  const searchText = `${category || ''} ${itemName}`.toLowerCase();
+  
+  // Rule 1: IF width ≥ 180cm → SOFA_MULTI
+  if (width_cm >= 180) {
+    return BlueprintType.SOFA_MULTI;
+  }
+  
+  // Rule 2: IF item contains "sofa" OR "couch" → SOFA_MULTI
+  if (searchText.includes('sofa') || searchText.includes('couch')) {
+    return BlueprintType.SOFA_MULTI;
+  }
+  
+  // Rule 3: IF item contains "chair" AND width < 120cm → CHAIR_SINGLE
+  if (searchText.includes('chair') && width_cm < 120) {
+    return BlueprintType.CHAIR_SINGLE;
+  }
+  
+  // Rule 4: IF item contains "table"
+  if (searchText.includes('table')) {
+    // IF |width − depth| < 10cm → TABLE_ROUND
+    if (Math.abs(width_cm - depth_cm) < 10) {
+      return BlueprintType.TABLE_ROUND;
+    }
+    // ELSE → TABLE_RECT
+    return BlueprintType.TABLE_RECT;
+  }
+  
+  // Rule 5: IF item contains "bench" OR "ottoman" → BENCH
+  if (searchText.includes('bench') || searchText.includes('ottoman')) {
+    return BlueprintType.BENCH;
+  }
+  
+  // Rule 6: ELSE → STORAGE_BOX
+  return BlueprintType.STORAGE_BOX;
+}
+
 interface Dimensions {
   width_cm: number;
   depth_cm: number;
@@ -320,6 +384,215 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
     ));
   }
   
+  const allElements = [...lines, ...dimensionElements];
+  return `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="background: white;">
+    ${allElements.join('\n    ')}
+  </svg>`;
+}
+
+/**
+ * Generate SOFA_MULTI frame
+ * Multi-bay sofa using plinth foundation, seat bays, and aligned back supports
+ */
+function generateSofaMultiFrame(width: number, depth: number, height: number, showDimensions: boolean = false): string {
+  const svgWidth = 400;
+  const svgHeight = 400;
+  const centerX = svgWidth / 2;
+  const centerY = svgHeight / 2 + 50;
+  const lines: string[] = [];
+
+  const w = width / 2;
+  const d = depth / 2;
+  const totalHeight = height;
+
+  // Foundation: Plinth base (90% of footprint)
+  const plinthThickness = totalHeight * 0.05;
+  const plinthW = w * 0.9;
+  const plinthD = d * 0.9;
+
+  const plinthCorners = [
+    { x: -plinthW, y: -plinthD, z: 0 },                // Front-left-bottom
+    { x: plinthW, y: -plinthD, z: 0 },                 // Front-right-bottom
+    { x: plinthW, y: plinthD, z: 0 },                  // Back-right-bottom
+    { x: -plinthW, y: plinthD, z: 0 },                 // Back-left-bottom
+    { x: -plinthW, y: -plinthD, z: plinthThickness },  // Front-left-top
+    { x: plinthW, y: -plinthD, z: plinthThickness },   // Front-right-top
+    { x: plinthW, y: plinthD, z: plinthThickness },    // Back-right-top
+    { x: -plinthW, y: plinthD, z: plinthThickness },   // Back-left-top
+  ];
+
+  const plinthProjected = plinthCorners.map(corner => {
+    const proj = isometricProject(corner.x, corner.y, corner.z);
+    return { x: centerX + proj.x, y: centerY + proj.y };
+  });
+
+  // Plinth faces and vertical edges (simple wireframe)
+  // Bottom
+  lines.push(svgLine(plinthProjected[0].x, plinthProjected[0].y, plinthProjected[1].x, plinthProjected[1].y));
+  lines.push(svgLine(plinthProjected[1].x, plinthProjected[1].y, plinthProjected[2].x, plinthProjected[2].y));
+  lines.push(svgLine(plinthProjected[2].x, plinthProjected[2].y, plinthProjected[3].x, plinthProjected[3].y));
+  lines.push(svgLine(plinthProjected[3].x, plinthProjected[3].y, plinthProjected[0].x, plinthProjected[0].y));
+  // Top
+  lines.push(svgLine(plinthProjected[4].x, plinthProjected[4].y, plinthProjected[5].x, plinthProjected[5].y));
+  lines.push(svgLine(plinthProjected[5].x, plinthProjected[5].y, plinthProjected[6].x, plinthProjected[6].y));
+  lines.push(svgLine(plinthProjected[6].x, plinthProjected[6].y, plinthProjected[7].x, plinthProjected[7].y));
+  lines.push(svgLine(plinthProjected[7].x, plinthProjected[7].y, plinthProjected[4].x, plinthProjected[4].y));
+  // Vertical edges
+  lines.push(svgLine(plinthProjected[0].x, plinthProjected[0].y, plinthProjected[4].x, plinthProjected[4].y));
+  lines.push(svgLine(plinthProjected[1].x, plinthProjected[1].y, plinthProjected[5].x, plinthProjected[5].y));
+  lines.push(svgLine(plinthProjected[2].x, plinthProjected[2].y, plinthProjected[6].x, plinthProjected[6].y));
+  lines.push(svgLine(plinthProjected[3].x, plinthProjected[3].y, plinthProjected[7].x, plinthProjected[7].y));
+
+  // Seat bays: divide width into bays of ~65cm
+  const scale = 2; // 1cm = 2 units (from generateBlueprintSVG)
+  const width_cm = width / scale;
+  let seatCount = Math.floor(width_cm / 65);
+  if (seatCount < 2) seatCount = 2; // Ensure at least 2 bays for sofas
+
+  const seatHeight = totalHeight * 0.45;
+  const seatFrameZ = seatHeight;
+
+  // Seat frame footprint (aligned with plinth)
+  const seatW = plinthW;
+  const seatD = plinthD;
+
+  // Bay boundaries along X
+  const bayWidth = (seatW * 2) / seatCount;
+  const bayBoundaries: number[] = [];
+  for (let i = 0; i <= seatCount; i++) {
+    bayBoundaries.push(-seatW + i * bayWidth);
+  }
+
+  // Seat rails per bay
+  bayBoundaries.forEach((x, index) => {
+    if (index === seatCount) return;
+    const xStart = bayBoundaries[index];
+    const xEnd = bayBoundaries[index + 1];
+
+    // Front rail (per bay)
+    let projStart = isometricProject(xStart, -seatD, seatFrameZ);
+    let projEnd = isometricProject(xEnd, -seatD, seatFrameZ);
+    lines.push(svgLine(centerX + projStart.x, centerY + projStart.y, centerX + projEnd.x, centerY + projEnd.y));
+
+    // Back rail (per bay)
+    projStart = isometricProject(xStart, seatD, seatFrameZ);
+    projEnd = isometricProject(xEnd, seatD, seatFrameZ);
+    lines.push(svgLine(centerX + projStart.x, centerY + projStart.y, centerX + projEnd.x, centerY + projEnd.y));
+  });
+
+  // Shared side rails along bay boundaries
+  bayBoundaries.forEach(x => {
+    const frontProj = isometricProject(x, -seatD, seatFrameZ);
+    const backProj = isometricProject(x, seatD, seatFrameZ);
+    lines.push(svgLine(centerX + frontProj.x, centerY + frontProj.y, centerX + backProj.x, centerY + backProj.y));
+  });
+
+  // Vertical supports from plinth to seat frame at each bay boundary (front and back)
+  const supports: { x: number; y: number }[] = [];
+  bayBoundaries.forEach(x => {
+    supports.push({ x, y: -seatD });
+    supports.push({ x, y: seatD });
+  });
+
+  supports.forEach(pos => {
+    const bottomProj = isometricProject(pos.x, pos.y, plinthThickness);
+    const topProj = isometricProject(pos.x, pos.y, seatFrameZ);
+    lines.push(svgLine(centerX + bottomProj.x, centerY + bottomProj.y, centerX + topProj.x, centerY + topProj.y));
+  });
+
+  // Arm structures: Left and Right arms as vertical rectangular frames
+  // Arms sit at outermost X edges (±w), span full seat depth, from plinth top to backFrameTopZ
+  const armWidth = width * 0.1; // 10% of total width
+  const rightArmOuterX = w;
+  const rightArmInnerX = w - armWidth;
+  const leftArmOuterX = -w;
+  const leftArmInnerX = -w + armWidth;
+
+  function addArmFrame(innerX: number, outerX: number) {
+    const armCorners = [
+      // Bottom rectangle at plinth top
+      { x: innerX, y: -seatD, z: plinthThickness }, // Front-inner-bottom
+      { x: outerX, y: -seatD, z: plinthThickness }, // Front-outer-bottom
+      { x: outerX, y: seatD, z: plinthThickness },  // Back-outer-bottom
+      { x: innerX, y: seatD, z: plinthThickness },  // Back-inner-bottom
+      // Top rectangle at backFrameTopZ
+      { x: innerX, y: -seatD, z: backFrameTopZ },   // Front-inner-top
+      { x: outerX, y: -seatD, z: backFrameTopZ },   // Front-outer-top
+      { x: outerX, y: seatD, z: backFrameTopZ },    // Back-outer-top
+      { x: innerX, y: seatD, z: backFrameTopZ },    // Back-inner-top
+    ];
+
+    const proj = armCorners.map(corner => {
+      const p = isometricProject(corner.x, corner.y, corner.z);
+      return { x: centerX + p.x, y: centerY + p.y };
+    });
+
+    // Bottom face
+    lines.push(svgLine(proj[0].x, proj[0].y, proj[1].x, proj[1].y));
+    lines.push(svgLine(proj[1].x, proj[1].y, proj[2].x, proj[2].y));
+    lines.push(svgLine(proj[2].x, proj[2].y, proj[3].x, proj[3].y));
+    lines.push(svgLine(proj[3].x, proj[3].y, proj[0].x, proj[0].y));
+
+    // Top face
+    lines.push(svgLine(proj[4].x, proj[4].y, proj[5].x, proj[5].y));
+    lines.push(svgLine(proj[5].x, proj[5].y, proj[6].x, proj[6].y));
+    lines.push(svgLine(proj[6].x, proj[6].y, proj[7].x, proj[7].y));
+    lines.push(svgLine(proj[7].x, proj[7].y, proj[4].x, proj[4].y));
+
+    // Vertical edges
+    lines.push(svgLine(proj[0].x, proj[0].y, proj[4].x, proj[4].y));
+    lines.push(svgLine(proj[1].x, proj[1].y, proj[5].x, proj[5].y));
+    lines.push(svgLine(proj[2].x, proj[2].y, proj[6].x, proj[6].y));
+    lines.push(svgLine(proj[3].x, proj[3].y, proj[7].x, proj[7].y));
+  }
+
+  // Left and right arms
+  addArmFrame(leftArmInnerX, leftArmOuterX);
+  addArmFrame(rightArmInnerX, rightArmOuterX);
+
+  // Back support: continuous back frame aligned with bay divisions
+  const backFrameBottomZ = seatFrameZ;
+  const backFrameTopZ = totalHeight;
+
+  // Vertical back supports at each bay boundary along back edge (y = seatD)
+  bayBoundaries.forEach(x => {
+    const bottomProj = isometricProject(x, seatD, backFrameBottomZ);
+    const topProj = isometricProject(x, seatD, backFrameTopZ);
+    lines.push(svgLine(centerX + bottomProj.x, centerY + bottomProj.y, centerX + topProj.x, centerY + topProj.y));
+  });
+
+  // Top back rail (continuous across bays)
+  const backTopLeftProj = isometricProject(-seatW, seatD, backFrameTopZ);
+  const backTopRightProj = isometricProject(seatW, seatD, backFrameTopZ);
+  lines.push(svgLine(centerX + backTopLeftProj.x, centerY + backTopLeftProj.y, centerX + backTopRightProj.x, centerY + backTopRightProj.y));
+
+  // Dimension annotations layer (optional overlay) - using reusable helper
+  const dimensionElements: string[] = [];
+  if (showDimensions) {
+    const widthPoints = [
+      { x: -w, y: -d, z: totalHeight },  // Front-left-top
+      { x: w, y: -d, z: totalHeight }    // Front-right-top
+    ];
+    const depthPoints = [
+      { x: w, y: -d, z: totalHeight },   // Right-front-top
+      { x: w, y: d, z: totalHeight }     // Right-back-top
+    ];
+    const heightPoints = [
+      { x: w, y: -d, z: 0 },             // Floor (front-right)
+      { x: w, y: d, z: backFrameTopZ }   // Top of back frame
+    ];
+
+    dimensionElements.push(...addDimensionOverlay(
+      widthPoints,
+      depthPoints,
+      heightPoints,
+      centerX,
+      centerY,
+      15,
+      2.5
+    ));
+  }
+
   const allElements = [...lines, ...dimensionElements];
   return `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="background: white;">
     ${allElements.join('\n    ')}
@@ -853,40 +1126,37 @@ function generateBenchFrame(width: number, depth: number, height: number, showDi
   </svg>`;
 }
 
-function selectTemplate(category: string | undefined, itemName: string): 'box' | 'chair' | 'table-rect' | 'table-round' | 'bench' {
-  if (!category) {
-    const nameLower = itemName.toLowerCase();
-    if (nameLower.includes('chair') || nameLower.includes('armchair') || nameLower.includes('lounge')) return 'chair';
-    if (nameLower.includes('table') || nameLower.includes('desk') || nameLower.includes('console')) {
-      return nameLower.includes('round') || nameLower.includes('circular') ? 'table-round' : 'table-rect';
-    }
-    if (nameLower.includes('bench') || nameLower.includes('ottoman') || nameLower.includes('stool')) return 'bench';
-    return 'box';
-  }
-  const catLower = category.toLowerCase();
-  if (catLower.includes('chair') || catLower.includes('armchair') || catLower.includes('lounge')) return 'chair';
-  if (catLower.includes('table') || catLower.includes('desk') || catLower.includes('console')) {
-    if (catLower.includes('round') || catLower.includes('circular') || catLower.includes('coffee')) return 'table-round';
-    return 'table-rect';
-  }
-  if (catLower.includes('bench') || catLower.includes('ottoman') || catLower.includes('stool')) return 'bench';
-  return 'box';
-}
-
 function generateBlueprintSVG(spec: CarpenterSpec, category?: string, itemName?: string): string {
   const { width_cm, depth_cm, height_cm } = spec.dimensions;
   const scale = 2;
   const width = width_cm * scale;
   const depth = depth_cm * scale;
   const height = height_cm * scale;
-  const template = selectTemplate(category, itemName || '');
-  switch (template) {
-    case 'box': return generateBoxFrame(width, depth, height);
-    case 'chair': return generateChairFrame(width, depth, height, category, itemName);
-    case 'table-rect': return generateTableFrameRectangular(width, depth, height);
-    case 'table-round': return generateTableFrameRound(width, depth, height);
-    case 'bench': return generateBenchFrame(width, depth, height);
-    default: return generateBoxFrame(width, depth, height);
+  
+  // Resolve blueprint type deterministically using enum
+  const blueprintType = resolveBlueprintType(
+    itemName || '',
+    category,
+    width_cm,
+    depth_cm
+  );
+  
+  // Route generators ONLY via BlueprintType enum
+  switch (blueprintType) {
+    case BlueprintType.CHAIR_SINGLE:
+      return generateChairFrame(width, depth, height, category, itemName);
+    case BlueprintType.SOFA_MULTI:
+      return generateSofaMultiFrame(width, depth, height);
+    case BlueprintType.TABLE_RECT:
+      return generateTableFrameRectangular(width, depth, height);
+    case BlueprintType.TABLE_ROUND:
+      return generateTableFrameRound(width, depth, height);
+    case BlueprintType.BENCH:
+      return generateBenchFrame(width, depth, height);
+    case BlueprintType.STORAGE_BOX:
+      return generateBoxFrame(width, depth, height);
+    default:
+      return generateBoxFrame(width, depth, height);
   }
 }
 
