@@ -19,6 +19,19 @@ const NIGERIAN_MATERIALS = [
   'Abura',
 ];
 
+/**
+ * Blueprint Engine v1 – geometry and annotation frozen.
+ * Changes require explicit design review.
+ * 
+ * VERIFICATION CHECKLIST:
+ * For each frame type (Chair, Table Rect, Table Round, Box, Bench):
+ * - Render one example with dimensions ON (showDimensions=true)
+ * - Render one example with dimensions OFF (showDimensions=false)
+ * - Confirm no overlaps, clipping, or missing lines
+ * - Verify dimension labels (W, D, H) are visible and correctly positioned
+ * - Verify extension lines maintain 2.5px gap from structure
+ * - Verify arrowheads render correctly at both ends of dimension lines
+ */
 // Blueprint Generator - Code-generated SVG technical diagrams
 // Isometric projection constants (30° angle)
 // Strict values: cos = 0.866, sin = 0.5
@@ -87,6 +100,120 @@ function svgDimensionText(x: number, y: number, text: string): string {
 }
 
 /**
+ * Reusable dimension overlay helper
+ * Category-agnostic, geometry-agnostic dimension annotation system
+ * @param widthPoints - Projected points for width dimension: [start, end] in 3D space
+ * @param depthPoints - Projected points for depth dimension: [start, end] in 3D space
+ * @param heightPoints - Projected points for height dimension: [start, end] in 3D space
+ * @param centerX - SVG center X coordinate
+ * @param centerY - SVG center Y coordinate
+ * @param offset - Offset distance from structure (default: 15)
+ * @param gap - Gap between structure and extension lines (default: 2.5)
+ * @returns Array of SVG element strings
+ */
+function addDimensionOverlay(
+  widthPoints: { x: number; y: number; z: number }[],
+  depthPoints: { x: number; y: number; z: number }[],
+  heightPoints: { x: number; y: number; z: number }[],
+  centerX: number,
+  centerY: number,
+  offset: number = 15,
+  gap: number = 2.5
+): string[] {
+  const elements: string[] = [];
+  
+  // Add arrowhead markers
+  elements.push(svgArrowheadMarker('dimArrow'));
+  
+  // 1. Total Width (W) - XY plane (horizontal, front edge)
+  const widthStartProj = isometricProject(widthPoints[0].x, widthPoints[0].y, widthPoints[0].z);
+  const widthEndProj = isometricProject(widthPoints[1].x, widthPoints[1].y, widthPoints[1].z);
+  
+  // Dimension line offset downward (in screen Y direction)
+  const widthDimY1 = centerY + widthStartProj.y + offset;
+  const widthDimY2 = centerY + widthEndProj.y + offset;
+  const widthDimX1 = centerX + widthStartProj.x;
+  const widthDimX2 = centerX + widthEndProj.x;
+  
+  // Extension lines: from structure corners with gap
+  const widthExt1X = widthDimX1;
+  const widthExt1Y = centerY + widthStartProj.y + gap;
+  const widthExt2X = widthDimX2;
+  const widthExt2Y = centerY + widthEndProj.y + gap;
+  
+  elements.push(svgDimensionLine(
+    widthExt1X, widthExt1Y, widthExt2X, widthExt2Y,
+    widthDimX1, widthDimY1, widthDimX2, widthDimY2,
+    'dimArrow'
+  ));
+  
+  // Width label (W)
+  const widthLabelX = (widthDimX1 + widthDimX2) / 2;
+  const widthLabelY = widthDimY1 - 5;
+  elements.push(svgDimensionText(widthLabelX, widthLabelY, 'W'));
+  
+  // 2. Total Depth (D) - XY plane (diagonal, side edge)
+  const depthStartProj = isometricProject(depthPoints[0].x, depthPoints[0].y, depthPoints[0].z);
+  const depthEndProj = isometricProject(depthPoints[1].x, depthPoints[1].y, depthPoints[1].z);
+  
+  // Offset diagonally (in isometric space: move in +x and +y direction)
+  const depthOffsetX = offset * ISO_COS;
+  const depthOffsetY = offset * ISO_SIN;
+  
+  const depthDimX1 = centerX + depthStartProj.x + depthOffsetX;
+  const depthDimY1 = centerY + depthStartProj.y + depthOffsetY;
+  const depthDimX2 = centerX + depthEndProj.x + depthOffsetX;
+  const depthDimY2 = centerY + depthEndProj.y + depthOffsetY;
+  
+  // Extension lines: from structure corners with gap
+  const depthGapX = gap * ISO_COS;
+  const depthGapY = gap * ISO_SIN;
+  const depthExt1X = centerX + depthStartProj.x + depthGapX;
+  const depthExt1Y = centerY + depthStartProj.y + depthGapY;
+  const depthExt2X = centerX + depthEndProj.x + depthGapX;
+  const depthExt2Y = centerY + depthEndProj.y + depthGapY;
+  
+  elements.push(svgDimensionLine(
+    depthExt1X, depthExt1Y, depthExt2X, depthExt2Y,
+    depthDimX1, depthDimY1, depthDimX2, depthDimY2,
+    'dimArrow'
+  ));
+  
+  // Depth label (D)
+  const depthLabelX = (depthDimX1 + depthDimX2) / 2;
+  const depthLabelY = (depthDimY1 + depthDimY2) / 2 - 5;
+  elements.push(svgDimensionText(depthLabelX, depthLabelY, 'D'));
+  
+  // 3. Total Height (H) - XZ or YZ plane (vertical)
+  const heightStartProj = isometricProject(heightPoints[0].x, heightPoints[0].y, heightPoints[0].z);
+  const heightEndProj = isometricProject(heightPoints[1].x, heightPoints[1].y, heightPoints[1].z);
+  
+  // Dimension line offset to the right (in screen X direction)
+  const heightDimX = centerX + heightStartProj.x + offset;
+  const heightDimY1 = centerY + heightStartProj.y;
+  const heightDimY2 = centerY + heightEndProj.y;
+  
+  // Extension lines: from structure with gap
+  const heightExt1X = centerX + heightStartProj.x + gap;
+  const heightExt1Y = heightDimY1;
+  const heightExt2X = centerX + heightEndProj.x + gap;
+  const heightExt2Y = heightDimY2;
+  
+  elements.push(svgDimensionLine(
+    heightExt1X, heightExt1Y, heightExt2X, heightExt2Y,
+    heightDimX, heightDimY1, heightDimX, heightDimY2,
+    'dimArrow'
+  ));
+  
+  // Height label (H)
+  const heightLabelX = heightDimX + 8;
+  const heightLabelY = (heightDimY1 + heightDimY2) / 2;
+  elements.push(svgDimensionText(heightLabelX, heightLabelY, 'H'));
+  
+  return elements;
+}
+
+/**
  * Determine if an edge is hidden based on camera position (Front-Right-Top)
  * Returns true if edge should be dashed (hidden)
  */
@@ -149,7 +276,7 @@ function drawIsometricBox(
   return lines;
 }
 
-function generateBoxFrame(width: number, depth: number, height: number): string {
+function generateBoxFrame(width: number, depth: number, height: number, showDimensions: boolean = false): string {
   const svgWidth = 400;
   const svgHeight = 400;
   const centerX = svgWidth / 2;
@@ -164,8 +291,38 @@ function generateBoxFrame(width: number, depth: number, height: number): string 
   const leftCenter = isometricProject(-w, 0, h / 2);
   const rightCenter = isometricProject(w, 0, h / 2);
   lines.push(svgLine(centerX + leftCenter.x, centerY + leftCenter.y, centerX + rightCenter.x, centerY + rightCenter.y));
+  
+  // Dimension annotations layer (optional overlay) - using reusable helper
+  const dimensionElements: string[] = [];
+  if (showDimensions) {
+    // Define dimension points in 3D space (using top level for width/depth)
+    const widthPoints = [
+      { x: -w, y: -d, z: height },  // Front-left-top
+      { x: w, y: -d, z: height }    // Front-right-top
+    ];
+    const depthPoints = [
+      { x: w, y: -d, z: height },   // Right-front-top
+      { x: w, y: d, z: height }     // Right-back-top
+    ];
+    const heightPoints = [
+      { x: w, y: -d, z: 0 },        // Floor (front-right)
+      { x: w, y: -d, z: height }    // Top of box
+    ];
+    
+    dimensionElements.push(...addDimensionOverlay(
+      widthPoints,
+      depthPoints,
+      heightPoints,
+      centerX,
+      centerY,
+      15,  // offset
+      2.5  // gap
+    ));
+  }
+  
+  const allElements = [...lines, ...dimensionElements];
   return `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="background: white;">
-    ${lines.join('\n    ')}
+    ${allElements.join('\n    ')}
   </svg>`;
 }
 
@@ -450,103 +607,32 @@ function generateChairFrame(width: number, depth: number, height: number, catego
   lines.push(...backFrameLines);
   lines.push(...internalSupportLines);
   
-  // Dimension annotations layer (optional overlay)
+  // Dimension annotations layer (optional overlay) - using reusable helper
   const dimensionElements: string[] = [];
   if (showDimensions) {
-    // Add arrowhead markers
-    dimensionElements.push(svgArrowheadMarker('dimArrow'));
+    // Define dimension points in 3D space
+    const widthPoints = [
+      { x: -seatW, y: -seatD, z: seatFrameZ },  // Front-left
+      { x: seatW, y: -seatD, z: seatFrameZ }    // Front-right
+    ];
+    const depthPoints = [
+      { x: seatW, y: -seatD, z: seatFrameZ },   // Right-front
+      { x: seatW, y: seatD, z: seatFrameZ }     // Right-back
+    ];
+    const heightPoints = [
+      { x: seatW, y: -seatD, z: 0 },            // Floor (front-right)
+      { x: seatW, y: seatD, z: backFrameTopZ }  // Top of back frame
+    ];
     
-    // Calculate dimension positions
-    const offset = 15; // 15px offset from structure
-    const gap = 2.5; // 2-3px gap for extension lines
-    
-    // 1. Total Width (W) - parallel to front seat rail, offset downward by 15px
-    // Front seat rail: from seatCorners[0] to seatCorners[1] at z = seatFrameZ
-    const frontLeftProj = isometricProject(-seatW, -seatD, seatFrameZ);
-    const frontRightProj = isometricProject(seatW, -seatD, seatFrameZ);
-    
-    // Dimension line offset downward (in screen Y direction)
-    const widthDimY1 = centerY + frontLeftProj.y + offset;
-    const widthDimY2 = centerY + frontRightProj.y + offset;
-    const widthDimX1 = centerX + frontLeftProj.x;
-    const widthDimX2 = centerX + frontRightProj.x;
-    
-    // Extension lines: from structure corners with gap
-    const widthExt1X = widthDimX1;
-    const widthExt1Y = centerY + frontLeftProj.y + gap;
-    const widthExt2X = widthDimX2;
-    const widthExt2Y = centerY + frontRightProj.y + gap;
-    
-    dimensionElements.push(svgDimensionLine(
-      widthExt1X, widthExt1Y, widthExt2X, widthExt2Y,
-      widthDimX1, widthDimY1, widthDimX2, widthDimY2,
-      'dimArrow'
+    dimensionElements.push(...addDimensionOverlay(
+      widthPoints,
+      depthPoints,
+      heightPoints,
+      centerX,
+      centerY,
+      15,  // offset
+      2.5  // gap
     ));
-    
-    // Width label (W)
-    const widthLabelX = (widthDimX1 + widthDimX2) / 2;
-    const widthLabelY = widthDimY1 - 5;
-    dimensionElements.push(svgDimensionText(widthLabelX, widthLabelY, 'W'));
-    
-    // 2. Total Depth (D) - parallel to side seat rail, offset diagonally by 15px
-    // Right side rail: from seatCorners[1] to seatCorners[2] at z = seatFrameZ
-    const rightFrontProj = isometricProject(seatW, -seatD, seatFrameZ);
-    const rightBackProj = isometricProject(seatW, seatD, seatFrameZ);
-    
-    // Offset diagonally (in isometric space: move in +x and +y direction)
-    const depthOffsetX = offset * ISO_COS;
-    const depthOffsetY = offset * ISO_SIN;
-    
-    const depthDimX1 = centerX + rightFrontProj.x + depthOffsetX;
-    const depthDimY1 = centerY + rightFrontProj.y + depthOffsetY;
-    const depthDimX2 = centerX + rightBackProj.x + depthOffsetX;
-    const depthDimY2 = centerY + rightBackProj.y + depthOffsetY;
-    
-    // Extension lines: from structure corners with gap
-    const depthGapX = gap * ISO_COS;
-    const depthGapY = gap * ISO_SIN;
-    const depthExt1X = centerX + rightFrontProj.x + depthGapX;
-    const depthExt1Y = centerY + rightFrontProj.y + depthGapY;
-    const depthExt2X = centerX + rightBackProj.x + depthGapX;
-    const depthExt2Y = centerY + rightBackProj.y + depthGapY;
-    
-    dimensionElements.push(svgDimensionLine(
-      depthExt1X, depthExt1Y, depthExt2X, depthExt2Y,
-      depthDimX1, depthDimY1, depthDimX2, depthDimY2,
-      'dimArrow'
-    ));
-    
-    // Depth label (D)
-    const depthLabelX = (depthDimX1 + depthDimX2) / 2;
-    const depthLabelY = (depthDimY1 + depthDimY2) / 2 - 5;
-    dimensionElements.push(svgDimensionText(depthLabelX, depthLabelY, 'D'));
-    
-    // 3. Total Height (H) - perfectly vertical from floor (z=0) to top of back frame
-    // Use front-right corner for visibility
-    const floorPoint = isometricProject(seatW, -seatD, 0);
-    const backTopPoint = isometricProject(seatW, seatD, backFrameTopZ);
-    
-    // Dimension line offset to the right (in screen X direction)
-    const heightDimX = centerX + floorPoint.x + offset;
-    const heightDimY1 = centerY + floorPoint.y;
-    const heightDimY2 = centerY + backTopPoint.y;
-    
-    // Extension lines: from structure with gap
-    const heightExt1X = centerX + floorPoint.x + gap;
-    const heightExt1Y = heightDimY1;
-    const heightExt2X = centerX + backTopPoint.x + gap;
-    const heightExt2Y = heightDimY2;
-    
-    dimensionElements.push(svgDimensionLine(
-      heightExt1X, heightExt1Y, heightExt2X, heightExt2Y,
-      heightDimX, heightDimY1, heightDimX, heightDimY2,
-      'dimArrow'
-    ));
-    
-    // Height label (H)
-    const heightLabelX = heightDimX + 8;
-    const heightLabelY = (heightDimY1 + heightDimY2) / 2;
-    dimensionElements.push(svgDimensionText(heightLabelX, heightLabelY, 'H'));
   }
   
   // Combine all elements
@@ -557,7 +643,7 @@ function generateChairFrame(width: number, depth: number, height: number, catego
   </svg>`;
 }
 
-function generateTableFrameRectangular(width: number, depth: number, height: number): string {
+function generateTableFrameRectangular(width: number, depth: number, height: number, showDimensions: boolean = false): string {
   const svgWidth = 400;
   const svgHeight = 400;
   const centerX = svgWidth / 2;
@@ -587,12 +673,42 @@ function generateTableFrameRectangular(width: number, depth: number, height: num
   const backLeftRail = isometricProject(-w * 0.9, d * 0.9, railHeight);
   const backRightRail = isometricProject(w * 0.9, d * 0.9, railHeight);
   lines.push(svgLine(centerX + backLeftRail.x, centerY + backLeftRail.y, centerX + backRightRail.x, centerY + backRightRail.y));
+  
+  // Dimension annotations layer (optional overlay) - using reusable helper
+  const dimensionElements: string[] = [];
+  if (showDimensions) {
+    // Define dimension points in 3D space (using tabletop level for width/depth)
+    const widthPoints = [
+      { x: -w * 0.9, y: -d * 0.9, z: height },  // Front-left-top
+      { x: w * 0.9, y: -d * 0.9, z: height }    // Front-right-top
+    ];
+    const depthPoints = [
+      { x: w * 0.9, y: -d * 0.9, z: height },   // Right-front-top
+      { x: w * 0.9, y: d * 0.9, z: height }     // Right-back-top
+    ];
+    const heightPoints = [
+      { x: w * 0.9, y: -d * 0.9, z: 0 },        // Floor (front-right)
+      { x: w * 0.9, y: -d * 0.9, z: height }    // Top of table
+    ];
+    
+    dimensionElements.push(...addDimensionOverlay(
+      widthPoints,
+      depthPoints,
+      heightPoints,
+      centerX,
+      centerY,
+      15,  // offset
+      2.5  // gap
+    ));
+  }
+  
+  const allElements = [...lines, ...dimensionElements];
   return `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="background: white;">
-    ${lines.join('\n    ')}
+    ${allElements.join('\n    ')}
   </svg>`;
 }
 
-function generateTableFrameRound(width: number, depth: number, height: number): string {
+function generateTableFrameRound(width: number, depth: number, height: number, showDimensions: boolean = false): string {
   const svgWidth = 400;
   const svgHeight = 400;
   const centerX = svgWidth / 2;
@@ -636,12 +752,43 @@ function generateTableFrameRound(width: number, depth: number, height: number): 
     basePoints.push(`${centerX + baseProj.x},${centerY + baseProj.y}`);
   }
   lines.push(`<polyline points="${basePoints.join(' ')}" stroke="black" stroke-width="2" fill="none"/>`);
+  
+  // Dimension annotations layer (optional overlay) - using reusable helper
+  const dimensionElements: string[] = [];
+  if (showDimensions) {
+    // Define dimension points in 3D space (using tabletop level for width/depth)
+    // For round tables, use diameter points
+    const widthPoints = [
+      { x: -radius, y: 0, z: height },  // Left-center-top
+      { x: radius, y: 0, z: height }    // Right-center-top
+    ];
+    const depthPoints = [
+      { x: 0, y: -radius, z: height },  // Front-center-top
+      { x: 0, y: radius, z: height }    // Back-center-top
+    ];
+    const heightPoints = [
+      { x: radius, y: 0, z: 0 },        // Floor (right-center)
+      { x: radius, y: 0, z: height }    // Top of table
+    ];
+    
+    dimensionElements.push(...addDimensionOverlay(
+      widthPoints,
+      depthPoints,
+      heightPoints,
+      centerX,
+      centerY,
+      15,  // offset
+      2.5  // gap
+    ));
+  }
+  
+  const allElements = [...lines, ...dimensionElements];
   return `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="background: white;">
-    ${lines.join('\n    ')}
+    ${allElements.join('\n    ')}
   </svg>`;
 }
 
-function generateBenchFrame(width: number, depth: number, height: number): string {
+function generateBenchFrame(width: number, depth: number, height: number, showDimensions: boolean = false): string {
   const svgWidth = 400;
   const svgHeight = 400;
   const centerX = svgWidth / 2;
@@ -671,8 +818,38 @@ function generateBenchFrame(width: number, depth: number, height: number): strin
   const backLeftRail = isometricProject(-w * 0.85, d * 0.85, railHeight);
   const backRightRail = isometricProject(w * 0.85, d * 0.85, railHeight);
   lines.push(svgLine(centerX + backLeftRail.x, centerY + backLeftRail.y, centerX + backRightRail.x, centerY + backRightRail.y));
+  
+  // Dimension annotations layer (optional overlay) - using reusable helper
+  const dimensionElements: string[] = [];
+  if (showDimensions) {
+    // Define dimension points in 3D space (using seat level for width/depth)
+    const widthPoints = [
+      { x: -w * 0.85, y: -d * 0.85, z: seatThickness },  // Front-left-seat
+      { x: w * 0.85, y: -d * 0.85, z: seatThickness }    // Front-right-seat
+    ];
+    const depthPoints = [
+      { x: w * 0.85, y: -d * 0.85, z: seatThickness },   // Right-front-seat
+      { x: w * 0.85, y: d * 0.85, z: seatThickness }     // Right-back-seat
+    ];
+    const heightPoints = [
+      { x: w * 0.85, y: -d * 0.85, z: 0 },               // Floor (front-right)
+      { x: w * 0.85, y: -d * 0.85, z: seatThickness }     // Top of seat
+    ];
+    
+    dimensionElements.push(...addDimensionOverlay(
+      widthPoints,
+      depthPoints,
+      heightPoints,
+      centerX,
+      centerY,
+      15,  // offset
+      2.5  // gap
+    ));
+  }
+  
+  const allElements = [...lines, ...dimensionElements];
   return `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="background: white;">
-    ${lines.join('\n    ')}
+    ${allElements.join('\n    ')}
   </svg>`;
 }
 
