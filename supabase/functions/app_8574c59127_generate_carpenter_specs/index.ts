@@ -360,6 +360,7 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
   const centerY = svgHeight / 2 + 50;
   
   try {
+    // PRIMARY STRUCTURE: Outer carcass only (drawIsometricBox provides complete wireframe)
     const lines = drawIsometricBox(width, depth, height, centerX, centerY);
     const w = width / 2;
     const d = depth / 2;
@@ -368,27 +369,12 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
     console.log(`[generateBoxFrame] Calculated - w: ${w}, d: ${d}, h: ${h}`);
     console.log(`[generateBoxFrame] Z values - h/2: ${h / 2}`);
     
-    const frontCenter = isometricProject(0, -d, h / 2);
-    const backCenter = isometricProject(0, d, h / 2);
-    lines.push(svgLine(centerX + frontCenter.x, centerY + frontCenter.y, centerX + backCenter.x, centerY + backCenter.y));
-    const leftCenter = isometricProject(-w, 0, h / 2);
-    const rightCenter = isometricProject(w, 0, h / 2);
-    lines.push(svgLine(centerX + leftCenter.x, centerY + leftCenter.y, centerX + rightCenter.x, centerY + rightCenter.y));
+    // REMOVED: Internal center lines (front-back, left-right) - these add visual noise
+    // and don't contribute to structural understanding. The outer carcass from
+    // drawIsometricBox already conveys the complete structure.
     
-    // Structural load path: Corner posts from floor (z=0) to top (z=height)
-    // 4 vertical corner posts supporting the box structure
-    const cornerPosts = [
-      { x: -w, y: -d, z: 0 },  // Front-left-bottom
-      { x: w, y: -d, z: 0 },   // Front-right-bottom
-      { x: w, y: d, z: 0 },    // Back-right-bottom
-      { x: -w, y: d, z: 0 },   // Back-left-bottom
-    ];
-    
-    cornerPosts.forEach(corner => {
-      const bottomProj = isometricProject(corner.x, corner.y, 0);
-      const topProj = isometricProject(corner.x, corner.y, h);
-      lines.push(svgLine(centerX + bottomProj.x, centerY + bottomProj.y, centerX + topProj.x, centerY + topProj.y));
-    });
+    // REMOVED: Duplicate corner posts - drawIsometricBox already draws vertical edges
+    // at all four corners, which serve as the load-bearing corner posts.
   
     // Dimension annotations layer (optional overlay) - using reusable helper
     const dimensionElements: string[] = [];
@@ -530,41 +516,40 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
     bayBoundaries.push(-seatW + i * bayWidth);
   }
 
-  // Seat rails per bay
-  bayBoundaries.forEach((x, index) => {
-    if (index === seatCount) return;
-    const xStart = bayBoundaries[index];
-    const xEnd = bayBoundaries[index + 1];
+  // PRIMARY STRUCTURE: Outer seat frame perimeter only (not per-bay)
+  // Front rail (continuous)
+  const frontLeftProj = isometricProject(-seatW, -seatD, seatFrameZ);
+  const frontRightProj = isometricProject(seatW, -seatD, seatFrameZ);
+  lines.push(svgLine(centerX + frontLeftProj.x, centerY + frontLeftProj.y, centerX + frontRightProj.x, centerY + frontRightProj.y));
+  
+  // Back rail (continuous)
+  const backLeftProj = isometricProject(-seatW, seatD, seatFrameZ);
+  const backRightProj = isometricProject(seatW, seatD, seatFrameZ);
+  lines.push(svgLine(centerX + backLeftProj.x, centerY + backLeftProj.y, centerX + backRightProj.x, centerY + backRightProj.y));
+  
+  // Left side rail (continuous)
+  lines.push(svgLine(centerX + frontLeftProj.x, centerY + frontLeftProj.y, centerX + backLeftProj.x, centerY + backLeftProj.y));
+  
+  // Right side rail (continuous)
+  lines.push(svgLine(centerX + frontRightProj.x, centerY + frontRightProj.y, centerX + backRightProj.x, centerY + backRightProj.y));
 
-    // Front rail (per bay)
-    let projStart = isometricProject(xStart, -seatD, seatFrameZ);
-    let projEnd = isometricProject(xEnd, -seatD, seatFrameZ);
-    lines.push(svgLine(centerX + projStart.x, centerY + projStart.y, centerX + projEnd.x, centerY + projEnd.y));
-
-    // Back rail (per bay)
-    projStart = isometricProject(xStart, seatD, seatFrameZ);
-    projEnd = isometricProject(xEnd, seatD, seatFrameZ);
-    lines.push(svgLine(centerX + projStart.x, centerY + projStart.y, centerX + projEnd.x, centerY + projEnd.y));
+  // SECONDARY STRUCTURE: Interior vertical supports only (exclude outer bay boundaries where arms provide support)
+  // Vertical supports from plinth to seat frame at INTERIOR bay boundaries only (not at arm positions)
+  const interiorBayBoundaries = bayBoundaries.filter(x => {
+    // Exclude outer boundaries (arms already provide support there)
+    return x !== -seatW && x !== seatW;
   });
-
-  // Shared side rails along bay boundaries
-  bayBoundaries.forEach(x => {
-    const frontProj = isometricProject(x, -seatD, seatFrameZ);
-    const backProj = isometricProject(x, seatD, seatFrameZ);
-    lines.push(svgLine(centerX + frontProj.x, centerY + frontProj.y, centerX + backProj.x, centerY + backProj.y));
-  });
-
-  // Vertical supports from plinth to seat frame at each bay boundary (front and back)
-  const supports: { x: number; y: number }[] = [];
-  bayBoundaries.forEach(x => {
-    supports.push({ x, y: -seatD });
-    supports.push({ x, y: seatD });
-  });
-
-  supports.forEach(pos => {
-    const bottomProj = isometricProject(pos.x, pos.y, plinthThickness);
-    const topProj = isometricProject(pos.x, pos.y, seatFrameZ);
-    lines.push(svgLine(centerX + bottomProj.x, centerY + bottomProj.y, centerX + topProj.x, centerY + topProj.y));
+  
+  interiorBayBoundaries.forEach(x => {
+    // Front support
+    const frontBottomProj = isometricProject(x, -seatD, plinthThickness);
+    const frontTopProj = isometricProject(x, -seatD, seatFrameZ);
+    lines.push(svgLine(centerX + frontBottomProj.x, centerY + frontBottomProj.y, centerX + frontTopProj.x, centerY + frontTopProj.y));
+    
+    // Back support
+    const backBottomProj = isometricProject(x, seatD, plinthThickness);
+    const backTopProj = isometricProject(x, seatD, seatFrameZ);
+    lines.push(svgLine(centerX + backBottomProj.x, centerY + backBottomProj.y, centerX + backTopProj.x, centerY + backTopProj.y));
   });
 
   // Back support: continuous back frame aligned with bay divisions
@@ -626,17 +611,17 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   addArmFrame(leftArmInnerX, leftArmOuterX);
   addArmFrame(rightArmInnerX, rightArmOuterX);
 
-  // Vertical back supports at each bay boundary along back edge (y = seatD)
-  bayBoundaries.forEach(x => {
+  // PRIMARY STRUCTURE: Back frame top rail (continuous)
+  const backTopLeftProj = isometricProject(-seatW, seatD, backFrameTopZ);
+  const backTopRightProj = isometricProject(seatW, seatD, backFrameTopZ);
+  lines.push(svgLine(centerX + backTopLeftProj.x, centerY + backTopLeftProj.y, centerX + backTopRightProj.x, centerY + backTopRightProj.y));
+  
+  // SECONDARY STRUCTURE: Interior vertical back supports only (arms already provide back structure at outer edges)
+  interiorBayBoundaries.forEach(x => {
     const bottomProj = isometricProject(x, seatD, backFrameBottomZ);
     const topProj = isometricProject(x, seatD, backFrameTopZ);
     lines.push(svgLine(centerX + bottomProj.x, centerY + bottomProj.y, centerX + topProj.x, centerY + topProj.y));
   });
-
-  // Top back rail (continuous across bays)
-  const backTopLeftProj = isometricProject(-seatW, seatD, backFrameTopZ);
-  const backTopRightProj = isometricProject(seatW, seatD, backFrameTopZ);
-  lines.push(svgLine(centerX + backTopLeftProj.x, centerY + backTopLeftProj.y, centerX + backTopRightProj.x, centerY + backTopRightProj.y));
 
   // Dimension annotations layer (optional overlay) - using reusable helper
   const dimensionElements: string[] = [];
