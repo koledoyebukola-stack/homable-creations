@@ -541,24 +541,8 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   // Right side rail (continuous)
   lines.push(svgLine(centerX + frontRightProj.x, centerY + frontRightProj.y, centerX + backRightProj.x, centerY + backRightProj.y));
 
-  // SECONDARY STRUCTURE: Interior vertical supports only (exclude outer bay boundaries where arms provide support)
-  // Vertical supports from plinth to seat frame at INTERIOR bay boundaries only (not at arm positions)
-  const interiorBayBoundaries = bayBoundaries.filter(x => {
-    // Exclude outer boundaries (arms already provide support there)
-    return x !== -seatW && x !== seatW;
-  });
-  
-  interiorBayBoundaries.forEach(x => {
-    // Front support
-    const frontBottomProj = isometricProject(x, -seatD, plinthThickness);
-    const frontTopProj = isometricProject(x, -seatD, seatFrameZ);
-    lines.push(svgLine(centerX + frontBottomProj.x, centerY + frontBottomProj.y, centerX + frontTopProj.x, centerY + frontTopProj.y));
-    
-    // Back support
-    const backBottomProj = isometricProject(x, seatD, plinthThickness);
-    const backTopProj = isometricProject(x, seatD, seatFrameZ);
-    lines.push(svgLine(centerX + backBottomProj.x, centerY + backBottomProj.y, centerX + backTopProj.x, centerY + backTopProj.y));
-  });
+  // REMOVED: Interior vertical supports (secondary structure that competed with primary silhouette)
+  // Primary load paths are provided by: plinth foundation, seat frame perimeter, and arm outer edges
 
   // Back support: continuous back frame aligned with bay divisions
   // Define backFrameTopZ BEFORE arms (used in addArmFrame)
@@ -599,11 +583,10 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
     // REMOVED: Bottom face (overlaps exactly with plinth top face, redundant)
     // REMOVED: Top face (back frame top rail already defines the top structure)
     
-    // PRIMARY STRUCTURE: Vertical edges only (arms as vertical structural frames)
-    lines.push(svgLine(proj[0].x, proj[0].y, proj[4].x, proj[4].y)); // Front-inner vertical
+    // PRIMARY STRUCTURE: Outer vertical edges only (arms define the outer silhouette)
     lines.push(svgLine(proj[1].x, proj[1].y, proj[5].x, proj[5].y)); // Front-outer vertical
     lines.push(svgLine(proj[2].x, proj[2].y, proj[6].x, proj[6].y)); // Back-outer vertical
-    lines.push(svgLine(proj[3].x, proj[3].y, proj[7].x, proj[7].y)); // Back-inner vertical
+    // REMOVED: Inner verticals (redundant with seat frame and back structure)
   }
 
   // Left and right arms
@@ -615,12 +598,8 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   const backTopRightProj = isometricProject(seatW, seatD, backFrameTopZ);
   lines.push(svgLine(centerX + backTopLeftProj.x, centerY + backTopLeftProj.y, centerX + backTopRightProj.x, centerY + backTopRightProj.y));
   
-  // SECONDARY STRUCTURE: Interior vertical back supports only (arms already provide back structure at outer edges)
-  interiorBayBoundaries.forEach(x => {
-    const bottomProj = isometricProject(x, seatD, backFrameBottomZ);
-    const topProj = isometricProject(x, seatD, backFrameTopZ);
-    lines.push(svgLine(centerX + bottomProj.x, centerY + bottomProj.y, centerX + topProj.x, centerY + topProj.y));
-  });
+  // REMOVED: Interior vertical back supports (secondary structure that competed with primary silhouette)
+  // Back structure is defined by: back frame top rail and arm back-outer verticals
 
   // Dimension annotations layer (optional overlay) - using reusable helper
   const dimensionElements: string[] = [];
