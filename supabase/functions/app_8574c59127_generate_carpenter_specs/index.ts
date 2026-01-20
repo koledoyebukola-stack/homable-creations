@@ -577,44 +577,64 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   console.log(`[generateSofaMultiFrame] Arms - armWidth: ${armWidth}, leftArmInnerX: ${leftArmInnerX}, leftArmOuterX: ${leftArmOuterX}, rightArmInnerX: ${rightArmInnerX}, rightArmOuterX: ${rightArmOuterX}`);
 
   function addArmFrame(innerX: number, outerX: number) {
-    const armCorners = [
-      // Bottom rectangle at plinth top
-      { x: innerX, y: -seatD, z: plinthThickness }, // Front-inner-bottom
-      { x: outerX, y: -seatD, z: plinthThickness }, // Front-outer-bottom
-      { x: outerX, y: seatD, z: plinthThickness },  // Back-outer-bottom
-      { x: innerX, y: seatD, z: plinthThickness },  // Back-inner-bottom
-      // Top rectangle at backFrameTopZ
-      { x: innerX, y: -seatD, z: backFrameTopZ },   // Front-inner-top
-      { x: outerX, y: -seatD, z: backFrameTopZ },   // Front-outer-top
-      { x: outerX, y: seatD, z: backFrameTopZ },    // Back-outer-top
-      { x: innerX, y: seatD, z: backFrameTopZ },    // Back-inner-top
-    ];
+    // Arm corners at three Z levels: plinth top, seat frame, and back top
+    // Bottom level (plinth top)
+    const armBottomFrontOuter = { x: outerX, y: -seatD, z: plinthThickness };
+    const armBottomBackOuter = { x: outerX, y: seatD, z: plinthThickness };
+    // Middle level (seat frame - authoritative connection plane)
+    const armSeatFrontOuter = { x: outerX, y: -seatD, z: seatFrameZ };
+    const armSeatBackOuter = { x: outerX, y: seatD, z: seatFrameZ };
+    // Top level (back frame top)
+    const armTopFrontOuter = { x: outerX, y: -seatD, z: backFrameTopZ };
+    const armTopBackOuter = { x: outerX, y: seatD, z: backFrameTopZ };
 
-    const proj = armCorners.map(corner => {
-      const p = isometricProject(corner.x, corner.y, corner.z);
-      return { x: centerX + p.x, y: centerY + p.y };
-    });
+    // Project all points
+    const projBottomFront = isometricProject(armBottomFrontOuter.x, armBottomFrontOuter.y, armBottomFrontOuter.z);
+    const projBottomBack = isometricProject(armBottomBackOuter.x, armBottomBackOuter.y, armBottomBackOuter.z);
+    const projSeatFront = isometricProject(armSeatFrontOuter.x, armSeatFrontOuter.y, armSeatFrontOuter.z);
+    const projSeatBack = isometricProject(armSeatBackOuter.x, armSeatBackOuter.y, armSeatBackOuter.z);
+    const projTopFront = isometricProject(armTopFrontOuter.x, armTopFrontOuter.y, armTopFrontOuter.z);
+    const projTopBack = isometricProject(armTopBackOuter.x, armTopBackOuter.y, armTopBackOuter.z);
 
-    // REMOVED: Bottom face (overlaps exactly with plinth top face, redundant)
-    // REMOVED: Top face (back frame top rail already defines the top structure)
+    // PRIMARY STRUCTURE: Outer vertical edges split into two segments
+    // Segment 1: Plinth → Seat frame (foundation to authoritative plane)
+    lines.push(svgLine(
+      centerX + projBottomFront.x, centerY + projBottomFront.y,
+      centerX + projSeatFront.x, centerY + projSeatFront.y
+    )); // Front-outer: plinth → seat
+    lines.push(svgLine(
+      centerX + projBottomBack.x, centerY + projBottomBack.y,
+      centerX + projSeatBack.x, centerY + projSeatBack.y
+    )); // Back-outer: plinth → seat
     
-    // PRIMARY STRUCTURE: Outer vertical edges only (arms define the outer silhouette)
-    lines.push(svgLine(proj[1].x, proj[1].y, proj[5].x, proj[5].y)); // Front-outer vertical
-    lines.push(svgLine(proj[2].x, proj[2].y, proj[6].x, proj[6].y)); // Back-outer vertical
-    // REMOVED: Inner verticals (redundant with seat frame and back structure)
+    // Segment 2: Seat frame → Back top (authoritative plane to back structure)
+    lines.push(svgLine(
+      centerX + projSeatFront.x, centerY + projSeatFront.y,
+      centerX + projTopFront.x, centerY + projTopFront.y
+    )); // Front-outer: seat → back top
+    lines.push(svgLine(
+      centerX + projSeatBack.x, centerY + projSeatBack.y,
+      centerX + projTopBack.x, centerY + projTopBack.y
+    )); // Back-outer: seat → back top
   }
 
   // Left and right arms
   addArmFrame(leftArmInnerX, leftArmOuterX);
   addArmFrame(rightArmInnerX, rightArmOuterX);
 
-  // PRIMARY STRUCTURE: Back frame top rail (continuous)
+  // PRIMARY STRUCTURE: Back frame rails (bottom and top)
+  // Bottom rail: anchors to seat frame back rail (authoritative connection plane)
+  const backBottomLeftProj = isometricProject(-seatW, seatD, backFrameBottomZ);
+  const backBottomRightProj = isometricProject(seatW, seatD, backFrameBottomZ);
+  lines.push(svgLine(centerX + backBottomLeftProj.x, centerY + backBottomLeftProj.y, centerX + backBottomRightProj.x, centerY + backBottomRightProj.y));
+  
+  // Top rail: continuous across back structure
   const backTopLeftProj = isometricProject(-seatW, seatD, backFrameTopZ);
   const backTopRightProj = isometricProject(seatW, seatD, backFrameTopZ);
   lines.push(svgLine(centerX + backTopLeftProj.x, centerY + backTopLeftProj.y, centerX + backTopRightProj.x, centerY + backTopRightProj.y));
   
   // REMOVED: Interior vertical back supports (secondary structure that competed with primary silhouette)
-  // Back structure is defined by: back frame top rail and arm back-outer verticals
+  // Back structure is defined by: back frame bottom rail (anchored to seat), top rail, and arm back-outer verticals
 
   // Dimension annotations layer (optional overlay) - using reusable helper
   const dimensionElements: string[] = [];
