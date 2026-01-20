@@ -304,7 +304,8 @@ function drawIsometricBox(
   depth: number,
   height: number,
   centerX: number,
-  centerY: number
+  centerY: number,
+  zOffset: number = 0
 ): string[] {
   const lines: string[] = [];
   const w = width / 2;
@@ -312,8 +313,8 @@ function drawIsometricBox(
   const h = height;
 
   const corners = [
-    { x: -w, y: -d, z: 0 }, { x: w, y: -d, z: 0 }, { x: w, y: d, z: 0 }, { x: -w, y: d, z: 0 },
-    { x: -w, y: -d, z: h }, { x: w, y: -d, z: h }, { x: w, y: d, z: h }, { x: -w, y: d, z: h },
+    { x: -w, y: -d, z: zOffset }, { x: w, y: -d, z: zOffset }, { x: w, y: d, z: zOffset }, { x: -w, y: d, z: zOffset },
+    { x: -w, y: -d, z: zOffset + h }, { x: w, y: -d, z: zOffset + h }, { x: w, y: d, z: zOffset + h }, { x: -w, y: d, z: zOffset + h },
   ];
 
   const projected = corners.map(corner => {
@@ -341,53 +342,99 @@ function drawIsometricBox(
 }
 
 function generateBoxFrame(width: number, depth: number, height: number, showDimensions: boolean = false): string {
+  console.log(`[generateBoxFrame] Input - width: ${width}, depth: ${depth}, height: ${height}`);
+  
+  // Validate inputs
+  if (!isFinite(width) || !isFinite(depth) || !isFinite(height)) {
+    console.error(`[generateBoxFrame] Invalid input - width: ${width}, depth: ${depth}, height: ${height}`);
+    throw new Error(`Invalid dimensions: width=${width}, depth=${depth}, height=${height}`);
+  }
+  if (width <= 0 || depth <= 0 || height <= 0) {
+    console.error(`[generateBoxFrame] Non-positive dimensions - width: ${width}, depth: ${depth}, height: ${height}`);
+    throw new Error(`Non-positive dimensions: width=${width}, depth=${depth}, height=${height}`);
+  }
+  
   const svgWidth = 400;
   const svgHeight = 400;
   const centerX = svgWidth / 2;
   const centerY = svgHeight / 2 + 50;
-  const lines = drawIsometricBox(width, depth, height, centerX, centerY);
-  const w = width / 2;
-  const d = depth / 2;
-  const h = height;
-  const frontCenter = isometricProject(0, -d, h / 2);
-  const backCenter = isometricProject(0, d, h / 2);
-  lines.push(svgLine(centerX + frontCenter.x, centerY + frontCenter.y, centerX + backCenter.x, centerY + backCenter.y));
-  const leftCenter = isometricProject(-w, 0, h / 2);
-  const rightCenter = isometricProject(w, 0, h / 2);
-  lines.push(svgLine(centerX + leftCenter.x, centerY + leftCenter.y, centerX + rightCenter.x, centerY + rightCenter.y));
   
-  // Dimension annotations layer (optional overlay) - using reusable helper
-  const dimensionElements: string[] = [];
-  if (showDimensions) {
-    // Define dimension points in 3D space (using top level for width/depth)
-    const widthPoints = [
-      { x: -w, y: -d, z: height },  // Front-left-top
-      { x: w, y: -d, z: height }    // Front-right-top
-    ];
-    const depthPoints = [
-      { x: w, y: -d, z: height },   // Right-front-top
-      { x: w, y: d, z: height }     // Right-back-top
-    ];
-    const heightPoints = [
-      { x: w, y: -d, z: 0 },        // Floor (front-right)
-      { x: w, y: -d, z: height }    // Top of box
+  try {
+    const lines = drawIsometricBox(width, depth, height, centerX, centerY);
+    const w = width / 2;
+    const d = depth / 2;
+    const h = height;
+    
+    console.log(`[generateBoxFrame] Calculated - w: ${w}, d: ${d}, h: ${h}`);
+    console.log(`[generateBoxFrame] Z values - h/2: ${h / 2}`);
+    
+    const frontCenter = isometricProject(0, -d, h / 2);
+    const backCenter = isometricProject(0, d, h / 2);
+    lines.push(svgLine(centerX + frontCenter.x, centerY + frontCenter.y, centerX + backCenter.x, centerY + backCenter.y));
+    const leftCenter = isometricProject(-w, 0, h / 2);
+    const rightCenter = isometricProject(w, 0, h / 2);
+    lines.push(svgLine(centerX + leftCenter.x, centerY + leftCenter.y, centerX + rightCenter.x, centerY + rightCenter.y));
+    
+    // Structural load path: Corner posts from floor (z=0) to top (z=height)
+    // 4 vertical corner posts supporting the box structure
+    const cornerPosts = [
+      { x: -w, y: -d, z: 0 },  // Front-left-bottom
+      { x: w, y: -d, z: 0 },   // Front-right-bottom
+      { x: w, y: d, z: 0 },    // Back-right-bottom
+      { x: -w, y: d, z: 0 },   // Back-left-bottom
     ];
     
-    dimensionElements.push(...addDimensionOverlay(
-      widthPoints,
-      depthPoints,
-      heightPoints,
-      centerX,
-      centerY,
-      15,  // offset
-      2.5  // gap
-    ));
-  }
+    cornerPosts.forEach(corner => {
+      const bottomProj = isometricProject(corner.x, corner.y, 0);
+      const topProj = isometricProject(corner.x, corner.y, h);
+      lines.push(svgLine(centerX + bottomProj.x, centerY + bottomProj.y, centerX + topProj.x, centerY + topProj.y));
+    });
   
-  const allElements = [...lines, ...dimensionElements];
-  return `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="background: white;">
+    // Dimension annotations layer (optional overlay) - using reusable helper
+    const dimensionElements: string[] = [];
+    if (showDimensions) {
+      // Define dimension points in 3D space (using top level for width/depth)
+      const widthPoints = [
+        { x: -w, y: -d, z: height },  // Front-left-top
+        { x: w, y: -d, z: height }    // Front-right-top
+      ];
+      const depthPoints = [
+        { x: w, y: -d, z: height },   // Right-front-top
+        { x: w, y: d, z: height }     // Right-back-top
+      ];
+      const heightPoints = [
+        { x: w, y: -d, z: 0 },        // Floor (front-right)
+        { x: w, y: -d, z: height }    // Top of box
+      ];
+      
+      dimensionElements.push(...addDimensionOverlay(
+        widthPoints,
+        depthPoints,
+        heightPoints,
+        centerX,
+        centerY,
+        15,  // offset
+        2.5  // gap
+      ));
+    }
+    
+    const allElements = [...lines, ...dimensionElements];
+    const svgString = `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="background: white;">
     ${allElements.join('\n    ')}
   </svg>`;
+    
+    // Validate SVG string
+    if (svgString.includes('NaN') || svgString.includes('Infinity')) {
+      console.error(`[generateBoxFrame] SVG contains NaN or Infinity`);
+      throw new Error('SVG contains NaN or Infinity');
+    }
+    
+    console.log(`[generateBoxFrame] SVG generated successfully, length: ${svgString.length}`);
+    return svgString;
+  } catch (error: any) {
+    console.error(`[generateBoxFrame] Exception:`, error);
+    throw error;
+  }
 }
 
 /**
@@ -395,6 +442,18 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
  * Multi-bay sofa using plinth foundation, seat bays, and aligned back supports
  */
 function generateSofaMultiFrame(width: number, depth: number, height: number, showDimensions: boolean = false): string {
+  console.log(`[generateSofaMultiFrame] Input - width: ${width}, depth: ${depth}, height: ${height}`);
+  
+  // Validate inputs
+  if (!isFinite(width) || !isFinite(depth) || !isFinite(height)) {
+    console.error(`[generateSofaMultiFrame] Invalid input - width: ${width}, depth: ${depth}, height: ${height}`);
+    throw new Error(`Invalid dimensions: width=${width}, depth=${depth}, height=${height}`);
+  }
+  if (width <= 0 || depth <= 0 || height <= 0) {
+    console.error(`[generateSofaMultiFrame] Non-positive dimensions - width: ${width}, depth: ${depth}, height: ${height}`);
+    throw new Error(`Non-positive dimensions: width=${width}, depth=${depth}, height=${height}`);
+  }
+  
   const svgWidth = 400;
   const svgHeight = 400;
   const centerX = svgWidth / 2;
@@ -404,11 +463,15 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   const w = width / 2;
   const d = depth / 2;
   const totalHeight = height;
+  
+  console.log(`[generateSofaMultiFrame] Calculated - w: ${w}, d: ${d}, totalHeight: ${totalHeight}`);
 
   // Foundation: Plinth base (90% of footprint)
   const plinthThickness = totalHeight * 0.05;
   const plinthW = w * 0.9;
   const plinthD = d * 0.9;
+  
+  console.log(`[generateSofaMultiFrame] Plinth - thickness: ${plinthThickness}, plinthW: ${plinthW}, plinthD: ${plinthD}`);
 
   const plinthCorners = [
     { x: -plinthW, y: -plinthD, z: 0 },                // Front-left-bottom
@@ -448,9 +511,13 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   const width_cm = width / scale;
   let seatCount = Math.floor(width_cm / 65);
   if (seatCount < 2) seatCount = 2; // Ensure at least 2 bays for sofas
+  
+  console.log(`[generateSofaMultiFrame] Seat bays - scale: ${scale}, width_cm: ${width_cm}, seatCount: ${seatCount}`);
 
   const seatHeight = totalHeight * 0.45;
   const seatFrameZ = seatHeight;
+  
+  console.log(`[generateSofaMultiFrame] Seat frame - seatHeight: ${seatHeight}, seatFrameZ: ${seatFrameZ}`);
 
   // Seat frame footprint (aligned with plinth)
   const seatW = plinthW;
@@ -500,6 +567,13 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
     lines.push(svgLine(centerX + bottomProj.x, centerY + bottomProj.y, centerX + topProj.x, centerY + topProj.y));
   });
 
+  // Back support: continuous back frame aligned with bay divisions
+  // Define backFrameTopZ BEFORE arms (used in addArmFrame)
+  const backFrameBottomZ = seatFrameZ;
+  const backFrameTopZ = totalHeight;
+  
+  console.log(`[generateSofaMultiFrame] Back frame - backFrameBottomZ: ${backFrameBottomZ}, backFrameTopZ: ${backFrameTopZ}`);
+
   // Arm structures: Left and Right arms as vertical rectangular frames
   // Arms sit at outermost X edges (±w), span full seat depth, from plinth top to backFrameTopZ
   const armWidth = width * 0.1; // 10% of total width
@@ -507,6 +581,8 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   const rightArmInnerX = w - armWidth;
   const leftArmOuterX = -w;
   const leftArmInnerX = -w + armWidth;
+  
+  console.log(`[generateSofaMultiFrame] Arms - armWidth: ${armWidth}, leftArmInnerX: ${leftArmInnerX}, leftArmOuterX: ${leftArmOuterX}, rightArmInnerX: ${rightArmInnerX}, rightArmOuterX: ${rightArmOuterX}`);
 
   function addArmFrame(innerX: number, outerX: number) {
     const armCorners = [
@@ -550,10 +626,6 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   addArmFrame(leftArmInnerX, leftArmOuterX);
   addArmFrame(rightArmInnerX, rightArmOuterX);
 
-  // Back support: continuous back frame aligned with bay divisions
-  const backFrameBottomZ = seatFrameZ;
-  const backFrameTopZ = totalHeight;
-
   // Vertical back supports at each bay boundary along back edge (y = seatD)
   bayBoundaries.forEach(x => {
     const bottomProj = isometricProject(x, seatD, backFrameBottomZ);
@@ -594,9 +666,42 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   }
 
   const allElements = [...lines, ...dimensionElements];
-  return `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="background: white;">
+  
+  console.log(`[generateSofaMultiFrame] Final - lines count: ${lines.length}, dimensionElements count: ${dimensionElements.length}, allElements count: ${allElements.length}`);
+  
+  // Validate all calculated values
+  console.log(`[generateSofaMultiFrame] Z values summary - plinthThickness: ${plinthThickness}, seatFrameZ: ${seatFrameZ}, backFrameBottomZ: ${backFrameBottomZ}, backFrameTopZ: ${backFrameTopZ}`);
+  console.log(`[generateSofaMultiFrame] Division results - bayWidth: ${bayWidth}, bayBoundaries count: ${bayBoundaries.length}`);
+  
+  try {
+    const svgString = `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="background: white;">
     ${allElements.join('\n    ')}
   </svg>`;
+    
+    // Validate SVG string
+    if (svgString === undefined) {
+      console.error(`[generateSofaMultiFrame] SVG string is undefined`);
+      throw new Error('SVG string is undefined');
+    }
+    if (svgString === null) {
+      console.error(`[generateSofaMultiFrame] SVG string is null`);
+      throw new Error('SVG string is null');
+    }
+    if (svgString === '') {
+      console.error(`[generateSofaMultiFrame] SVG string is empty`);
+      throw new Error('SVG string is empty');
+    }
+    if (svgString.includes('NaN') || svgString.includes('Infinity')) {
+      console.error(`[generateSofaMultiFrame] SVG contains NaN or Infinity`);
+      throw new Error('SVG contains NaN or Infinity');
+    }
+    
+    console.log(`[generateSofaMultiFrame] SVG generated successfully, length: ${svgString.length}`);
+    return svgString;
+  } catch (error: any) {
+    console.error(`[generateSofaMultiFrame] Exception during SVG assembly:`, error);
+    throw error;
+  }
 }
 
 /**
@@ -925,21 +1030,24 @@ function generateTableFrameRectangular(width: number, depth: number, height: num
   const w = width / 2;
   const d = depth / 2;
   const tabletopThickness = height * 0.05;
-  const legHeight = height - tabletopThickness;
-  const topLines = drawIsometricBox(width, depth, tabletopThickness, centerX, centerY);
+  const tabletopBottomZ = height - tabletopThickness; // Tabletop sits on top of legs
+  const topLines = drawIsometricBox(width, depth, tabletopThickness, centerX, centerY, tabletopBottomZ);
   lines.push(...topLines);
+  
+  // Structural load path: 4 vertical legs at footprint corners
+  // Legs extend from floor (z=0) to underside of tabletop (z=tabletopBottomZ)
   const legs = [
-    { x: -w * 0.9, y: -d * 0.9, z: tabletopThickness },
-    { x: w * 0.9, y: -d * 0.9, z: tabletopThickness },
-    { x: w * 0.9, y: d * 0.9, z: tabletopThickness },
-    { x: -w * 0.9, y: d * 0.9, z: tabletopThickness },
+    { x: -w * 0.9, y: -d * 0.9 },  // Front-left
+    { x: w * 0.9, y: -d * 0.9 },   // Front-right
+    { x: w * 0.9, y: d * 0.9 },    // Back-right
+    { x: -w * 0.9, y: d * 0.9 },   // Back-left
   ];
   legs.forEach(leg => {
-    const legTop = isometricProject(leg.x, leg.y, leg.z);
+    const legTop = isometricProject(leg.x, leg.y, tabletopBottomZ);
     const legBottom = isometricProject(leg.x, leg.y, 0);
     lines.push(svgLine(centerX + legTop.x, centerY + legTop.y, centerX + legBottom.x, centerY + legBottom.y));
   });
-  const railHeight = legHeight * 0.3;
+  const railHeight = tabletopBottomZ * 0.3;
   const frontLeftRail = isometricProject(-w * 0.9, -d * 0.9, railHeight);
   const frontRightRail = isometricProject(w * 0.9, -d * 0.9, railHeight);
   lines.push(svgLine(centerX + frontLeftRail.x, centerY + frontLeftRail.y, centerX + frontRightRail.x, centerY + frontRightRail.y));
@@ -1069,21 +1177,30 @@ function generateBenchFrame(width: number, depth: number, height: number, showDi
   const lines: string[] = [];
   const w = width / 2;
   const d = depth / 2;
+  // Structural load path: Seat must be raised and supported by legs
+  // Seat sits above floor, supported by 4 vertical legs at corners
   const seatThickness = height * 0.15;
-  const seatLines = drawIsometricBox(width, depth, seatThickness, centerX, centerY);
+  const seatBottomZ = height * 0.2; // Seat raised above floor
+  const seatTopZ = seatBottomZ + seatThickness;
+  
+  // Draw seat box at raised position
+  const seatLines = drawIsometricBox(width, depth, seatThickness, centerX, centerY, seatBottomZ);
   lines.push(...seatLines);
-  const legHeight = height * 0.2;
+  
+  // Structural load path: 4 vertical legs from floor (z=0) to underside of seat (z=seatBottomZ)
   const legs = [
-    { x: -w * 0.85, y: -d * 0.85, z: seatThickness },
-    { x: w * 0.85, y: -d * 0.85, z: seatThickness },
-    { x: w * 0.85, y: d * 0.85, z: seatThickness },
-    { x: -w * 0.85, y: d * 0.85, z: seatThickness },
+    { x: -w * 0.85, y: -d * 0.85 },  // Front-left
+    { x: w * 0.85, y: -d * 0.85 },   // Front-right
+    { x: w * 0.85, y: d * 0.85 },    // Back-right
+    { x: -w * 0.85, y: d * 0.85 },   // Back-left
   ];
   legs.forEach(leg => {
-    const legTop = isometricProject(leg.x, leg.y, leg.z);
+    const legTop = isometricProject(leg.x, leg.y, seatBottomZ);
     const legBottom = isometricProject(leg.x, leg.y, 0);
     lines.push(svgLine(centerX + legTop.x, centerY + legTop.y, centerX + legBottom.x, centerY + legBottom.y));
   });
+  
+  const legHeight = seatBottomZ; // Leg height is now seatBottomZ
   const railHeight = legHeight * 0.5;
   const frontLeftRail = isometricProject(-w * 0.85, -d * 0.85, railHeight);
   const frontRightRail = isometricProject(w * 0.85, -d * 0.85, railHeight);
@@ -1095,18 +1212,18 @@ function generateBenchFrame(width: number, depth: number, height: number, showDi
   // Dimension annotations layer (optional overlay) - using reusable helper
   const dimensionElements: string[] = [];
   if (showDimensions) {
-    // Define dimension points in 3D space (using seat level for width/depth)
+    // Define dimension points in 3D space (using seat top level for width/depth)
     const widthPoints = [
-      { x: -w * 0.85, y: -d * 0.85, z: seatThickness },  // Front-left-seat
-      { x: w * 0.85, y: -d * 0.85, z: seatThickness }    // Front-right-seat
+      { x: -w * 0.85, y: -d * 0.85, z: seatTopZ },  // Front-left-seat-top
+      { x: w * 0.85, y: -d * 0.85, z: seatTopZ }    // Front-right-seat-top
     ];
     const depthPoints = [
-      { x: w * 0.85, y: -d * 0.85, z: seatThickness },   // Right-front-seat
-      { x: w * 0.85, y: d * 0.85, z: seatThickness }     // Right-back-seat
+      { x: w * 0.85, y: -d * 0.85, z: seatTopZ },   // Right-front-seat-top
+      { x: w * 0.85, y: d * 0.85, z: seatTopZ }     // Right-back-seat-top
     ];
     const heightPoints = [
-      { x: w * 0.85, y: -d * 0.85, z: 0 },               // Floor (front-right)
-      { x: w * 0.85, y: -d * 0.85, z: seatThickness }     // Top of seat
+      { x: w * 0.85, y: -d * 0.85, z: 0 },          // Floor (front-right)
+      { x: w * 0.85, y: -d * 0.85, z: seatTopZ }    // Top of seat
     ];
     
     dimensionElements.push(...addDimensionOverlay(
@@ -1126,6 +1243,15 @@ function generateBenchFrame(width: number, depth: number, height: number, showDi
   </svg>`;
 }
 
+/**
+ * Generate placeholder SVG with error message
+ */
+function generateErrorSVG(errorMessage: string): string {
+  return `<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg" style="background: white;">
+    <text x="200" y="200" font-family="Arial, sans-serif" font-size="12" fill="red" text-anchor="middle">ERROR: ${errorMessage}</text>
+  </svg>`;
+}
+
 function generateBlueprintSVG(spec: CarpenterSpec, category?: string, itemName?: string): string {
   const { width_cm, depth_cm, height_cm } = spec.dimensions;
   const scale = 2;
@@ -1141,22 +1267,66 @@ function generateBlueprintSVG(spec: CarpenterSpec, category?: string, itemName?:
     depth_cm
   );
   
-  // Route generators ONLY via BlueprintType enum
-  switch (blueprintType) {
-    case BlueprintType.CHAIR_SINGLE:
-      return generateChairFrame(width, depth, height, category, itemName);
-    case BlueprintType.SOFA_MULTI:
-      return generateSofaMultiFrame(width, depth, height);
-    case BlueprintType.TABLE_RECT:
-      return generateTableFrameRectangular(width, depth, height);
-    case BlueprintType.TABLE_ROUND:
-      return generateTableFrameRound(width, depth, height);
-    case BlueprintType.BENCH:
-      return generateBenchFrame(width, depth, height);
-    case BlueprintType.STORAGE_BOX:
-      return generateBoxFrame(width, depth, height);
-    default:
-      return generateBoxFrame(width, depth, height);
+  console.log(`[generateBlueprintSVG] BlueprintType: ${blueprintType}, width_cm: ${width_cm}, depth_cm: ${depth_cm}, height_cm: ${height_cm}`);
+  console.log(`[generateBlueprintSVG] Scaled dimensions - width: ${width}, depth: ${depth}, height: ${height}`);
+  
+  // Route generators ONLY via BlueprintType enum with diagnostic try/catch
+  let svgResult: string;
+  try {
+    switch (blueprintType) {
+      case BlueprintType.CHAIR_SINGLE:
+        console.log(`[generateBlueprintSVG] Calling generateChairFrame`);
+        svgResult = generateChairFrame(width, depth, height, category, itemName);
+        break;
+      case BlueprintType.SOFA_MULTI:
+        console.log(`[generateBlueprintSVG] Calling generateSofaMultiFrame`);
+        svgResult = generateSofaMultiFrame(width, depth, height);
+        break;
+      case BlueprintType.TABLE_RECT:
+        console.log(`[generateBlueprintSVG] Calling generateTableFrameRectangular`);
+        svgResult = generateTableFrameRectangular(width, depth, height);
+        break;
+      case BlueprintType.TABLE_ROUND:
+        console.log(`[generateBlueprintSVG] Calling generateTableFrameRound`);
+        svgResult = generateTableFrameRound(width, depth, height);
+        break;
+      case BlueprintType.BENCH:
+        console.log(`[generateBlueprintSVG] Calling generateBenchFrame`);
+        svgResult = generateBenchFrame(width, depth, height);
+        break;
+      case BlueprintType.STORAGE_BOX:
+        console.log(`[generateBlueprintSVG] Calling generateBoxFrame`);
+        svgResult = generateBoxFrame(width, depth, height);
+        break;
+      default:
+        console.log(`[generateBlueprintSVG] Default case, calling generateBoxFrame`);
+        svgResult = generateBoxFrame(width, depth, height);
+    }
+    
+    // Validate SVG result
+    if (svgResult === undefined) {
+      console.error(`[generateBlueprintSVG] SVG result is undefined for ${blueprintType}`);
+      return generateErrorSVG(`SVG undefined for ${blueprintType}`);
+    }
+    if (svgResult === null) {
+      console.error(`[generateBlueprintSVG] SVG result is null for ${blueprintType}`);
+      return generateErrorSVG(`SVG null for ${blueprintType}`);
+    }
+    if (svgResult === '') {
+      console.error(`[generateBlueprintSVG] SVG result is empty string for ${blueprintType}`);
+      return generateErrorSVG(`SVG empty for ${blueprintType}`);
+    }
+    if (svgResult.includes('NaN') || svgResult.includes('Infinity')) {
+      console.error(`[generateBlueprintSVG] SVG contains NaN or Infinity for ${blueprintType}`);
+      return generateErrorSVG(`SVG contains NaN/Infinity for ${blueprintType}`);
+    }
+    
+    console.log(`[generateBlueprintSVG] SVG generated successfully for ${blueprintType}, length: ${svgResult.length}`);
+    return svgResult;
+  } catch (error: any) {
+    console.error(`[generateBlueprintSVG] Exception generating SVG for ${blueprintType}:`, error);
+    console.error(`[generateBlueprintSVG] Error stack:`, error.stack);
+    return generateErrorSVG(`${blueprintType} generation failed: ${error.message || error}`);
   }
 }
 
@@ -1306,21 +1476,34 @@ Provide detailed fabrication specs suitable for a Nigerian carpenter.`,
     let technicalImageUrl: string | null = null;
     try {
       const dimensions = carpenterSpec.dimensions;
+      console.log(`[${requestId}] Calling generateBlueprintSVG with dimensions:`, dimensions);
       const svgString = generateBlueprintSVG(
         carpenterSpec,
         category,
         item_name
       );
       
+      console.log(`[${requestId}] SVG string received, length: ${svgString?.length || 0}, type: ${typeof svgString}`);
+      
+      if (!svgString) {
+        console.error(`[${requestId}] SVG string is falsy:`, svgString);
+        throw new Error('SVG string is falsy');
+      }
+      
       // Convert SVG string to data URL (URL-encoded for better compatibility)
       const encodedSvg = encodeURIComponent(svgString);
       const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodedSvg}`;
       technicalImageUrl = svgDataUrl;
-      console.log(`[${requestId}] Successfully generated SVG blueprint diagram`);
-    } catch (imageError) {
+      console.log(`[${requestId}] Successfully generated SVG blueprint diagram, data URL length: ${svgDataUrl.length}`);
+    } catch (imageError: any) {
       console.error(`[${requestId}] Error generating SVG blueprint:`, imageError);
-      // Continue without image - don't fail the entire request
-      technicalImageUrl = null;
+      console.error(`[${requestId}] Error stack:`, imageError?.stack);
+      console.error(`[${requestId}] Error message:`, imageError?.message);
+      // Return placeholder SVG instead of null for diagnostics
+      const errorSvg = generateErrorSVG(`Blueprint generation failed: ${imageError?.message || imageError}`);
+      const encodedErrorSvg = encodeURIComponent(errorSvg);
+      technicalImageUrl = `data:image/svg+xml;charset=utf-8,${encodedErrorSvg}`;
+      console.log(`[${requestId}] Returning error placeholder SVG instead of null`);
     }
 
     const imageGenEnd = performance.now();
