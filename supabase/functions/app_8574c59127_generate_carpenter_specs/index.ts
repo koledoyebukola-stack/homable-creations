@@ -305,7 +305,8 @@ function drawIsometricBox(
   height: number,
   centerX: number,
   centerY: number,
-  zOffset: number = 0
+  zOffset: number = 0,
+  omitHiddenEdges: boolean = false
 ): string[] {
   const lines: string[] = [];
   const w = width / 2;
@@ -323,16 +324,23 @@ function drawIsometricBox(
   });
 
   // Bottom face
-  lines.push(svgLine(projected[0].x, projected[0].y, projected[1].x, projected[1].y));
-  lines.push(svgLine(projected[1].x, projected[1].y, projected[2].x, projected[2].y));
-  lines.push(svgLine(projected[2].x, projected[2].y, projected[3].x, projected[3].y));
-  lines.push(svgLine(projected[3].x, projected[3].y, projected[0].x, projected[0].y));
+  lines.push(svgLine(projected[0].x, projected[0].y, projected[1].x, projected[1].y)); // Front edge (always visible)
+  if (!omitHiddenEdges) {
+    lines.push(svgLine(projected[1].x, projected[1].y, projected[2].x, projected[2].y)); // Right side edge
+    lines.push(svgLine(projected[2].x, projected[2].y, projected[3].x, projected[3].y)); // Back edge (hidden)
+    lines.push(svgLine(projected[3].x, projected[3].y, projected[0].x, projected[0].y)); // Left side edge
+  }
+  // When omitHiddenEdges=true: only front edge of bottom face (cabinet base is implied by vertical posts)
+  
   // Top face
-  lines.push(svgLine(projected[4].x, projected[4].y, projected[5].x, projected[5].y));
-  lines.push(svgLine(projected[5].x, projected[5].y, projected[6].x, projected[6].y));
-  lines.push(svgLine(projected[6].x, projected[6].y, projected[7].x, projected[7].y));
-  lines.push(svgLine(projected[7].x, projected[7].y, projected[4].x, projected[4].y));
-  // Vertical edges
+  lines.push(svgLine(projected[4].x, projected[4].y, projected[5].x, projected[5].y)); // Front edge (always visible)
+  lines.push(svgLine(projected[5].x, projected[5].y, projected[6].x, projected[6].y)); // Right side edge (always visible)
+  if (!omitHiddenEdges) {
+    lines.push(svgLine(projected[6].x, projected[6].y, projected[7].x, projected[7].y)); // Back edge (hidden)
+  }
+  lines.push(svgLine(projected[7].x, projected[7].y, projected[4].x, projected[4].y)); // Left side edge (always visible)
+  
+  // Vertical edges (all 4 are essential load paths)
   lines.push(svgLine(projected[0].x, projected[0].y, projected[4].x, projected[4].y));
   lines.push(svgLine(projected[1].x, projected[1].y, projected[5].x, projected[5].y));
   lines.push(svgLine(projected[2].x, projected[2].y, projected[6].x, projected[6].y));
@@ -360,8 +368,8 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
   const centerY = svgHeight / 2 + 50;
   
   try {
-    // PRIMARY STRUCTURE: Outer carcass only (drawIsometricBox provides complete wireframe)
-    const lines = drawIsometricBox(width, depth, height, centerX, centerY);
+    // PRIMARY STRUCTURE: Outer carcass only (drawIsometricBox with hidden edges omitted for clarity)
+    const lines = drawIsometricBox(width, depth, height, centerX, centerY, 0, true);
     const w = width / 2;
     const d = depth / 2;
     const h = height;
@@ -560,12 +568,12 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   console.log(`[generateSofaMultiFrame] Back frame - backFrameBottomZ: ${backFrameBottomZ}, backFrameTopZ: ${backFrameTopZ}`);
 
   // Arm structures: Left and Right arms as vertical rectangular frames
-  // Arms sit at outermost X edges (±w), span full seat depth, from plinth top to backFrameTopZ
+  // Arms aligned to seat frame perimeter (±seatW), span full seat depth, from plinth top to backFrameTopZ
   const armWidth = width * 0.1; // 10% of total width
-  const rightArmOuterX = w;
-  const rightArmInnerX = w - armWidth;
-  const leftArmOuterX = -w;
-  const leftArmInnerX = -w + armWidth;
+  const rightArmOuterX = seatW; // Aligned to seat frame, not full width
+  const rightArmInnerX = seatW - armWidth;
+  const leftArmOuterX = -seatW; // Aligned to seat frame, not full width
+  const leftArmInnerX = -seatW + armWidth;
   
   console.log(`[generateSofaMultiFrame] Arms - armWidth: ${armWidth}, leftArmInnerX: ${leftArmInnerX}, leftArmOuterX: ${leftArmOuterX}, rightArmInnerX: ${rightArmInnerX}, rightArmOuterX: ${rightArmOuterX}`);
 
@@ -588,23 +596,14 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
       return { x: centerX + p.x, y: centerY + p.y };
     });
 
-    // Bottom face
-    lines.push(svgLine(proj[0].x, proj[0].y, proj[1].x, proj[1].y));
-    lines.push(svgLine(proj[1].x, proj[1].y, proj[2].x, proj[2].y));
-    lines.push(svgLine(proj[2].x, proj[2].y, proj[3].x, proj[3].y));
-    lines.push(svgLine(proj[3].x, proj[3].y, proj[0].x, proj[0].y));
-
-    // Top face
-    lines.push(svgLine(proj[4].x, proj[4].y, proj[5].x, proj[5].y));
-    lines.push(svgLine(proj[5].x, proj[5].y, proj[6].x, proj[6].y));
-    lines.push(svgLine(proj[6].x, proj[6].y, proj[7].x, proj[7].y));
-    lines.push(svgLine(proj[7].x, proj[7].y, proj[4].x, proj[4].y));
-
-    // Vertical edges
-    lines.push(svgLine(proj[0].x, proj[0].y, proj[4].x, proj[4].y));
-    lines.push(svgLine(proj[1].x, proj[1].y, proj[5].x, proj[5].y));
-    lines.push(svgLine(proj[2].x, proj[2].y, proj[6].x, proj[6].y));
-    lines.push(svgLine(proj[3].x, proj[3].y, proj[7].x, proj[7].y));
+    // REMOVED: Bottom face (overlaps exactly with plinth top face, redundant)
+    // REMOVED: Top face (back frame top rail already defines the top structure)
+    
+    // PRIMARY STRUCTURE: Vertical edges only (arms as vertical structural frames)
+    lines.push(svgLine(proj[0].x, proj[0].y, proj[4].x, proj[4].y)); // Front-inner vertical
+    lines.push(svgLine(proj[1].x, proj[1].y, proj[5].x, proj[5].y)); // Front-outer vertical
+    lines.push(svgLine(proj[2].x, proj[2].y, proj[6].x, proj[6].y)); // Back-outer vertical
+    lines.push(svgLine(proj[3].x, proj[3].y, proj[7].x, proj[7].y)); // Back-inner vertical
   }
 
   // Left and right arms
