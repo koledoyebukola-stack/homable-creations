@@ -341,10 +341,26 @@ function drawIsometricBox(
   lines.push(svgLine(projected[7].x, projected[7].y, projected[4].x, projected[4].y)); // Left side edge (always visible)
   
   // Vertical edges (all 4 are essential load paths)
+  // Apply hidden edge logic: back verticals (y = d > 0) should be dashed
+  const frontLeftBottom = { x: -w, y: -d, z: zOffset };
+  const frontLeftTop = { x: -w, y: -d, z: zOffset + h };
+  const frontRightBottom = { x: w, y: -d, z: zOffset };
+  const frontRightTop = { x: w, y: -d, z: zOffset + h };
+  const backRightBottom = { x: w, y: d, z: zOffset };
+  const backRightTop = { x: w, y: d, z: zOffset + h };
+  const backLeftBottom = { x: -w, y: d, z: zOffset };
+  const backLeftTop = { x: -w, y: d, z: zOffset + h };
+  
+  // Front-left vertical (visible)
   lines.push(svgLine(projected[0].x, projected[0].y, projected[4].x, projected[4].y));
+  // Front-right vertical (visible)
   lines.push(svgLine(projected[1].x, projected[1].y, projected[5].x, projected[5].y));
-  lines.push(svgLine(projected[2].x, projected[2].y, projected[6].x, projected[6].y));
-  lines.push(svgLine(projected[3].x, projected[3].y, projected[7].x, projected[7].y));
+  // Back-right vertical (hidden - convert to dashed)
+  const backRightHidden = isHiddenEdge(backRightBottom, backRightTop);
+  lines.push(svgLine(projected[2].x, projected[2].y, projected[6].x, projected[6].y, undefined, backRightHidden ? '3,3' : undefined));
+  // Back-left vertical (hidden - convert to dashed)
+  const backLeftHidden = isHiddenEdge(backLeftBottom, backLeftTop);
+  lines.push(svgLine(projected[3].x, projected[3].y, projected[7].x, projected[7].y, undefined, backLeftHidden ? '3,3' : undefined));
 
   return lines;
 }
@@ -494,11 +510,10 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   lines.push(svgLine(plinthProjected[5].x, plinthProjected[5].y, plinthProjected[6].x, plinthProjected[6].y));
   lines.push(svgLine(plinthProjected[6].x, plinthProjected[6].y, plinthProjected[7].x, plinthProjected[7].y));
   lines.push(svgLine(plinthProjected[7].x, plinthProjected[7].y, plinthProjected[4].x, plinthProjected[4].y));
-  // Vertical edges
-  lines.push(svgLine(plinthProjected[0].x, plinthProjected[0].y, plinthProjected[4].x, plinthProjected[4].y));
-  lines.push(svgLine(plinthProjected[1].x, plinthProjected[1].y, plinthProjected[5].x, plinthProjected[5].y));
-  lines.push(svgLine(plinthProjected[2].x, plinthProjected[2].y, plinthProjected[6].x, plinthProjected[6].y));
-  lines.push(svgLine(plinthProjected[3].x, plinthProjected[3].y, plinthProjected[7].x, plinthProjected[7].y));
+  // Vertical edges - REMOVED corner verticals where arms occupy same (x, y) coordinates
+  // Plinth corner verticals at (±plinthW, ±plinthD) are redundant with arm verticals at (±seatW, ±seatD)
+  // Since seatW = plinthW and seatD = plinthD, all 4 corner verticals are removed
+  // Arms will provide the vertical structure at these corners
 
   // Seat bays: divide width into bays of ~65cm
   const scale = 2; // 1cm = 2 units (from generateBlueprintSVG)
