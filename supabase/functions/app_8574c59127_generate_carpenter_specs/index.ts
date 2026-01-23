@@ -391,56 +391,39 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
     console.log(`[generateBoxFrame] Calculated - w: ${w}, d: ${d}, h: ${h}`);
     
     // Carcass geometry: bottom shelf plane is at z = 0 (authoritative termination point)
-    // All internal dividers must terminate at this plane, not extend below it
-    const carcassBaseZ = 0; // Bottom shelf/carcass base Z value (derived from carcass geometry)
-    const carcassTopZ = h; // Top of carcass (authoritative termination point for all verticals)
+    const carcassBaseZ = 0;
+    const carcassTopZ = h;
     
     // Stroke weights: Front face rails are 0.5px thicker than internal dividers
     const frontFaceStrokeWidth = 2.5; // Front face rails (thicker for visual hierarchy)
     const dividerStrokeWidth = 2.0; // Internal dividers (standard weight)
     
+    // Use drawIsometricBox to generate correct outer carcass geometry
+    // Then separate into layers and apply stroke weights
+    const corners = [
+      { x: -w, y: -d, z: 0 }, { x: w, y: -d, z: 0 }, { x: w, y: d, z: 0 }, { x: -w, y: d, z: 0 },
+      { x: -w, y: -d, z: h }, { x: w, y: -d, z: h }, { x: w, y: d, z: h }, { x: -w, y: d, z: h },
+    ];
+    const projected = corners.map(corner => {
+      const proj = isometricProject(corner.x, corner.y, corner.z);
+      return { x: centerX + proj.x, y: centerY + proj.y };
+    });
+    
     // LAYER 1 (BOTTOM): Back rails and back verticals (dashed, drawn first)
     const backLayerLines: string[] = [];
-    
-    // Back verticals (dashed)
-    const backRightBottom = { x: w, y: d, z: carcassBaseZ };
-    const backRightTop = { x: w, y: d, z: carcassTopZ };
-    const backLeftBottom = { x: -w, y: d, z: carcassBaseZ };
-    const backLeftTop = { x: -w, y: d, z: carcassTopZ };
-    
-    const backRightBottomProj = isometricProject(backRightBottom.x, backRightBottom.y, backRightBottom.z);
-    const backRightTopProj = isometricProject(backRightTop.x, backRightTop.y, backRightTop.z);
-    const backLeftBottomProj = isometricProject(backLeftBottom.x, backLeftBottom.y, backLeftBottom.z);
-    const backLeftTopProj = isometricProject(backLeftTop.x, backLeftTop.y, backLeftTop.z);
-    
-    backLayerLines.push(svgLine(
-      centerX + backRightBottomProj.x, centerY + backRightBottomProj.y,
-      centerX + backRightTopProj.x, centerY + backRightTopProj.y,
-      dividerStrokeWidth, '3,3' // Dashed, standard weight
-    ));
-    backLayerLines.push(svgLine(
-      centerX + backLeftBottomProj.x, centerY + backLeftBottomProj.y,
-      centerX + backLeftTopProj.x, centerY + backLeftTopProj.y,
-      dividerStrokeWidth, '3,3' // Dashed, standard weight
-    ));
-    
+    // Back-right vertical (dashed)
+    const backRightHidden = isHiddenEdge({ x: w, y: d, z: 0 }, { x: w, y: d, z: h });
+    backLayerLines.push(svgLine(projected[2].x, projected[2].y, projected[6].x, projected[6].y, dividerStrokeWidth, backRightHidden ? '3,3' : undefined));
+    // Back-left vertical (dashed)
+    const backLeftHidden = isHiddenEdge({ x: -w, y: d, z: 0 }, { x: -w, y: d, z: h });
+    backLayerLines.push(svgLine(projected[3].x, projected[3].y, projected[7].x, projected[7].y, dividerStrokeWidth, backLeftHidden ? '3,3' : undefined));
     // Back top rail (dashed)
-    const topRailBackRight = { x: w, y: d, z: carcassTopZ };
-    const topRailBackLeft = { x: -w, y: d, z: carcassTopZ };
-    const topRailBackRightProj = isometricProject(topRailBackRight.x, topRailBackRight.y, topRailBackRight.z);
-    const topRailBackLeftProj = isometricProject(topRailBackLeft.x, topRailBackLeft.y, topRailBackLeft.z);
-    
-    backLayerLines.push(svgLine(
-      centerX + topRailBackRightProj.x, centerY + topRailBackRightProj.y,
-      centerX + topRailBackLeftProj.x, centerY + topRailBackLeftProj.y,
-      dividerStrokeWidth, '3,3' // Dashed, standard weight
-    ));
+    backLayerLines.push(svgLine(projected[6].x, projected[6].y, projected[7].x, projected[7].y, dividerStrokeWidth, '3,3'));
     
     // LAYER 2 (MIDDLE): All internal vertical and horizontal dividers
     const dividerLayerLines: string[] = [];
     
     // Front-back center divider (vertical plane dividing left/right compartments)
-    // Front edge: stops 1px short of front rail to avoid occlusion
     const frontBackDividerFrontBottom = { x: 0, y: -d, z: carcassBaseZ };
     const frontBackDividerFrontTop = { x: 0, y: -d, z: carcassTopZ };
     const frontBackDividerBackBottom = { x: 0, y: d, z: carcassBaseZ };
@@ -451,22 +434,21 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
     const frontBackDividerBackBottomProj = isometricProject(frontBackDividerBackBottom.x, frontBackDividerBackBottom.y, frontBackDividerBackBottom.z);
     const frontBackDividerBackTopProj = isometricProject(frontBackDividerBackTop.x, frontBackDividerBackTop.y, frontBackDividerBackTop.z);
     
-    // Front edge: stop 1px short of front rail (y = -d) to avoid breaking front rail continuity
-    // Calculate 1px offset in isometric space (approximate)
+    // Front edge: stop 1px short of front rail to avoid breaking front rail continuity
     const frontBackDividerFrontTopOffset = {
       x: frontBackDividerFrontTopProj.x,
-      y: frontBackDividerFrontTopProj.y - 1 // Stop 1px short of front rail
+      y: frontBackDividerFrontTopProj.y - 1 // Stop 1px short in screen space
     };
     
     dividerLayerLines.push(svgLine(
       centerX + frontBackDividerFrontBottomProj.x, centerY + frontBackDividerFrontBottomProj.y,
       centerX + frontBackDividerFrontTopOffset.x, centerY + frontBackDividerFrontTopOffset.y,
-      dividerStrokeWidth // Standard weight, stops short of front rail
+      dividerStrokeWidth
     ));
     dividerLayerLines.push(svgLine(
       centerX + frontBackDividerBackBottomProj.x, centerY + frontBackDividerBackBottomProj.y,
       centerX + frontBackDividerBackTopProj.x, centerY + frontBackDividerBackTopProj.y,
-      dividerStrokeWidth // Standard weight
+      dividerStrokeWidth
     ));
     
     // Left-right center divider (vertical plane dividing front/back compartments)
@@ -480,78 +462,33 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
     const leftRightDividerRightBottomProj = isometricProject(leftRightDividerRightBottom.x, leftRightDividerRightBottom.y, leftRightDividerRightBottom.z);
     const leftRightDividerRightTopProj = isometricProject(leftRightDividerRightTop.x, leftRightDividerRightTop.y, leftRightDividerRightTop.z);
     
-    // Left edge: stop 1px short of front rail (x = -w, y = -d) if it would intersect
-    // Right edge: stop 1px short of front rail (x = w, y = -d) if it would intersect
-    // For vertical dividers at x = ±w, they align with corner posts, so no offset needed
-    // But we need to check if they meet front rails at top
     dividerLayerLines.push(svgLine(
       centerX + leftRightDividerLeftBottomProj.x, centerY + leftRightDividerLeftBottomProj.y,
       centerX + leftRightDividerLeftTopProj.x, centerY + leftRightDividerLeftTopProj.y,
-      dividerStrokeWidth // Standard weight
+      dividerStrokeWidth
     ));
     dividerLayerLines.push(svgLine(
       centerX + leftRightDividerRightBottomProj.x, centerY + leftRightDividerRightBottomProj.y,
       centerX + leftRightDividerRightTopProj.x, centerY + leftRightDividerRightTopProj.y,
-      dividerStrokeWidth // Standard weight
+      dividerStrokeWidth
     ));
     
     // LAYER 3 (TOP): Front-most rectangle (front rails and front corner posts, thicker strokes)
     const frontLayerLines: string[] = [];
     
-    // Front corner posts (thicker, drawn last)
-    const frontLeftBottom = { x: -w, y: -d, z: carcassBaseZ };
-    const frontLeftTop = { x: -w, y: -d, z: carcassTopZ };
-    const frontRightBottom = { x: w, y: -d, z: carcassBaseZ };
-    const frontRightTop = { x: w, y: -d, z: carcassTopZ };
-    
-    const frontLeftBottomProj = isometricProject(frontLeftBottom.x, frontLeftBottom.y, frontLeftBottom.z);
-    const frontLeftTopProj = isometricProject(frontLeftTop.x, frontLeftTop.y, frontLeftTop.z);
-    const frontRightBottomProj = isometricProject(frontRightBottom.x, frontRightBottom.y, frontRightBottom.z);
-    const frontRightTopProj = isometricProject(frontRightTop.x, frontRightTop.y, frontRightTop.z);
-    
-    frontLayerLines.push(svgLine(
-      centerX + frontLeftBottomProj.x, centerY + frontLeftBottomProj.y,
-      centerX + frontLeftTopProj.x, centerY + frontLeftTopProj.y,
-      frontFaceStrokeWidth // Thicker for visual hierarchy
-    ));
-    frontLayerLines.push(svgLine(
-      centerX + frontRightBottomProj.x, centerY + frontRightBottomProj.y,
-      centerX + frontRightTopProj.x, centerY + frontRightTopProj.y,
-      frontFaceStrokeWidth // Thicker for visual hierarchy
-    ));
-    
-    // Front bottom rail (thicker)
-    frontLayerLines.push(svgLine(
-      centerX + frontLeftBottomProj.x, centerY + frontLeftBottomProj.y,
-      centerX + frontRightBottomProj.x, centerY + frontRightBottomProj.y,
-      frontFaceStrokeWidth // Thicker for visual hierarchy
-    ));
-    
-    // Front top rail (thicker, continuous and unbroken)
-    const topRailFrontLeft = { x: -w, y: -d, z: carcassTopZ };
-    const topRailFrontRight = { x: w, y: -d, z: carcassTopZ };
-    const topRailFrontLeftProj = isometricProject(topRailFrontLeft.x, topRailFrontLeft.y, topRailFrontLeft.z);
-    const topRailFrontRightProj = isometricProject(topRailFrontRight.x, topRailFrontRight.y, topRailFrontRight.z);
-    
-    frontLayerLines.push(svgLine(
-      centerX + topRailFrontLeftProj.x, centerY + topRailFrontLeftProj.y,
-      centerX + topRailFrontRightProj.x, centerY + topRailFrontRightProj.y,
-      frontFaceStrokeWidth // Thicker for visual hierarchy
-    ));
-    
-    // Right side top rail (visible, thicker) - reuse topRailBackRightProj from back layer
-    frontLayerLines.push(svgLine(
-      centerX + topRailFrontRightProj.x, centerY + topRailFrontRightProj.y,
-      centerX + topRailBackRightProj.x, centerY + topRailBackRightProj.y,
-      frontFaceStrokeWidth // Thicker for visual hierarchy
-    ));
-    
-    // Left side top rail (visible, thicker)
-    frontLayerLines.push(svgLine(
-      centerX + topRailBackLeftProj.x, centerY + topRailBackLeftProj.y,
-      centerX + topRailFrontLeftProj.x, centerY + topRailFrontLeftProj.y,
-      frontFaceStrokeWidth // Thicker for visual hierarchy
-    ));
+    // Front face elements with thicker strokes (using exact coordinates from drawIsometricBox)
+    // Front bottom rail
+    frontLayerLines.push(svgLine(projected[0].x, projected[0].y, projected[1].x, projected[1].y, frontFaceStrokeWidth));
+    // Front top rail
+    frontLayerLines.push(svgLine(projected[4].x, projected[4].y, projected[5].x, projected[5].y, frontFaceStrokeWidth));
+    // Right side top rail
+    frontLayerLines.push(svgLine(projected[5].x, projected[5].y, projected[6].x, projected[6].y, frontFaceStrokeWidth));
+    // Left side top rail
+    frontLayerLines.push(svgLine(projected[7].x, projected[7].y, projected[4].x, projected[4].y, frontFaceStrokeWidth));
+    // Front-left vertical
+    frontLayerLines.push(svgLine(projected[0].x, projected[0].y, projected[4].x, projected[4].y, frontFaceStrokeWidth));
+    // Front-right vertical
+    frontLayerLines.push(svgLine(projected[1].x, projected[1].y, projected[5].x, projected[5].y, frontFaceStrokeWidth));
     
     // Combine layers in correct order: Back (bottom) → Dividers (middle) → Front (top)
     const lines = [...backLayerLines, ...dividerLayerLines, ...frontLayerLines];
