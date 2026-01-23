@@ -403,13 +403,14 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
     const D2 = dims.D / 2;
     
     // Line Weight Hierarchy (critical):
-    // THICK (2.5px): External outline/silhouette of entire piece
-    // MEDIUM (1.8px): Major internal divisions (dividers, shelves)
-    // THIN (0.8px): Minor details
-    // DASHED THIN (0.8px): Hidden edges only
-    const thickStroke = 2.5;   // External outline/silhouette
-    const mediumStroke = 1.8;   // Major internal divisions
-    const thinStroke = 0.8;     // Minor details and hidden edges
+    // Line Weight Hierarchy (critical):
+    // THICK (2.75px): External outline/silhouette of entire piece (top, bottom, sides, front face edges)
+    // MEDIUM (1.5px): Major internal divisions (vertical partitions/dividers)
+    // THIN (0.75px): Internal shelf edges
+    // DASHED THIN (0.75px): Hidden edges only (back corners, rear shelf edges)
+    const thickStroke = 2.75;   // External outline/silhouette
+    const mediumStroke = 1.5;   // Major internal divisions (dividers)
+    const thinStroke = 0.75;    // Internal shelf edges and minor details
     
     // ============================================================
     // 2) BUILD IN EXACT ORDER: Plinth → Carcass → Shelf → Dividers
@@ -495,93 +496,81 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
       return { x: centerX + p.x, y: centerY + p.y };
     });
     
-    // Outer bottom rails (4 edges) - THICK for external outline
-    allLines.push(svgLine(carcassProjected[0].x, carcassProjected[0].y, carcassProjected[1].x, carcassProjected[1].y, thickStroke)); // Front
-    allLines.push(svgLine(carcassProjected[1].x, carcassProjected[1].y, carcassProjected[2].x, carcassProjected[2].y, thickStroke)); // Right
+    // Outer carcass frame - THICK for external outline (ONE line per edge, no doubling)
+    // Bottom rails (4 edges)
+    allLines.push(svgLine(carcassProjected[0].x, carcassProjected[0].y, carcassProjected[1].x, carcassProjected[1].y, thickStroke)); // Front (THICK)
+    allLines.push(svgLine(carcassProjected[1].x, carcassProjected[1].y, carcassProjected[2].x, carcassProjected[2].y, thickStroke)); // Right (THICK)
     // Back bottom rail: DASHED THIN (hidden edge)
     allLines.push(svgLine(carcassProjected[2].x, carcassProjected[2].y, carcassProjected[3].x, carcassProjected[3].y, thinStroke, '3,3')); // Back (dashed)
-    allLines.push(svgLine(carcassProjected[3].x, carcassProjected[3].y, carcassProjected[0].x, carcassProjected[0].y, thickStroke)); // Left
+    allLines.push(svgLine(carcassProjected[3].x, carcassProjected[3].y, carcassProjected[0].x, carcassProjected[0].y, thickStroke)); // Left (THICK)
     
-    // Outer top rails (4 edges) - THICK for external outline
-    allLines.push(svgLine(carcassProjected[4].x, carcassProjected[4].y, carcassProjected[5].x, carcassProjected[5].y, thickStroke)); // Front
-    allLines.push(svgLine(carcassProjected[5].x, carcassProjected[5].y, carcassProjected[6].x, carcassProjected[6].y, thickStroke)); // Right
+    // Top rails (4 edges) - THICK for external outline (ONE line, no doubling)
+    allLines.push(svgLine(carcassProjected[4].x, carcassProjected[4].y, carcassProjected[5].x, carcassProjected[5].y, thickStroke)); // Front (THICK)
+    allLines.push(svgLine(carcassProjected[5].x, carcassProjected[5].y, carcassProjected[6].x, carcassProjected[6].y, thickStroke)); // Right (THICK)
     // Back top rail: DASHED THIN (hidden edge)
     allLines.push(svgLine(carcassProjected[6].x, carcassProjected[6].y, carcassProjected[7].x, carcassProjected[7].y, thinStroke, '3,3')); // Back (dashed)
-    allLines.push(svgLine(carcassProjected[7].x, carcassProjected[7].y, carcassProjected[4].x, carcassProjected[4].y, thickStroke)); // Left
+    allLines.push(svgLine(carcassProjected[7].x, carcassProjected[7].y, carcassProjected[4].x, carcassProjected[4].y, thickStroke)); // Left (THICK)
     
     // Vertical corner posts (4 edges) - THICK for external outline
-    allLines.push(svgLine(carcassProjected[0].x, carcassProjected[0].y, carcassProjected[4].x, carcassProjected[4].y, thickStroke)); // Front-left
-    allLines.push(svgLine(carcassProjected[1].x, carcassProjected[1].y, carcassProjected[5].x, carcassProjected[5].y, thickStroke)); // Front-right
+    allLines.push(svgLine(carcassProjected[0].x, carcassProjected[0].y, carcassProjected[4].x, carcassProjected[4].y, thickStroke)); // Front-left (THICK)
+    allLines.push(svgLine(carcassProjected[1].x, carcassProjected[1].y, carcassProjected[5].x, carcassProjected[5].y, thickStroke)); // Front-right (THICK)
     // Back verticals: DASHED THIN (hidden edges)
     allLines.push(svgLine(carcassProjected[2].x, carcassProjected[2].y, carcassProjected[6].x, carcassProjected[6].y, thinStroke, '3,3')); // Back-right (dashed)
     allLines.push(svgLine(carcassProjected[3].x, carcassProjected[3].y, carcassProjected[7].x, carcassProjected[7].y, thinStroke, '3,3')); // Back-left (dashed)
     
-    // Inner front frame (wall thickness) - THIN for minor detail
-    allLines.push(svgLine(innerFrontProjected[0].x, innerFrontProjected[0].y, innerFrontProjected[1].x, innerFrontProjected[1].y, thinStroke)); // Inner front bottom rail
-    allLines.push(svgLine(innerFrontProjected[2].x, innerFrontProjected[2].y, innerFrontProjected[3].x, innerFrontProjected[3].y, thinStroke)); // Inner front top rail
-    allLines.push(svgLine(innerFrontProjected[0].x, innerFrontProjected[0].y, innerFrontProjected[2].x, innerFrontProjected[2].y, thinStroke)); // Inner front left vertical
-    allLines.push(svgLine(innerFrontProjected[1].x, innerFrontProjected[1].y, innerFrontProjected[3].x, innerFrontProjected[3].y, thinStroke)); // Inner front right vertical
-    
-    // Shortened horizontal return edges (wall thickness indicators) - THIN
-    const returnShortenFactor = 0.3;
-    const bottomLeftReturnEnd = {
-      x: carcassProjected[0].x + (innerFrontProjected[0].x - carcassProjected[0].x) * returnShortenFactor,
-      y: carcassProjected[0].y + (innerFrontProjected[0].y - carcassProjected[0].y) * returnShortenFactor
-    };
-    const bottomRightReturnEnd = {
-      x: carcassProjected[1].x + (innerFrontProjected[1].x - carcassProjected[1].x) * returnShortenFactor,
-      y: carcassProjected[1].y + (innerFrontProjected[1].y - carcassProjected[1].y) * returnShortenFactor
-    };
-    const topLeftReturnEnd = {
-      x: carcassProjected[4].x + (innerFrontProjected[2].x - carcassProjected[4].x) * returnShortenFactor,
-      y: carcassProjected[4].y + (innerFrontProjected[2].y - carcassProjected[4].y) * returnShortenFactor
-    };
-    const topRightReturnEnd = {
-      x: carcassProjected[5].x + (innerFrontProjected[3].x - carcassProjected[5].x) * returnShortenFactor,
-      y: carcassProjected[5].y + (innerFrontProjected[3].y - carcassProjected[5].y) * returnShortenFactor
-    };
-    
-    allLines.push(svgLine(carcassProjected[0].x, carcassProjected[0].y, bottomLeftReturnEnd.x, bottomLeftReturnEnd.y, thinStroke)); // Bottom-left return
-    allLines.push(svgLine(carcassProjected[1].x, carcassProjected[1].y, bottomRightReturnEnd.x, bottomRightReturnEnd.y, thinStroke)); // Bottom-right return
-    allLines.push(svgLine(carcassProjected[4].x, carcassProjected[4].y, topLeftReturnEnd.x, topLeftReturnEnd.y, thinStroke)); // Top-left return
-    allLines.push(svgLine(carcassProjected[5].x, carcassProjected[5].y, topRightReturnEnd.x, topRightReturnEnd.y, thinStroke)); // Top-right return
+    // REMOVED: Inner front frame and return edges to eliminate double lines
+    // The outer carcass frame is sufficient - no need for inner frame that creates parallel lines
     
     // ============================================================
-    // STEP 3: INTERNAL SHELF (must terminate into inner carcass frame)
+    // STEP 3: INTERNAL SHELVES (show shelf thickness with proper isometric projection)
     // ============================================================
     const shelfZ = carcassBottomZ + dims.carcassH * 0.55;
+    const shelfThickness = dims.carcassH * 0.02; // 2% of carcass height for shelf thickness
     
-    // Shelf aligns with inner front frame (not outer frame)
-    // Shelf front edge terminates at inner front frame (y = -D2 + wallThickness)
-    // Shelf side edges terminate at inner side walls (x = ±W2 - wallThickness, but sides are at full width)
-    // Actually, shelf should span full width between side walls, but front edge at inner frame
-    const shelfCorners = [
-      { x: -W2, y: -D2 + wallThickness, z: shelfZ }, // Front-left (at inner front frame)
-      { x: W2, y: -D2 + wallThickness, z: shelfZ },  // Front-right (at inner front frame)
-      { x: W2, y: D2, z: shelfZ },                    // Back-right (at back wall)
-      { x: -W2, y: D2, z: shelfZ },                   // Back-left (at back wall)
+    // Shelf spans full width, front edge at front wall, back edge at back wall
+    // Show shelf as having thickness (top and bottom surfaces)
+    const shelfTopCorners = [
+      { x: -W2, y: -D2, z: shelfZ + shelfThickness }, // Front-left-top
+      { x: W2, y: -D2, z: shelfZ + shelfThickness },   // Front-right-top
+      { x: W2, y: D2, z: shelfZ + shelfThickness },    // Back-right-top
+      { x: -W2, y: D2, z: shelfZ + shelfThickness },   // Back-left-top
     ];
     
-    const shelfProjected = shelfCorners.map(c => {
+    const shelfBottomCorners = [
+      { x: -W2, y: -D2, z: shelfZ }, // Front-left-bottom
+      { x: W2, y: -D2, z: shelfZ },  // Front-right-bottom
+      { x: W2, y: D2, z: shelfZ },   // Back-right-bottom
+      { x: -W2, y: D2, z: shelfZ },  // Back-left-bottom
+    ];
+    
+    const shelfTopProjected = shelfTopCorners.map(c => {
       const p = isometricProject(c.x, c.y, c.z);
       return { x: centerX + p.x, y: centerY + p.y };
     });
     
-    // Shelf edges - MEDIUM for major internal division
-    // Front edge terminates at inner frame
-    allLines.push(svgLine(shelfProjected[0].x, shelfProjected[0].y, shelfProjected[1].x, shelfProjected[1].y, mediumStroke)); // Front
-    allLines.push(svgLine(shelfProjected[1].x, shelfProjected[1].y, shelfProjected[2].x, shelfProjected[2].y, mediumStroke)); // Right
+    const shelfBottomProjected = shelfBottomCorners.map(c => {
+      const p = isometricProject(c.x, c.y, c.z);
+      return { x: centerX + p.x, y: centerY + p.y };
+    });
+    
+    // Shelf top surface edges - THIN (internal shelf edges)
+    allLines.push(svgLine(shelfTopProjected[0].x, shelfTopProjected[0].y, shelfTopProjected[1].x, shelfTopProjected[1].y, thinStroke)); // Front (solid, visible)
+    allLines.push(svgLine(shelfTopProjected[1].x, shelfTopProjected[1].y, shelfTopProjected[2].x, shelfTopProjected[2].y, thinStroke)); // Right (solid, visible)
     // Back edge: DASHED THIN (hidden edge)
-    allLines.push(svgLine(shelfProjected[2].x, shelfProjected[2].y, shelfProjected[3].x, shelfProjected[3].y, thinStroke, '3,3')); // Back (dashed)
-    allLines.push(svgLine(shelfProjected[3].x, shelfProjected[3].y, shelfProjected[0].x, shelfProjected[0].y, mediumStroke)); // Left
+    allLines.push(svgLine(shelfTopProjected[2].x, shelfTopProjected[2].y, shelfTopProjected[3].x, shelfTopProjected[3].y, thinStroke, '3,3')); // Back (dashed)
+    allLines.push(svgLine(shelfTopProjected[3].x, shelfTopProjected[3].y, shelfTopProjected[0].x, shelfTopProjected[0].y, thinStroke)); // Left (solid, visible)
+    
+    // Shelf front vertical edge (showing thickness) - THIN
+    allLines.push(svgLine(shelfTopProjected[0].x, shelfTopProjected[0].y, shelfBottomProjected[0].x, shelfBottomProjected[0].y, thinStroke)); // Front-left vertical
+    allLines.push(svgLine(shelfTopProjected[1].x, shelfTopProjected[1].y, shelfBottomProjected[1].x, shelfBottomProjected[1].y, thinStroke)); // Front-right vertical
     
     // ============================================================
-    // STEP 4: INTERNAL DIVIDERS (must terminate into carcass rails)
+    // STEP 4: INTERNAL DIVIDERS (vertical partitions - clearly read as front-to-back)
     // ============================================================
-    // Divider 1: Front-back divider at x = 0 (center width)
-    // Front edge terminates at inner front frame (y = -D2 + wallThickness)
-    const divider1FrontBottom = { x: 0, y: -D2 + wallThickness, z: carcassBottomZ };
-    const divider1FrontTop = { x: 0, y: -D2 + wallThickness, z: carcassTopZ };
+    // Divider 1: Front-back divider at x = 0 (center width) - creates left/right sections
+    // Front edge terminates at front wall (y = -D2)
+    const divider1FrontBottom = { x: 0, y: -D2, z: carcassBottomZ };
+    const divider1FrontTop = { x: 0, y: -D2, z: carcassTopZ };
     const divider1BackBottom = { x: 0, y: D2, z: carcassBottomZ };
     const divider1BackTop = { x: 0, y: D2, z: carcassTopZ };
     
@@ -591,7 +580,7 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
     const divider1BackTopProj = isometricProject(divider1BackTop.x, divider1BackTop.y, divider1BackTop.z);
     
     // Divider 1: Front-back divider - MEDIUM for major internal division
-    // Front edge: solid (terminates at inner front frame, clearly reads as vertical partition)
+    // Front edge: SOLID (visible, clearly reads as vertical partition)
     allLines.push(svgLine(
       centerX + divider1FrontBottomProj.x, centerY + divider1FrontBottomProj.y,
       centerX + divider1FrontTopProj.x, centerY + divider1FrontTopProj.y,
@@ -604,29 +593,107 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
       thinStroke, '3,3'
     ));
     
-    // Divider 2: Left-right divider at y = 0 (center depth) - creates compartments
-    const divider2LeftBottom = { x: -W2, y: 0, z: carcassBottomZ };
-    const divider2LeftTop = { x: -W2, y: 0, z: carcassTopZ };
-    const divider2RightBottom = { x: W2, y: 0, z: carcassBottomZ };
-    const divider2RightTop = { x: W2, y: 0, z: carcassTopZ };
+    // Divider 2: Left-right divider at x = -W2/3 (creates left cabinet section)
+    // This creates: Left cabinet | Middle open | Right cabinet
+    const divider2X = -W2 / 3; // Position for left cabinet divider
+    const divider2LeftBottom = { x: divider2X, y: -D2, z: carcassBottomZ };
+    const divider2LeftTop = { x: divider2X, y: -D2, z: carcassTopZ };
+    const divider2RightBottom = { x: divider2X, y: D2, z: carcassBottomZ };
+    const divider2RightTop = { x: divider2X, y: D2, z: carcassTopZ };
     
     const divider2LeftBottomProj = isometricProject(divider2LeftBottom.x, divider2LeftBottom.y, divider2LeftBottom.z);
     const divider2LeftTopProj = isometricProject(divider2LeftTop.x, divider2LeftTop.y, divider2LeftTop.z);
     const divider2RightBottomProj = isometricProject(divider2RightBottom.x, divider2RightBottom.y, divider2RightBottom.z);
     const divider2RightTopProj = isometricProject(divider2RightTop.x, divider2RightTop.y, divider2RightTop.z);
     
-    // Divider 2: Left-right divider - MEDIUM for major internal division
-    // Clearly reads as vertical partition from front to back
+    // Divider 2: Left cabinet divider - MEDIUM for major internal division
+    // Front edge: SOLID (visible, clearly reads as vertical partition)
     allLines.push(svgLine(
       centerX + divider2LeftBottomProj.x, centerY + divider2LeftBottomProj.y,
       centerX + divider2LeftTopProj.x, centerY + divider2LeftTopProj.y,
       mediumStroke
     ));
+    // Back edge: DASHED THIN (hidden edge)
     allLines.push(svgLine(
       centerX + divider2RightBottomProj.x, centerY + divider2RightBottomProj.y,
       centerX + divider2RightTopProj.x, centerY + divider2RightTopProj.y,
+      thinStroke, '3,3'
+    ));
+    
+    // Divider 3: Right cabinet divider at x = W2/3 (creates right cabinet section)
+    const divider3X = W2 / 3;
+    const divider3LeftBottom = { x: divider3X, y: -D2, z: carcassBottomZ };
+    const divider3LeftTop = { x: divider3X, y: -D2, z: carcassTopZ };
+    const divider3RightBottom = { x: divider3X, y: D2, z: carcassBottomZ };
+    const divider3RightTop = { x: divider3X, y: D2, z: carcassTopZ };
+    
+    const divider3LeftBottomProj = isometricProject(divider3LeftBottom.x, divider3LeftBottom.y, divider3LeftBottom.z);
+    const divider3LeftTopProj = isometricProject(divider3LeftTop.x, divider3LeftTop.y, divider3LeftTop.z);
+    const divider3RightBottomProj = isometricProject(divider3RightBottom.x, divider3RightBottom.y, divider3RightBottom.z);
+    const divider3RightTopProj = isometricProject(divider3RightTop.x, divider3RightTop.y, divider3RightTop.z);
+    
+    // Divider 3: Right cabinet divider - MEDIUM for major internal division
+    // Front edge: SOLID (visible, clearly reads as vertical partition)
+    allLines.push(svgLine(
+      centerX + divider3LeftBottomProj.x, centerY + divider3LeftBottomProj.y,
+      centerX + divider3LeftTopProj.x, centerY + divider3LeftTopProj.y,
       mediumStroke
     ));
+    // Back edge: DASHED THIN (hidden edge)
+    allLines.push(svgLine(
+      centerX + divider3RightBottomProj.x, centerY + divider3RightBottomProj.y,
+      centerX + divider3RightTopProj.x, centerY + divider3RightTopProj.y,
+      thinStroke, '3,3'
+    ));
+    
+    // ============================================================
+    // STEP 5: CABINET DOOR PANELS (show doors on left and right sections)
+    // ============================================================
+    // Left cabinet door panel (rectangular panel on front face)
+    const leftDoorTop = carcassTopZ - dims.carcassH * 0.1; // Door top slightly below carcass top
+    const leftDoorBottom = carcassBottomZ + dims.carcassH * 0.1; // Door bottom slightly above carcass bottom
+    const leftDoorLeft = -W2 + dims.W * 0.05; // Inset from left edge
+    const leftDoorRight = divider2X - dims.W * 0.05; // Inset from divider
+    
+    const leftDoorCorners = [
+      { x: leftDoorLeft, y: -D2, z: leftDoorBottom },
+      { x: leftDoorRight, y: -D2, z: leftDoorBottom },
+      { x: leftDoorRight, y: -D2, z: leftDoorTop },
+      { x: leftDoorLeft, y: -D2, z: leftDoorTop },
+    ];
+    
+    const leftDoorProjected = leftDoorCorners.map(c => {
+      const p = isometricProject(c.x, c.y, c.z);
+      return { x: centerX + p.x, y: centerY + p.y };
+    });
+    
+    // Left door panel outline - THIN (door detail)
+    allLines.push(svgLine(leftDoorProjected[0].x, leftDoorProjected[0].y, leftDoorProjected[1].x, leftDoorProjected[1].y, thinStroke)); // Bottom
+    allLines.push(svgLine(leftDoorProjected[1].x, leftDoorProjected[1].y, leftDoorProjected[2].x, leftDoorProjected[2].y, thinStroke)); // Right
+    allLines.push(svgLine(leftDoorProjected[2].x, leftDoorProjected[2].y, leftDoorProjected[3].x, leftDoorProjected[3].y, thinStroke)); // Top
+    allLines.push(svgLine(leftDoorProjected[3].x, leftDoorProjected[3].y, leftDoorProjected[0].x, leftDoorProjected[0].y, thinStroke)); // Left
+    
+    // Right cabinet door panel
+    const rightDoorLeft = divider3X + dims.W * 0.05; // Inset from divider
+    const rightDoorRight = W2 - dims.W * 0.05; // Inset from right edge
+    
+    const rightDoorCorners = [
+      { x: rightDoorLeft, y: -D2, z: leftDoorBottom },
+      { x: rightDoorRight, y: -D2, z: leftDoorBottom },
+      { x: rightDoorRight, y: -D2, z: leftDoorTop },
+      { x: rightDoorLeft, y: -D2, z: leftDoorTop },
+    ];
+    
+    const rightDoorProjected = rightDoorCorners.map(c => {
+      const p = isometricProject(c.x, c.y, c.z);
+      return { x: centerX + p.x, y: centerY + p.y };
+    });
+    
+    // Right door panel outline - THIN (door detail)
+    allLines.push(svgLine(rightDoorProjected[0].x, rightDoorProjected[0].y, rightDoorProjected[1].x, rightDoorProjected[1].y, thinStroke)); // Bottom
+    allLines.push(svgLine(rightDoorProjected[1].x, rightDoorProjected[1].y, rightDoorProjected[2].x, rightDoorProjected[2].y, thinStroke)); // Right
+    allLines.push(svgLine(rightDoorProjected[2].x, rightDoorProjected[2].y, rightDoorProjected[3].x, rightDoorProjected[3].y, thinStroke)); // Top
+    allLines.push(svgLine(rightDoorProjected[3].x, rightDoorProjected[3].y, rightDoorProjected[0].x, rightDoorProjected[0].y, thinStroke)); // Left
     
     // ============================================================
     // 7) VALIDATION INVARIANTS
@@ -635,6 +702,7 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
     const allVerticalEndpoints = [
       divider1FrontBottom, divider1FrontTop, divider1BackBottom, divider1BackTop,
       divider2LeftBottom, divider2LeftTop, divider2RightBottom, divider2RightTop,
+      divider3LeftBottom, divider3LeftTop, divider3RightBottom, divider3RightTop,
     ];
     
     for (const endpoint of allVerticalEndpoints) {
