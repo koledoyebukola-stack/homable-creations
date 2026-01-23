@@ -866,6 +866,21 @@ function generateChairFrame(width: number, depth: number, height: number, catego
   seatRailLines.push(svgLine(seatProjected[2].x, seatProjected[2].y, seatProjected[6].x, seatProjected[6].y, 2.5, '3,3'));
   seatRailLines.push(svgLine(seatProjected[3].x, seatProjected[3].y, seatProjected[7].x, seatProjected[7].y, 2.5, '3,3'));
   
+  // Explicit rear seat rail at seat plane (seatFrameZ) - mandatory structural termination point
+  // This rail connects the two rear vertical posts and anchors the backrest structure
+  // Coordinates: x ∈ [-seatW, seatW], y = seatD, z = seatFrameZ
+  // This is the same as the bottom back rail, but explicitly defined for backrest anchoring
+  const rearSeatRailLeft = { x: -seatW, y: seatD, z: seatFrameZ };
+  const rearSeatRailRight = { x: seatW, y: seatD, z: seatFrameZ };
+  const rearSeatRailLeftProj = isometricProject(rearSeatRailLeft.x, rearSeatRailLeft.y, rearSeatRailLeft.z);
+  const rearSeatRailRightProj = isometricProject(rearSeatRailRight.x, rearSeatRailRight.y, rearSeatRailRight.z);
+  const rearSeatRailHidden = isHiddenEdge(rearSeatRailLeft, rearSeatRailRight);
+  seatRailLines.push(svgLine(
+    centerX + rearSeatRailLeftProj.x, centerY + rearSeatRailLeftProj.y,
+    centerX + rearSeatRailRightProj.x, centerY + rearSeatRailRightProj.y,
+    2.5, rearSeatRailHidden ? '3,3' : undefined
+  ));
+  
   // Left Rail (left edge) - 2.5px solid (left is hidden)
   const leftRailBottom = isHiddenEdge(seatCorners[0], seatCorners[3]) ? '3,3' : undefined;
   const leftRailTop = isHiddenEdge(seatCorners[4], seatCorners[7]) ? '3,3' : undefined;
@@ -939,15 +954,16 @@ function generateChairFrame(width: number, depth: number, height: number, catego
   }
   
   // Component 3: Back Support Frame - Vertical rectangular frame
-  // Anchored exactly to rear edge of Seat Support Frame (Back Rail), extends to totalHeight
-  const backFrameZ = seatFrameTopZ; // Starts at top of seat rails
+  // Anchored exactly to rear seat rail at seat plane (seatFrameZ), extends to totalHeight
+  // The backrest posts must terminate at the rear seat rail (seatFrameZ) to form a closed structural loop
+  const backFrameZ = seatFrameZ; // Starts at seat plane (authoritative connection level)
   const backFrameTopZ = height; // Extends to total height
   
-  // Back frame shares corner coordinates with back rail (rear edge of seat frame)
-  // Back rail corners: seatCorners[2] (back-right) and seatCorners[3] (back-left)
+  // Back frame shares corner coordinates with rear seat rail (rear edge of seat frame at seat plane)
+  // Rear seat rail corners: (-seatW, seatD, seatFrameZ) and (seatW, seatD, seatFrameZ)
   const backFrameCorners = [
-    { x: -seatW, y: seatD, z: backFrameZ },        // Back-left-bottom (shared with back rail)
-    { x: seatW, y: seatD, z: backFrameZ },         // Back-right-bottom (shared with back rail)
+    { x: -seatW, y: seatD, z: backFrameZ },        // Back-left-bottom (anchored to rear seat rail)
+    { x: seatW, y: seatD, z: backFrameZ },         // Back-right-bottom (anchored to rear seat rail)
     { x: -seatW, y: seatD, z: backFrameTopZ },     // Back-left-top
     { x: seatW, y: seatD, z: backFrameTopZ },      // Back-right-top
   ];
