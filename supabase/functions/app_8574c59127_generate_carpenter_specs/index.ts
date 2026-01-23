@@ -491,14 +491,14 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
       return { x: centerX + p.x, y: centerY + p.y };
     });
     
-    // Outer bottom rails (4 edges)
+    // Outer bottom rails (4 edges) - DOMINANT opening frame
     allLines.push(svgLine(carcassProjected[0].x, carcassProjected[0].y, carcassProjected[1].x, carcassProjected[1].y, frontFaceStrokeWidth)); // Front
     allLines.push(svgLine(carcassProjected[1].x, carcassProjected[1].y, carcassProjected[2].x, carcassProjected[2].y, frontFaceStrokeWidth)); // Right
     // Back bottom rail: always dashed (back plane)
     allLines.push(svgLine(carcassProjected[2].x, carcassProjected[2].y, carcassProjected[3].x, carcassProjected[3].y, frontFaceStrokeWidth, '3,3')); // Back (dashed)
     allLines.push(svgLine(carcassProjected[3].x, carcassProjected[3].y, carcassProjected[0].x, carcassProjected[0].y, frontFaceStrokeWidth)); // Left
     
-    // Outer top rails (4 edges)
+    // Outer top rails (4 edges) - DOMINANT opening frame
     allLines.push(svgLine(carcassProjected[4].x, carcassProjected[4].y, carcassProjected[5].x, carcassProjected[5].y, frontFaceStrokeWidth)); // Front
     allLines.push(svgLine(carcassProjected[5].x, carcassProjected[5].y, carcassProjected[6].x, carcassProjected[6].y, frontFaceStrokeWidth)); // Right
     // Back top rail: always dashed (back plane)
@@ -512,25 +512,41 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
     allLines.push(svgLine(carcassProjected[2].x, carcassProjected[2].y, carcassProjected[6].x, carcassProjected[6].y, frontFaceStrokeWidth, '3,3')); // Back-right (dashed)
     allLines.push(svgLine(carcassProjected[3].x, carcassProjected[3].y, carcassProjected[7].x, carcassProjected[7].y, frontFaceStrokeWidth, '3,3')); // Back-left (dashed)
     
-    // Inner front frame (opening rectangle)
-    // Inner front bottom rail
-    allLines.push(svgLine(innerFrontProjected[0].x, innerFrontProjected[0].y, innerFrontProjected[1].x, innerFrontProjected[1].y, frontFaceStrokeWidth));
-    // Inner front top rail
-    allLines.push(svgLine(innerFrontProjected[2].x, innerFrontProjected[2].y, innerFrontProjected[3].x, innerFrontProjected[3].y, frontFaceStrokeWidth));
-    // Inner front left vertical
-    allLines.push(svgLine(innerFrontProjected[0].x, innerFrontProjected[0].y, innerFrontProjected[2].x, innerFrontProjected[2].y, frontFaceStrokeWidth));
-    // Inner front right vertical
-    allLines.push(svgLine(innerFrontProjected[1].x, innerFrontProjected[1].y, innerFrontProjected[3].x, innerFrontProjected[3].y, frontFaceStrokeWidth));
+    // Inner front frame (wall thickness only - SUBORDINATE, thinner stroke)
+    // Inner front bottom rail (thinner to read as wall thickness, not structure)
+    allLines.push(svgLine(innerFrontProjected[0].x, innerFrontProjected[0].y, innerFrontProjected[1].x, innerFrontProjected[1].y, dividerStrokeWidth));
+    // Inner front top rail (thinner to read as wall thickness, not structure)
+    allLines.push(svgLine(innerFrontProjected[2].x, innerFrontProjected[2].y, innerFrontProjected[3].x, innerFrontProjected[3].y, dividerStrokeWidth));
+    // Inner front left vertical (thinner to read as wall thickness, not structure)
+    allLines.push(svgLine(innerFrontProjected[0].x, innerFrontProjected[0].y, innerFrontProjected[2].x, innerFrontProjected[2].y, dividerStrokeWidth));
+    // Inner front right vertical (thinner to read as wall thickness, not structure)
+    allLines.push(svgLine(innerFrontProjected[1].x, innerFrontProjected[1].y, innerFrontProjected[3].x, innerFrontProjected[3].y, dividerStrokeWidth));
     
-    // Horizontal return edges connecting outer to inner frame (4 edges)
-    // Bottom-left return
-    allLines.push(svgLine(carcassProjected[0].x, carcassProjected[0].y, innerFrontProjected[0].x, innerFrontProjected[0].y, frontFaceStrokeWidth));
-    // Bottom-right return
-    allLines.push(svgLine(carcassProjected[1].x, carcassProjected[1].y, innerFrontProjected[1].x, innerFrontProjected[1].y, frontFaceStrokeWidth));
-    // Top-left return
-    allLines.push(svgLine(carcassProjected[4].x, carcassProjected[4].y, innerFrontProjected[2].x, innerFrontProjected[2].y, frontFaceStrokeWidth));
-    // Top-right return
-    allLines.push(svgLine(carcassProjected[5].x, carcassProjected[5].y, innerFrontProjected[3].x, innerFrontProjected[3].y, frontFaceStrokeWidth));
+    // Shortened horizontal return edges (read as thickness, not beams)
+    // Calculate shortened endpoints: only show ~30% of return edge length
+    const returnShortenFactor = 0.3;
+    const bottomLeftReturnEnd = {
+      x: carcassProjected[0].x + (innerFrontProjected[0].x - carcassProjected[0].x) * returnShortenFactor,
+      y: carcassProjected[0].y + (innerFrontProjected[0].y - carcassProjected[0].y) * returnShortenFactor
+    };
+    const bottomRightReturnEnd = {
+      x: carcassProjected[1].x + (innerFrontProjected[1].x - carcassProjected[1].x) * returnShortenFactor,
+      y: carcassProjected[1].y + (innerFrontProjected[1].y - carcassProjected[1].y) * returnShortenFactor
+    };
+    const topLeftReturnEnd = {
+      x: carcassProjected[4].x + (innerFrontProjected[2].x - carcassProjected[4].x) * returnShortenFactor,
+      y: carcassProjected[4].y + (innerFrontProjected[2].y - carcassProjected[4].y) * returnShortenFactor
+    };
+    const topRightReturnEnd = {
+      x: carcassProjected[5].x + (innerFrontProjected[3].x - carcassProjected[5].x) * returnShortenFactor,
+      y: carcassProjected[5].y + (innerFrontProjected[3].y - carcassProjected[5].y) * returnShortenFactor
+    };
+    
+    // Shortened return edges (thinner stroke, read as wall thickness)
+    allLines.push(svgLine(carcassProjected[0].x, carcassProjected[0].y, bottomLeftReturnEnd.x, bottomLeftReturnEnd.y, dividerStrokeWidth)); // Bottom-left return
+    allLines.push(svgLine(carcassProjected[1].x, carcassProjected[1].y, bottomRightReturnEnd.x, bottomRightReturnEnd.y, dividerStrokeWidth)); // Bottom-right return
+    allLines.push(svgLine(carcassProjected[4].x, carcassProjected[4].y, topLeftReturnEnd.x, topLeftReturnEnd.y, dividerStrokeWidth)); // Top-left return
+    allLines.push(svgLine(carcassProjected[5].x, carcassProjected[5].y, topRightReturnEnd.x, topRightReturnEnd.y, dividerStrokeWidth)); // Top-right return
     
     // ============================================================
     // STEP 3: INTERNAL SHELF (must terminate into inner carcass frame)
@@ -553,12 +569,13 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
       return { x: centerX + p.x, y: centerY + p.y };
     });
     
-    // Shelf edges (front and right solid, back always dashed)
-    allLines.push(svgLine(shelfProjected[0].x, shelfProjected[0].y, shelfProjected[1].x, shelfProjected[1].y, dividerStrokeWidth)); // Front (solid)
-    allLines.push(svgLine(shelfProjected[1].x, shelfProjected[1].y, shelfProjected[2].x, shelfProjected[2].y, dividerStrokeWidth)); // Right (solid)
+    // Shelf edges (visually subordinate - thinner stroke, back always dashed)
+    // Front edge terminates at inner frame (subordinate, not competing with outer frame)
+    allLines.push(svgLine(shelfProjected[0].x, shelfProjected[0].y, shelfProjected[1].x, shelfProjected[1].y, dividerStrokeWidth)); // Front (subordinate)
+    allLines.push(svgLine(shelfProjected[1].x, shelfProjected[1].y, shelfProjected[2].x, shelfProjected[2].y, dividerStrokeWidth)); // Right (subordinate)
     // Back edge: always dashed (back plane)
     allLines.push(svgLine(shelfProjected[2].x, shelfProjected[2].y, shelfProjected[3].x, shelfProjected[3].y, dividerStrokeWidth, '3,3')); // Back (dashed)
-    allLines.push(svgLine(shelfProjected[3].x, shelfProjected[3].y, shelfProjected[0].x, shelfProjected[0].y, dividerStrokeWidth)); // Left (solid)
+    allLines.push(svgLine(shelfProjected[3].x, shelfProjected[3].y, shelfProjected[0].x, shelfProjected[0].y, dividerStrokeWidth)); // Left (subordinate)
     
     // ============================================================
     // STEP 4: INTERNAL DIVIDERS (must terminate into carcass rails)
