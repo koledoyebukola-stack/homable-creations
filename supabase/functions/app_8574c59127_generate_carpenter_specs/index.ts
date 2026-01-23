@@ -395,7 +395,44 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
     // Carcass geometry: bottom shelf plane is at z = 0 (authoritative termination point)
     // All internal dividers must terminate at this plane, not extend below it
     const carcassBaseZ = 0; // Bottom shelf/carcass base Z value (derived from carcass geometry)
-    const carcassTopZ = h; // Top of carcass
+    const carcassTopZ = h; // Top of carcass (authoritative termination point for all verticals)
+    
+    // Explicit top carcass rails: complete rectangular loop at top carcass plane
+    // All vertical posts must terminate into these top rails
+    // Top rails share exact vertex coordinates with the verticals they receive
+    const topRailFrontLeft = { x: -w, y: -d, z: carcassTopZ };
+    const topRailFrontRight = { x: w, y: -d, z: carcassTopZ };
+    const topRailBackRight = { x: w, y: d, z: carcassTopZ };
+    const topRailBackLeft = { x: -w, y: d, z: carcassTopZ };
+    
+    const topRailFrontLeftProj = isometricProject(topRailFrontLeft.x, topRailFrontLeft.y, topRailFrontLeft.z);
+    const topRailFrontRightProj = isometricProject(topRailFrontRight.x, topRailFrontRight.y, topRailFrontRight.z);
+    const topRailBackRightProj = isometricProject(topRailBackRight.x, topRailBackRight.y, topRailBackRight.z);
+    const topRailBackLeftProj = isometricProject(topRailBackLeft.x, topRailBackLeft.y, topRailBackLeft.z);
+    
+    // Top rails: complete rectangular loop (all four sides)
+    // Front rail (visible)
+    lines.push(svgLine(
+      centerX + topRailFrontLeftProj.x, centerY + topRailFrontLeftProj.y,
+      centerX + topRailFrontRightProj.x, centerY + topRailFrontRightProj.y
+    ));
+    // Right side rail (visible)
+    lines.push(svgLine(
+      centerX + topRailFrontRightProj.x, centerY + topRailFrontRightProj.y,
+      centerX + topRailBackRightProj.x, centerY + topRailBackRightProj.y
+    ));
+    // Back rail (hidden - use dashed)
+    const topRailBackHidden = isHiddenEdge(topRailBackRight, topRailBackLeft);
+    lines.push(svgLine(
+      centerX + topRailBackRightProj.x, centerY + topRailBackRightProj.y,
+      centerX + topRailBackLeftProj.x, centerY + topRailBackLeftProj.y,
+      undefined, topRailBackHidden ? '3,3' : undefined
+    ));
+    // Left side rail (visible)
+    lines.push(svgLine(
+      centerX + topRailBackLeftProj.x, centerY + topRailBackLeftProj.y,
+      centerX + topRailFrontLeftProj.x, centerY + topRailFrontLeftProj.y
+    ));
     
     // Internal vertical dividers for sideboard compartments
     // These dividers terminate at the bottom carcass shelf (carcassBaseZ), not below it
@@ -426,10 +463,11 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
     
     // Left-right center divider (vertical plane dividing front/back compartments)
     // Vertical edges at left and right of divider plane (y = 0, center of depth)
+    // These terminate at top carcass rails (carcassTopZ), sharing exact coordinates
     const leftRightDividerLeftBottom = { x: -w, y: 0, z: carcassBaseZ }; // Left edge bottom at carcass base
-    const leftRightDividerLeftTop = { x: -w, y: 0, z: carcassTopZ };
+    const leftRightDividerLeftTop = { x: -w, y: 0, z: carcassTopZ }; // Left edge top at top rail
     const leftRightDividerRightBottom = { x: w, y: 0, z: carcassBaseZ }; // Right edge bottom at carcass base
-    const leftRightDividerRightTop = { x: w, y: 0, z: carcassTopZ };
+    const leftRightDividerRightTop = { x: w, y: 0, z: carcassTopZ }; // Right edge top at top rail
     
     const leftRightDividerLeftBottomProj = isometricProject(leftRightDividerLeftBottom.x, leftRightDividerLeftBottom.y, leftRightDividerLeftBottom.z);
     const leftRightDividerLeftTopProj = isometricProject(leftRightDividerLeftTop.x, leftRightDividerLeftTop.y, leftRightDividerLeftTop.z);
