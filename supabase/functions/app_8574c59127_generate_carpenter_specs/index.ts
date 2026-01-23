@@ -533,39 +533,28 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
         { x: middleSectionLeft, y: D2, z: shelfZ + shelfThickness },  // Back-left-top
       ];
       
-      // Shelf bottom surface corners (parallel to top, showing thickness)
-      const shelfBottomCorners = [
-        { x: middleSectionLeft, y: -D2, z: shelfZ }, // Front-left-bottom
-        { x: middleSectionRight, y: -D2, z: shelfZ }, // Front-right-bottom
-        { x: middleSectionRight, y: D2, z: shelfZ }, // Back-right-bottom
-        { x: middleSectionLeft, y: D2, z: shelfZ },  // Back-left-bottom
-      ];
-      
       const shelfTopProjected = shelfTopCorners.map(c => {
         const p = isometricProject(c.x, c.y, c.z);
         return { x: centerX + p.x, y: centerY + p.y };
       });
       
+      // Shelf top surface edges - THIN (shelf lines inside middle section)
+      allLines.push(svgLine(shelfTopProjected[0].x, shelfTopProjected[0].y, shelfTopProjected[1].x, shelfTopProjected[1].y, thinStroke)); // Front (solid, visible)
+      allLines.push(svgLine(shelfTopProjected[1].x, shelfTopProjected[1].y, shelfTopProjected[2].x, shelfTopProjected[2].y, thinStroke)); // Right (solid, visible)
+      // Back edge: DASHED THIN (hidden edge, uniform spacing)
+      allLines.push(svgLine(shelfTopProjected[2].x, shelfTopProjected[2].y, shelfTopProjected[3].x, shelfTopProjected[3].y, thinStroke, '4,2')); // Back (dashed)
+      allLines.push(svgLine(shelfTopProjected[3].x, shelfTopProjected[3].y, shelfTopProjected[0].x, shelfTopProjected[0].y, thinStroke)); // Left (solid, visible)
+      
+      // Shelf front vertical edges (showing thickness) - THIN
+      const shelfBottomCorners = [
+        { x: middleSectionLeft, y: -D2, z: shelfZ },
+        { x: middleSectionRight, y: -D2, z: shelfZ },
+      ];
       const shelfBottomProjected = shelfBottomCorners.map(c => {
         const p = isometricProject(c.x, c.y, c.z);
         return { x: centerX + p.x, y: centerY + p.y };
       });
       
-      // Shelf top surface edges - THIN (two parallel horizontal lines showing thickness)
-      allLines.push(svgLine(shelfTopProjected[0].x, shelfTopProjected[0].y, shelfTopProjected[1].x, shelfTopProjected[1].y, thinStroke)); // Front top (solid, visible)
-      allLines.push(svgLine(shelfTopProjected[1].x, shelfTopProjected[1].y, shelfTopProjected[2].x, shelfTopProjected[2].y, thinStroke)); // Right top (solid, visible)
-      // Back top edge: DASHED THIN (hidden edge)
-      allLines.push(svgLine(shelfTopProjected[2].x, shelfTopProjected[2].y, shelfTopProjected[3].x, shelfTopProjected[3].y, thinStroke, '4,2')); // Back top (dashed, uniform spacing)
-      allLines.push(svgLine(shelfTopProjected[3].x, shelfTopProjected[3].y, shelfTopProjected[0].x, shelfTopProjected[0].y, thinStroke)); // Left top (solid, visible)
-      
-      // Shelf bottom surface edges - THIN (parallel to top, showing consistent thickness)
-      allLines.push(svgLine(shelfBottomProjected[0].x, shelfBottomProjected[0].y, shelfBottomProjected[1].x, shelfBottomProjected[1].y, thinStroke)); // Front bottom (solid, visible)
-      allLines.push(svgLine(shelfBottomProjected[1].x, shelfBottomProjected[1].y, shelfBottomProjected[2].x, shelfBottomProjected[2].y, thinStroke)); // Right bottom (solid, visible)
-      // Back bottom edge: DASHED THIN (hidden edge)
-      allLines.push(svgLine(shelfBottomProjected[2].x, shelfBottomProjected[2].y, shelfBottomProjected[3].x, shelfBottomProjected[3].y, thinStroke, '4,2')); // Back bottom (dashed, uniform spacing)
-      allLines.push(svgLine(shelfBottomProjected[3].x, shelfBottomProjected[3].y, shelfBottomProjected[0].x, shelfBottomProjected[0].y, thinStroke)); // Left bottom (solid, visible)
-      
-      // Shelf front vertical edges (connecting top to bottom, showing thickness) - THIN
       allLines.push(svgLine(shelfTopProjected[0].x, shelfTopProjected[0].y, shelfBottomProjected[0].x, shelfBottomProjected[0].y, thinStroke)); // Front-left vertical
       allLines.push(svgLine(shelfTopProjected[1].x, shelfTopProjected[1].y, shelfBottomProjected[1].x, shelfBottomProjected[1].y, thinStroke)); // Front-right vertical
     }
@@ -681,11 +670,11 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
     allLines.push(svgLine(leftFrameProjected[2].x, leftFrameProjected[2].y, leftFrameProjected[3].x, leftFrameProjected[3].y, thinStroke)); // Top (horizontal)
     allLines.push(svgLine(leftFrameProjected[3].x, leftFrameProjected[3].y, leftFrameProjected[0].x, leftFrameProjected[0].y, thinStroke)); // Left (perfectly vertical)
     
-    // Left door hardware (circle at exact vertical center, 1/3 in from right edge) - THIN, smaller scale
+    // Left door hardware (circle at vertical center, 1/3 in from right edge) - THIN
     const leftHardwareX = leftDoorRight - (leftDoorRight - leftDoorLeft) / 3;
-    const leftHardwareZ = (leftDoorBottom + leftDoorTop) / 2; // Exact vertical center
+    const leftHardwareZ = (leftDoorBottom + leftDoorTop) / 2;
     const leftHardwareCenter = isometricProject(leftHardwareX, -D2, leftHardwareZ);
-    const hardwareRadius = dims.carcassH * 0.015; // Smaller circle for scale accuracy
+    const hardwareRadius = dims.carcassH * 0.02; // Small circle
     allLines.push(`<circle cx="${centerX + leftHardwareCenter.x}" cy="${centerY + leftHardwareCenter.y}" r="${hardwareRadius}" stroke="black" stroke-width="${thinStroke}" fill="none"/>`);
     
     // Right cabinet door panel (equal width to left door)
@@ -736,9 +725,9 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
     allLines.push(svgLine(rightFrameProjected[2].x, rightFrameProjected[2].y, rightFrameProjected[3].x, rightFrameProjected[3].y, thinStroke)); // Top (horizontal)
     allLines.push(svgLine(rightFrameProjected[3].x, rightFrameProjected[3].y, rightFrameProjected[0].x, rightFrameProjected[0].y, thinStroke)); // Left (perfectly vertical)
     
-    // Right door hardware (circle at exact vertical center, 1/3 in from left edge) - THIN, smaller scale
+    // Right door hardware (circle at vertical center, 1/3 in from left edge) - THIN
     const rightHardwareX = rightDoorLeft + (rightDoorRight - rightDoorLeft) / 3;
-    const rightHardwareZ = (rightDoorBottom + rightDoorTop) / 2; // Exact vertical center
+    const rightHardwareZ = (rightDoorBottom + rightDoorTop) / 2;
     const rightHardwareCenter = isometricProject(rightHardwareX, -D2, rightHardwareZ);
     allLines.push(`<circle cx="${centerX + rightHardwareCenter.x}" cy="${centerY + rightHardwareCenter.y}" r="${hardwareRadius}" stroke="black" stroke-width="${thinStroke}" fill="none"/>`);
     
