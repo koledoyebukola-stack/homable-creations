@@ -384,130 +384,241 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
   const centerY = svgHeight / 2 + 50;
   
   try {
-    const w = width / 2;
-    const d = depth / 2;
-    const h = height;
-    
-    console.log(`[generateBoxFrame] Calculated - w: ${w}, d: ${d}, h: ${h}`);
-    
-    // Carcass geometry: bottom shelf plane is at z = 0 (authoritative termination point)
-    const carcassBaseZ = 0;
-    const carcassTopZ = h;
-    
-    // Stroke weights: Front face rails are 0.5px thicker than internal dividers
-    const frontFaceStrokeWidth = 2.5; // Front face rails (thicker for visual hierarchy)
-    const dividerStrokeWidth = 2.0; // Internal dividers (standard weight)
-    
-    // Use drawIsometricBox to generate correct outer carcass geometry
-    // Then separate into layers and apply stroke weights
-    const corners = [
-      { x: -w, y: -d, z: 0 }, { x: w, y: -d, z: 0 }, { x: w, y: d, z: 0 }, { x: -w, y: d, z: 0 },
-      { x: -w, y: -d, z: h }, { x: w, y: -d, z: h }, { x: w, y: d, z: h }, { x: -w, y: d, z: h },
-    ];
-    const projected = corners.map(corner => {
-      const proj = isometricProject(corner.x, corner.y, corner.z);
-      return { x: centerX + proj.x, y: centerY + proj.y };
-    });
-    
-    // LAYER 1 (BOTTOM): Back rails and back verticals (dashed, drawn first)
-    const backLayerLines: string[] = [];
-    // Back-right vertical (dashed)
-    const backRightHidden = isHiddenEdge({ x: w, y: d, z: 0 }, { x: w, y: d, z: h });
-    backLayerLines.push(svgLine(projected[2].x, projected[2].y, projected[6].x, projected[6].y, dividerStrokeWidth, backRightHidden ? '3,3' : undefined));
-    // Back-left vertical (dashed)
-    const backLeftHidden = isHiddenEdge({ x: -w, y: d, z: 0 }, { x: -w, y: d, z: h });
-    backLayerLines.push(svgLine(projected[3].x, projected[3].y, projected[7].x, projected[7].y, dividerStrokeWidth, backLeftHidden ? '3,3' : undefined));
-    // Back top rail (dashed)
-    backLayerLines.push(svgLine(projected[6].x, projected[6].y, projected[7].x, projected[7].y, dividerStrokeWidth, '3,3'));
-    
-    // LAYER 2 (MIDDLE): All internal vertical and horizontal dividers
-    const dividerLayerLines: string[] = [];
-    
-    // Front-back center divider (vertical plane dividing left/right compartments)
-    const frontBackDividerFrontBottom = { x: 0, y: -d, z: carcassBaseZ };
-    const frontBackDividerFrontTop = { x: 0, y: -d, z: carcassTopZ };
-    const frontBackDividerBackBottom = { x: 0, y: d, z: carcassBaseZ };
-    const frontBackDividerBackTop = { x: 0, y: d, z: carcassTopZ };
-    
-    const frontBackDividerFrontBottomProj = isometricProject(frontBackDividerFrontBottom.x, frontBackDividerFrontBottom.y, frontBackDividerFrontBottom.z);
-    const frontBackDividerFrontTopProj = isometricProject(frontBackDividerFrontTop.x, frontBackDividerFrontTop.y, frontBackDividerFrontTop.z);
-    const frontBackDividerBackBottomProj = isometricProject(frontBackDividerBackBottom.x, frontBackDividerBackBottom.y, frontBackDividerBackBottom.z);
-    const frontBackDividerBackTopProj = isometricProject(frontBackDividerBackTop.x, frontBackDividerBackTop.y, frontBackDividerBackTop.z);
-    
-    // Front edge: stop 1px short of front rail to avoid breaking front rail continuity
-    const frontBackDividerFrontTopOffset = {
-      x: frontBackDividerFrontTopProj.x,
-      y: frontBackDividerFrontTopProj.y - 1 // Stop 1px short in screen space
+    // ============================================================
+    // 1) SINGLE AUTHORITATIVE COORDINATE SYSTEM
+    // ============================================================
+    const dims = {
+      W: width,           // Carcass width
+      D: depth,           // Carcass depth
+      plinthH: height * 0.08,  // Plinth height (8% of total height)
+      carcassH: height * 0.92, // Carcass height (92% of total height)
     };
     
-    dividerLayerLines.push(svgLine(
-      centerX + frontBackDividerFrontBottomProj.x, centerY + frontBackDividerFrontBottomProj.y,
-      centerX + frontBackDividerFrontTopOffset.x, centerY + frontBackDividerFrontTopOffset.y,
+    // Z coordinates (authoritative)
+    const carcassBottomZ = dims.plinthH;
+    const carcassTopZ = dims.plinthH + dims.carcassH;
+    
+    // Half-dimensions for coordinate calculations
+    const W2 = dims.W / 2;
+    const D2 = dims.D / 2;
+    
+    // Stroke weights
+    const frontFaceStrokeWidth = 2.5;
+    const dividerStrokeWidth = 2.0;
+    const plinthStrokeWidth = 2.0;
+    
+    // ============================================================
+    // 2) BUILD IN EXACT ORDER: Plinth → Carcass → Shelf → Dividers
+    // ============================================================
+    const allLines: string[] = [];
+    
+    // ============================================================
+    // STEP 1: PLINTH (separate box, no shared verticals)
+    // ============================================================
+    const plinthInset = dims.W * 0.05; // 5% inset for shadow gap
+    const plinthW2 = W2 - plinthInset;
+    const plinthD2 = D2 - plinthInset;
+    
+    const plinthCorners = [
+      { x: -plinthW2, y: -plinthD2, z: 0 },
+      { x: plinthW2, y: -plinthD2, z: 0 },
+      { x: plinthW2, y: plinthD2, z: 0 },
+      { x: -plinthW2, y: plinthD2, z: 0 },
+      { x: -plinthW2, y: -plinthD2, z: dims.plinthH },
+      { x: plinthW2, y: -plinthD2, z: dims.plinthH },
+      { x: plinthW2, y: plinthD2, z: dims.plinthH },
+      { x: -plinthW2, y: plinthD2, z: dims.plinthH },
+    ];
+    
+    const plinthProjected = plinthCorners.map(c => {
+      const p = isometricProject(c.x, c.y, c.z);
+      return { x: centerX + p.x, y: centerY + p.y };
+    });
+    
+    // Plinth bottom face (4 edges)
+    allLines.push(svgLine(plinthProjected[0].x, plinthProjected[0].y, plinthProjected[1].x, plinthProjected[1].y, plinthStrokeWidth)); // Front
+    allLines.push(svgLine(plinthProjected[1].x, plinthProjected[1].y, plinthProjected[2].x, plinthProjected[2].y, plinthStrokeWidth)); // Right
+    const plinthBackHidden = isHiddenEdge(plinthCorners[2], plinthCorners[3]);
+    allLines.push(svgLine(plinthProjected[2].x, plinthProjected[2].y, plinthProjected[3].x, plinthProjected[3].y, plinthStrokeWidth, plinthBackHidden ? '3,3' : undefined)); // Back
+    allLines.push(svgLine(plinthProjected[3].x, plinthProjected[3].y, plinthProjected[0].x, plinthProjected[0].y, plinthStrokeWidth)); // Left
+    
+    // Plinth top face (4 edges)
+    allLines.push(svgLine(plinthProjected[4].x, plinthProjected[4].y, plinthProjected[5].x, plinthProjected[5].y, plinthStrokeWidth)); // Front
+    allLines.push(svgLine(plinthProjected[5].x, plinthProjected[5].y, plinthProjected[6].x, plinthProjected[6].y, plinthStrokeWidth)); // Right
+    allLines.push(svgLine(plinthProjected[6].x, plinthProjected[6].y, plinthProjected[7].x, plinthProjected[7].y, plinthStrokeWidth, plinthBackHidden ? '3,3' : undefined)); // Back
+    allLines.push(svgLine(plinthProjected[7].x, plinthProjected[7].y, plinthProjected[4].x, plinthProjected[4].y, plinthStrokeWidth)); // Left
+    
+    // Plinth verticals (4 edges)
+    allLines.push(svgLine(plinthProjected[0].x, plinthProjected[0].y, plinthProjected[4].x, plinthProjected[4].y, plinthStrokeWidth)); // Front-left
+    allLines.push(svgLine(plinthProjected[1].x, plinthProjected[1].y, plinthProjected[5].x, plinthProjected[5].y, plinthStrokeWidth)); // Front-right
+    const plinthBackRightHidden = isHiddenEdge(plinthCorners[2], plinthCorners[6]);
+    allLines.push(svgLine(plinthProjected[2].x, plinthProjected[2].y, plinthProjected[6].x, plinthProjected[6].y, plinthStrokeWidth, plinthBackRightHidden ? '3,3' : undefined)); // Back-right
+    const plinthBackLeftHidden = isHiddenEdge(plinthCorners[3], plinthCorners[7]);
+    allLines.push(svgLine(plinthProjected[3].x, plinthProjected[3].y, plinthProjected[7].x, plinthProjected[7].y, plinthStrokeWidth, plinthBackLeftHidden ? '3,3' : undefined)); // Back-left
+    
+    // ============================================================
+    // STEP 2: CARCASS OUTER FRAME (all 12 edges explicitly drawn)
+    // ============================================================
+    const carcassCorners = [
+      { x: -W2, y: -D2, z: carcassBottomZ }, // Front-left-bottom
+      { x: W2, y: -D2, z: carcassBottomZ },  // Front-right-bottom
+      { x: W2, y: D2, z: carcassBottomZ },   // Back-right-bottom
+      { x: -W2, y: D2, z: carcassBottomZ },  // Back-left-bottom
+      { x: -W2, y: -D2, z: carcassTopZ },    // Front-left-top
+      { x: W2, y: -D2, z: carcassTopZ },     // Front-right-top
+      { x: W2, y: D2, z: carcassTopZ },      // Back-right-top
+      { x: -W2, y: D2, z: carcassTopZ },     // Back-left-top
+    ];
+    
+    const carcassProjected = carcassCorners.map(c => {
+      const p = isometricProject(c.x, c.y, c.z);
+      return { x: centerX + p.x, y: centerY + p.y };
+    });
+    
+    // Bottom rails (4 edges)
+    allLines.push(svgLine(carcassProjected[0].x, carcassProjected[0].y, carcassProjected[1].x, carcassProjected[1].y, frontFaceStrokeWidth)); // Front
+    allLines.push(svgLine(carcassProjected[1].x, carcassProjected[1].y, carcassProjected[2].x, carcassProjected[2].y, frontFaceStrokeWidth)); // Right
+    const carcassBackBottomHidden = isHiddenEdge(carcassCorners[2], carcassCorners[3]);
+    allLines.push(svgLine(carcassProjected[2].x, carcassProjected[2].y, carcassProjected[3].x, carcassProjected[3].y, frontFaceStrokeWidth, carcassBackBottomHidden ? '3,3' : undefined)); // Back
+    allLines.push(svgLine(carcassProjected[3].x, carcassProjected[3].y, carcassProjected[0].x, carcassProjected[0].y, frontFaceStrokeWidth)); // Left
+    
+    // Top rails (4 edges)
+    allLines.push(svgLine(carcassProjected[4].x, carcassProjected[4].y, carcassProjected[5].x, carcassProjected[5].y, frontFaceStrokeWidth)); // Front
+    allLines.push(svgLine(carcassProjected[5].x, carcassProjected[5].y, carcassProjected[6].x, carcassProjected[6].y, frontFaceStrokeWidth)); // Right
+    const carcassBackTopHidden = isHiddenEdge(carcassCorners[6], carcassCorners[7]);
+    allLines.push(svgLine(carcassProjected[6].x, carcassProjected[6].y, carcassProjected[7].x, carcassProjected[7].y, frontFaceStrokeWidth, carcassBackTopHidden ? '3,3' : undefined)); // Back
+    allLines.push(svgLine(carcassProjected[7].x, carcassProjected[7].y, carcassProjected[4].x, carcassProjected[4].y, frontFaceStrokeWidth)); // Left
+    
+    // Vertical corner posts (4 edges)
+    allLines.push(svgLine(carcassProjected[0].x, carcassProjected[0].y, carcassProjected[4].x, carcassProjected[4].y, frontFaceStrokeWidth)); // Front-left
+    allLines.push(svgLine(carcassProjected[1].x, carcassProjected[1].y, carcassProjected[5].x, carcassProjected[5].y, frontFaceStrokeWidth)); // Front-right
+    const carcassBackRightHidden = isHiddenEdge(carcassCorners[2], carcassCorners[6]);
+    allLines.push(svgLine(carcassProjected[2].x, carcassProjected[2].y, carcassProjected[6].x, carcassProjected[6].y, frontFaceStrokeWidth, carcassBackRightHidden ? '3,3' : undefined)); // Back-right
+    const carcassBackLeftHidden = isHiddenEdge(carcassCorners[3], carcassCorners[7]);
+    allLines.push(svgLine(carcassProjected[3].x, carcassProjected[3].y, carcassProjected[7].x, carcassProjected[7].y, frontFaceStrokeWidth, carcassBackLeftHidden ? '3,3' : undefined)); // Back-left
+    
+    // ============================================================
+    // STEP 3: INTERNAL SHELF (must terminate into carcass walls)
+    // ============================================================
+    const shelfZ = carcassBottomZ + dims.carcassH * 0.55;
+    const shelfInset = dims.W * 0.02; // 2% inset from carcass walls
+    
+    const shelfCorners = [
+      { x: -W2 + shelfInset, y: -D2 + shelfInset, z: shelfZ },
+      { x: W2 - shelfInset, y: -D2 + shelfInset, z: shelfZ },
+      { x: W2 - shelfInset, y: D2 - shelfInset, z: shelfZ },
+      { x: -W2 + shelfInset, y: D2 - shelfInset, z: shelfZ },
+    ];
+    
+    const shelfProjected = shelfCorners.map(c => {
+      const p = isometricProject(c.x, c.y, c.z);
+      return { x: centerX + p.x, y: centerY + p.y };
+    });
+    
+    // Shelf edges (front and right solid, back and left dashed if hidden)
+    allLines.push(svgLine(shelfProjected[0].x, shelfProjected[0].y, shelfProjected[1].x, shelfProjected[1].y, dividerStrokeWidth)); // Front
+    allLines.push(svgLine(shelfProjected[1].x, shelfProjected[1].y, shelfProjected[2].x, shelfProjected[2].y, dividerStrokeWidth)); // Right
+    const shelfBackHidden = isHiddenEdge(shelfCorners[2], shelfCorners[3]);
+    allLines.push(svgLine(shelfProjected[2].x, shelfProjected[2].y, shelfProjected[3].x, shelfProjected[3].y, dividerStrokeWidth, shelfBackHidden ? '3,3' : undefined)); // Back
+    allLines.push(svgLine(shelfProjected[3].x, shelfProjected[3].y, shelfProjected[0].x, shelfProjected[0].y, dividerStrokeWidth)); // Left
+    
+    // ============================================================
+    // STEP 4: INTERNAL DIVIDERS (must terminate into carcass rails)
+    // ============================================================
+    // Divider 1: Front-back divider at x = 0 (center width)
+    const divider1FrontBottom = { x: 0, y: -D2, z: carcassBottomZ };
+    const divider1FrontTop = { x: 0, y: -D2, z: carcassTopZ };
+    const divider1BackBottom = { x: 0, y: D2, z: carcassBottomZ };
+    const divider1BackTop = { x: 0, y: D2, z: carcassTopZ };
+    
+    const divider1FrontBottomProj = isometricProject(divider1FrontBottom.x, divider1FrontBottom.y, divider1FrontBottom.z);
+    const divider1FrontTopProj = isometricProject(divider1FrontTop.x, divider1FrontTop.y, divider1FrontTop.z);
+    const divider1BackBottomProj = isometricProject(divider1BackBottom.x, divider1BackBottom.y, divider1BackBottom.z);
+    const divider1BackTopProj = isometricProject(divider1BackTop.x, divider1BackTop.y, divider1BackTop.z);
+    
+    // Front edge: stop 1px short of front rail to preserve continuity
+    const divider1FrontTopOffset = {
+      x: divider1FrontTopProj.x,
+      y: divider1FrontTopProj.y - 1
+    };
+    
+    allLines.push(svgLine(
+      centerX + divider1FrontBottomProj.x, centerY + divider1FrontBottomProj.y,
+      centerX + divider1FrontTopOffset.x, centerY + divider1FrontTopOffset.y,
       dividerStrokeWidth
     ));
-    dividerLayerLines.push(svgLine(
-      centerX + frontBackDividerBackBottomProj.x, centerY + frontBackDividerBackBottomProj.y,
-      centerX + frontBackDividerBackTopProj.x, centerY + frontBackDividerBackTopProj.y,
+    allLines.push(svgLine(
+      centerX + divider1BackBottomProj.x, centerY + divider1BackBottomProj.y,
+      centerX + divider1BackTopProj.x, centerY + divider1BackTopProj.y,
       dividerStrokeWidth
     ));
     
-    // Left-right center divider (vertical plane dividing front/back compartments)
-    const leftRightDividerLeftBottom = { x: -w, y: 0, z: carcassBaseZ };
-    const leftRightDividerLeftTop = { x: -w, y: 0, z: carcassTopZ };
-    const leftRightDividerRightBottom = { x: w, y: 0, z: carcassBaseZ };
-    const leftRightDividerRightTop = { x: w, y: 0, z: carcassTopZ };
+    // Divider 2: Left-right divider at y = 0 (center depth) - creates compartments
+    const divider2LeftBottom = { x: -W2, y: 0, z: carcassBottomZ };
+    const divider2LeftTop = { x: -W2, y: 0, z: carcassTopZ };
+    const divider2RightBottom = { x: W2, y: 0, z: carcassBottomZ };
+    const divider2RightTop = { x: W2, y: 0, z: carcassTopZ };
     
-    const leftRightDividerLeftBottomProj = isometricProject(leftRightDividerLeftBottom.x, leftRightDividerLeftBottom.y, leftRightDividerLeftBottom.z);
-    const leftRightDividerLeftTopProj = isometricProject(leftRightDividerLeftTop.x, leftRightDividerLeftTop.y, leftRightDividerLeftTop.z);
-    const leftRightDividerRightBottomProj = isometricProject(leftRightDividerRightBottom.x, leftRightDividerRightBottom.y, leftRightDividerRightBottom.z);
-    const leftRightDividerRightTopProj = isometricProject(leftRightDividerRightTop.x, leftRightDividerRightTop.y, leftRightDividerRightTop.z);
+    const divider2LeftBottomProj = isometricProject(divider2LeftBottom.x, divider2LeftBottom.y, divider2LeftBottom.z);
+    const divider2LeftTopProj = isometricProject(divider2LeftTop.x, divider2LeftTop.y, divider2LeftTop.z);
+    const divider2RightBottomProj = isometricProject(divider2RightBottom.x, divider2RightBottom.y, divider2RightBottom.z);
+    const divider2RightTopProj = isometricProject(divider2RightTop.x, divider2RightTop.y, divider2RightTop.z);
     
-    dividerLayerLines.push(svgLine(
-      centerX + leftRightDividerLeftBottomProj.x, centerY + leftRightDividerLeftBottomProj.y,
-      centerX + leftRightDividerLeftTopProj.x, centerY + leftRightDividerLeftTopProj.y,
+    allLines.push(svgLine(
+      centerX + divider2LeftBottomProj.x, centerY + divider2LeftBottomProj.y,
+      centerX + divider2LeftTopProj.x, centerY + divider2LeftTopProj.y,
       dividerStrokeWidth
     ));
-    dividerLayerLines.push(svgLine(
-      centerX + leftRightDividerRightBottomProj.x, centerY + leftRightDividerRightBottomProj.y,
-      centerX + leftRightDividerRightTopProj.x, centerY + leftRightDividerRightTopProj.y,
+    allLines.push(svgLine(
+      centerX + divider2RightBottomProj.x, centerY + divider2RightBottomProj.y,
+      centerX + divider2RightTopProj.x, centerY + divider2RightTopProj.y,
       dividerStrokeWidth
     ));
     
-    // LAYER 3 (TOP): Front-most rectangle (front rails and front corner posts, thicker strokes)
-    const frontLayerLines: string[] = [];
+    // ============================================================
+    // 7) VALIDATION INVARIANTS
+    // ============================================================
+    // Validate all vertical endpoints match horizontal rails
+    const allVerticalEndpoints = [
+      divider1FrontBottom, divider1FrontTop, divider1BackBottom, divider1BackTop,
+      divider2LeftBottom, divider2LeftTop, divider2RightBottom, divider2RightTop,
+    ];
     
-    // Front face elements with thicker strokes (using exact coordinates from drawIsometricBox)
-    // Front bottom rail
-    frontLayerLines.push(svgLine(projected[0].x, projected[0].y, projected[1].x, projected[1].y, frontFaceStrokeWidth));
-    // Front top rail
-    frontLayerLines.push(svgLine(projected[4].x, projected[4].y, projected[5].x, projected[5].y, frontFaceStrokeWidth));
-    // Right side top rail
-    frontLayerLines.push(svgLine(projected[5].x, projected[5].y, projected[6].x, projected[6].y, frontFaceStrokeWidth));
-    // Left side top rail
-    frontLayerLines.push(svgLine(projected[7].x, projected[7].y, projected[4].x, projected[4].y, frontFaceStrokeWidth));
-    // Front-left vertical
-    frontLayerLines.push(svgLine(projected[0].x, projected[0].y, projected[4].x, projected[4].y, frontFaceStrokeWidth));
-    // Front-right vertical
-    frontLayerLines.push(svgLine(projected[1].x, projected[1].y, projected[5].x, projected[5].y, frontFaceStrokeWidth));
+    for (const endpoint of allVerticalEndpoints) {
+      if (endpoint.z < carcassBottomZ || endpoint.z > carcassTopZ) {
+        console.error(`[generateBoxFrame] Validation failed: endpoint z=${endpoint.z} outside carcass range [${carcassBottomZ}, ${carcassTopZ}]`);
+        return generateErrorSVG('Sideboard validation failed: internal divider outside carcass bounds');
+      }
+      
+      // Check if endpoint matches a carcass rail coordinate
+      const matchesBottom = Math.abs(endpoint.z - carcassBottomZ) < 0.001;
+      const matchesTop = Math.abs(endpoint.z - carcassTopZ) < 0.001;
+      
+      if (!matchesBottom && !matchesTop) {
+        console.error(`[generateBoxFrame] Validation failed: endpoint z=${endpoint.z} does not match carcass rails`);
+        return generateErrorSVG('Sideboard validation failed: divider endpoint does not match carcass rail');
+      }
+    }
     
-    // Combine layers in correct order: Back (bottom) → Dividers (middle) → Front (top)
-    const lines = [...backLayerLines, ...dividerLayerLines, ...frontLayerLines];
-  
-    // Dimension annotations layer (optional overlay) - using reusable helper
+    const lines = allLines;
+    
+    // ============================================================
+    // 8) DIMENSION ANNOTATIONS (optional overlay)
+    // ============================================================
     const dimensionElements: string[] = [];
     if (showDimensions) {
       // Define dimension points in 3D space (using top level for width/depth)
       const widthPoints = [
-        { x: -w, y: -d, z: height },  // Front-left-top
-        { x: w, y: -d, z: height }    // Front-right-top
+        { x: -W2, y: -D2, z: dims.plinthH + dims.carcassH },  // Front-left-top
+        { x: W2, y: -D2, z: dims.plinthH + dims.carcassH }    // Front-right-top
       ];
       const depthPoints = [
-        { x: w, y: -d, z: height },   // Right-front-top
-        { x: w, y: d, z: height }     // Right-back-top
+        { x: W2, y: -D2, z: dims.plinthH + dims.carcassH },   // Right-front-top
+        { x: W2, y: D2, z: dims.plinthH + dims.carcassH }     // Right-back-top
       ];
       const heightPoints = [
-        { x: w, y: -d, z: 0 },        // Floor (front-right)
-        { x: w, y: -d, z: height }    // Top of box
+        { x: W2, y: -D2, z: 0 },        // Floor (front-right)
+        { x: W2, y: -D2, z: dims.plinthH + dims.carcassH }    // Top of carcass
       ];
       
       dimensionElements.push(...addDimensionOverlay(
@@ -526,10 +637,10 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
     ${allElements.join('\n    ')}
   </svg>`;
     
-    // Validate SVG string
+    // Final validation: check for NaN or Infinity
     if (svgString.includes('NaN') || svgString.includes('Infinity')) {
       console.error(`[generateBoxFrame] SVG contains NaN or Infinity`);
-      throw new Error('SVG contains NaN or Infinity');
+      return generateErrorSVG('Sideboard SVG contains NaN or Infinity');
     }
     
     console.log(`[generateBoxFrame] SVG generated successfully, length: ${svgString.length}`);
