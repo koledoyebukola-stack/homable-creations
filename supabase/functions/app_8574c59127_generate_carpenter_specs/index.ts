@@ -482,23 +482,26 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
     });
     
     // Outer carcass frame - THICK for external outline (ONE line per edge, precise corners)
+    // Draw in order to ensure perfect corner connections: bottom → top → verticals
     // Bottom rails (4 edges)
     allLines.push(svgLine(carcassProjected[0].x, carcassProjected[0].y, carcassProjected[1].x, carcassProjected[1].y, thickStroke)); // Front (THICK)
-    allLines.push(svgLine(carcassProjected[1].x, carcassProjected[1].y, carcassProjected[2].x, carcassProjected[2].y, thickStroke)); // Right (THICK)
+    allLines.push(svgLine(carcassProjected[1].x, carcassProjected[1].y, carcassProjected[2].x, carcassProjected[2].y, thickStroke)); // Right (THICK) - connects to corner [1]
     // Back bottom rail: DASHED THIN (hidden edge, uniform spacing)
     allLines.push(svgLine(carcassProjected[2].x, carcassProjected[2].y, carcassProjected[3].x, carcassProjected[3].y, thinStroke, '4,2')); // Back (dashed)
     allLines.push(svgLine(carcassProjected[3].x, carcassProjected[3].y, carcassProjected[0].x, carcassProjected[0].y, thickStroke)); // Left (THICK)
     
     // Top rails (4 edges) - THICK for external outline
-    allLines.push(svgLine(carcassProjected[4].x, carcassProjected[4].y, carcassProjected[5].x, carcassProjected[5].y, thickStroke)); // Front (THICK)
-    allLines.push(svgLine(carcassProjected[5].x, carcassProjected[5].y, carcassProjected[6].x, carcassProjected[6].y, thickStroke)); // Right (THICK)
+    // CRITICAL: Top-right corner [5] must connect exactly to right top rail [5→6] and front-right vertical [1→5]
+    allLines.push(svgLine(carcassProjected[4].x, carcassProjected[4].y, carcassProjected[5].x, carcassProjected[5].y, thickStroke)); // Front (THICK) - connects to corner [5]
+    allLines.push(svgLine(carcassProjected[5].x, carcassProjected[5].y, carcassProjected[6].x, carcassProjected[6].y, thickStroke)); // Right (THICK) - top-right corner [5] connects exactly
     // Back top rail: DASHED THIN (hidden edge, uniform spacing)
     allLines.push(svgLine(carcassProjected[6].x, carcassProjected[6].y, carcassProjected[7].x, carcassProjected[7].y, thinStroke, '4,2')); // Back (dashed)
     allLines.push(svgLine(carcassProjected[7].x, carcassProjected[7].y, carcassProjected[4].x, carcassProjected[4].y, thickStroke)); // Left (THICK)
     
     // Vertical corner posts (4 edges) - THICK for external outline
+    // CRITICAL: Front-right vertical [1→5] connects exactly to top-right corner [5]
     allLines.push(svgLine(carcassProjected[0].x, carcassProjected[0].y, carcassProjected[4].x, carcassProjected[4].y, thickStroke)); // Front-left (THICK)
-    allLines.push(svgLine(carcassProjected[1].x, carcassProjected[1].y, carcassProjected[5].x, carcassProjected[5].y, thickStroke)); // Front-right (THICK)
+    allLines.push(svgLine(carcassProjected[1].x, carcassProjected[1].y, carcassProjected[5].x, carcassProjected[5].y, thickStroke)); // Front-right (THICK) - connects exactly to top-right corner [5]
     // Back verticals: DASHED THIN (hidden edges, uniform spacing)
     allLines.push(svgLine(carcassProjected[2].x, carcassProjected[2].y, carcassProjected[6].x, carcassProjected[6].y, thinStroke, '4,2')); // Back-right (dashed)
     allLines.push(svgLine(carcassProjected[3].x, carcassProjected[3].y, carcassProjected[7].x, carcassProjected[7].y, thinStroke, '4,2')); // Back-left (dashed)
