@@ -391,14 +391,61 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
     const h = height;
     
     console.log(`[generateBoxFrame] Calculated - w: ${w}, d: ${d}, h: ${h}`);
-    console.log(`[generateBoxFrame] Z values - h/2: ${h / 2}`);
     
-    // REMOVED: Internal center lines (front-back, left-right) - these add visual noise
-    // and don't contribute to structural understanding. The outer carcass from
-    // drawIsometricBox already conveys the complete structure.
+    // Carcass geometry: bottom shelf plane is at z = 0 (authoritative termination point)
+    // All internal dividers must terminate at this plane, not extend below it
+    const carcassBaseZ = 0; // Bottom shelf/carcass base Z value (derived from carcass geometry)
+    const carcassTopZ = h; // Top of carcass
     
-    // REMOVED: Duplicate corner posts - drawIsometricBox already draws vertical edges
-    // at all four corners, which serve as the load-bearing corner posts.
+    // Internal vertical dividers for sideboard compartments
+    // These dividers terminate at the bottom carcass shelf (carcassBaseZ), not below it
+    // The bottom shelf rail (carcass base at z = carcassBaseZ = 0) is the authoritative termination point
+    
+    // Front-back center divider (vertical plane dividing left/right compartments)
+    // Vertical edges at front and back of divider plane (x = 0, center of width)
+    const frontBackDividerFrontBottom = { x: 0, y: -d, z: carcassBaseZ }; // Front edge bottom at carcass base
+    const frontBackDividerFrontTop = { x: 0, y: -d, z: carcassTopZ };
+    const frontBackDividerBackBottom = { x: 0, y: d, z: carcassBaseZ }; // Back edge bottom at carcass base
+    const frontBackDividerBackTop = { x: 0, y: d, z: carcassTopZ };
+    
+    const frontBackDividerFrontBottomProj = isometricProject(frontBackDividerFrontBottom.x, frontBackDividerFrontBottom.y, frontBackDividerFrontBottom.z);
+    const frontBackDividerFrontTopProj = isometricProject(frontBackDividerFrontTop.x, frontBackDividerFrontTop.y, frontBackDividerFrontTop.z);
+    const frontBackDividerBackBottomProj = isometricProject(frontBackDividerBackBottom.x, frontBackDividerBackBottom.y, frontBackDividerBackBottom.z);
+    const frontBackDividerBackTopProj = isometricProject(frontBackDividerBackTop.x, frontBackDividerBackTop.y, frontBackDividerBackTop.z);
+    
+    // Front-back divider verticals: terminate at carcass base (z = carcassBaseZ = 0)
+    // These share exact coordinates with the bottom shelf rail at their Y positions
+    lines.push(svgLine(
+      centerX + frontBackDividerFrontBottomProj.x, centerY + frontBackDividerFrontBottomProj.y,
+      centerX + frontBackDividerFrontTopProj.x, centerY + frontBackDividerFrontTopProj.y
+    ));
+    lines.push(svgLine(
+      centerX + frontBackDividerBackBottomProj.x, centerY + frontBackDividerBackBottomProj.y,
+      centerX + frontBackDividerBackTopProj.x, centerY + frontBackDividerBackTopProj.y
+    ));
+    
+    // Left-right center divider (vertical plane dividing front/back compartments)
+    // Vertical edges at left and right of divider plane (y = 0, center of depth)
+    const leftRightDividerLeftBottom = { x: -w, y: 0, z: carcassBaseZ }; // Left edge bottom at carcass base
+    const leftRightDividerLeftTop = { x: -w, y: 0, z: carcassTopZ };
+    const leftRightDividerRightBottom = { x: w, y: 0, z: carcassBaseZ }; // Right edge bottom at carcass base
+    const leftRightDividerRightTop = { x: w, y: 0, z: carcassTopZ };
+    
+    const leftRightDividerLeftBottomProj = isometricProject(leftRightDividerLeftBottom.x, leftRightDividerLeftBottom.y, leftRightDividerLeftBottom.z);
+    const leftRightDividerLeftTopProj = isometricProject(leftRightDividerLeftTop.x, leftRightDividerLeftTop.y, leftRightDividerLeftTop.z);
+    const leftRightDividerRightBottomProj = isometricProject(leftRightDividerRightBottom.x, leftRightDividerRightBottom.y, leftRightDividerRightBottom.z);
+    const leftRightDividerRightTopProj = isometricProject(leftRightDividerRightTop.x, leftRightDividerRightTop.y, leftRightDividerRightTop.z);
+    
+    // Left-right divider verticals: terminate at carcass base (z = carcassBaseZ = 0)
+    // These share exact coordinates with the bottom shelf rail at their X positions
+    lines.push(svgLine(
+      centerX + leftRightDividerLeftBottomProj.x, centerY + leftRightDividerLeftBottomProj.y,
+      centerX + leftRightDividerLeftTopProj.x, centerY + leftRightDividerLeftTopProj.y
+    ));
+    lines.push(svgLine(
+      centerX + leftRightDividerRightBottomProj.x, centerY + leftRightDividerRightBottomProj.y,
+      centerX + leftRightDividerRightTopProj.x, centerY + leftRightDividerRightTopProj.y
+    ));
   
     // Dimension annotations layer (optional overlay) - using reusable helper
     const dimensionElements: string[] = [];
