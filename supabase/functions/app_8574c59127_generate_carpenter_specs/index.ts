@@ -849,10 +849,10 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   
   // Calculate scale to fit within canvas bounds (50-750 x, 50-550 y)
   // Max usable space: 700px width, 500px height
-  // Account for isometric projection: need space for both width and depth
+  // Input dimensions are in cm, calculate projected size in isometric space
   // Isometric projection: x_proj = (x - y) * cos30, y_proj = (x + y) * sin30 - z
   // Max projected width ≈ (width + depth) * cos30, max projected height ≈ (width + depth) * sin30 + height
-  const maxProjectedWidth = (width + depth) * ISO_COS;
+  const maxProjectedWidth = (width + depth) * ISO_COS;  // width and depth are in cm
   const maxProjectedHeight = (width + depth) * ISO_SIN + height;
   const scaleX = 280 / maxProjectedWidth; // Available width / projected width
   const scaleY = 240 / maxProjectedHeight; // Available height / projected height
@@ -861,33 +861,21 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   console.log(`[generateSofaMultiFrame] Scale calculation - maxProjectedWidth: ${maxProjectedWidth}, maxProjectedHeight: ${maxProjectedHeight}, scale: ${scale}`);
   
   // Proportional Relationships (from technical drawing reference)
-  // Input dimensions are in the blueprint's internal units (typically 2 units per cm)
-  // Convert to cm for proportional calculations
-  const scaleToCm = 2; // 1cm = 2 units in blueprint system
-  const width_cm = width / scaleToCm;
-  const depth_cm = depth / scaleToCm;
-  const height_cm = height / scaleToCm;
-  
-  // Component dimensions based on technical drawing proportions
-  const armWidth = width_cm * 0.08;          // Arms are 8% of total width (AT 160 / W 2000 ≈ 0.08)
-  const seatHeight = height_cm * 0.69;       // Seat is 69% of total height (SH 450 / AH 650 ≈ 0.69)
-  const backThickness = depth_cm * 0.13;     // Back is 13% of depth (BT 120 / D 900 ≈ 0.13)
-  const baseHeight = height_cm * 0.06;       // Base is ~6% of height
-  
-  // Convert back to blueprint units
-  const armW = armWidth * scaleToCm;
-  const seatH = seatHeight * scaleToCm;
-  const backT = backThickness * scaleToCm;
-  const baseH = baseHeight * scaleToCm;
+  // Input dimensions are ALREADY in centimeters from OpenAI
+  // No conversion needed - use directly
+  const armWidth = width * 0.08;          // Arms are 8% of total width (AT 160 / W 2000 ≈ 0.08)
+  const seatHeight = height * 0.69;       // Seat is 69% of total height (SH 450 / AH 650 ≈ 0.69)
+  const backThickness = depth * 0.13;     // Back is 13% of depth (BT 120 / D 900 ≈ 0.13)
+  const baseHeight = height * 0.06;       // Base is ~6% of height
   
   // Scaled dimensions for isometric projection
-  const w = (width / scaleToCm) * scale;   // Scaled width
-  const d = (depth / scaleToCm) * scale;  // Scaled depth
-  const h = (height / scaleToCm) * scale; // Scaled height
-  const armW_scaled = (armWidth * scaleToCm) * scale;
-  const seatH_scaled = (seatHeight * scaleToCm) * scale;
-  const backT_scaled = (backThickness * scaleToCm) * scale;
-  const baseH_scaled = (baseHeight * scaleToCm) * scale;
+  const w = width * scale;   // Scaled width
+  const d = depth * scale;   // Scaled depth
+  const h = height * scale;  // Scaled height
+  const armW_scaled = armWidth * scale;
+  const seatH_scaled = seatHeight * scale;
+  const backT_scaled = backThickness * scale;
+  const baseH_scaled = baseHeight * scale;
   
   console.log(`[generateSofaMultiFrame] Component dimensions - armW: ${armW_scaled}, seatH: ${seatH_scaled}, backT: ${backT_scaled}, baseH: ${baseH_scaled}`);
   
@@ -918,12 +906,12 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   }
   
   // Determine number of seat cushions (2-3 based on width)
-  const width_cm_for_cushions = width / scaleToCm;
-  let cushionCount = Math.floor(width_cm_for_cushions / 65);
+  // Input width is already in cm
+  let cushionCount = Math.floor(width / 65);
   if (cushionCount < 2) cushionCount = 2;
   if (cushionCount > 3) cushionCount = 3;
   
-  console.log(`[generateSofaMultiFrame] Cushion count: ${cushionCount}`);
+  console.log(`[generateSofaMultiFrame] Cushion count: ${cushionCount} (width: ${width}cm)`);
   
   // Drawing order: back to front (dashed → back → front)
   // Layer 1: Hidden edges (dashed lines)
@@ -1793,10 +1781,11 @@ function generateBlueprintSVG(spec: CarpenterSpec, category?: string, itemName?:
         console.log(`[generateBlueprintSVG] Calling generateChairFrame`);
         svgResult = generateChairFrame(width, depth, height, category, itemName);
         break;
-      case BlueprintType.SOFA_MULTI:
-        console.log(`[generateBlueprintSVG] Calling generateSofaMultiFrame`);
-        svgResult = generateSofaMultiFrame(width, depth, height);
-        break;
+    case BlueprintType.SOFA_MULTI:
+      console.log(`[generateBlueprintSVG] Calling generateSofaMultiFrame`);
+      // Pass cm values directly (no pre-scaling needed)
+      svgResult = generateSofaMultiFrame(width_cm, depth_cm, height_cm);
+      break;
       case BlueprintType.TABLE_RECT:
         console.log(`[generateBlueprintSVG] Calling generateTableFrameRectangular`);
         svgResult = generateTableFrameRectangular(width, depth, height);
