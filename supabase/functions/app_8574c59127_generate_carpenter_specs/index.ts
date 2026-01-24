@@ -816,7 +816,8 @@ function generateBoxFrame(width: number, depth: number, height: number, showDime
 
 /**
  * Generate SOFA_MULTI frame
- * Multi-bay sofa using plinth foundation, seat bays, and aligned back supports
+ * Complete sofa blueprint with proper proportions, line weights, and canvas bounds
+ * Based on technical drawing reference: W 2000, D 900, AH 650, SH 450, BT 120, AT 160
  */
 function generateSofaMultiFrame(width: number, depth: number, height: number, showDimensions: boolean = false): string {
   console.log(`[generateSofaMultiFrame] Input - width: ${width}, depth: ${depth}, height: ${height}`);
@@ -831,194 +832,329 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
     throw new Error(`Non-positive dimensions: width=${width}, depth=${depth}, height=${height}`);
   }
   
-  const svgWidth = 400;
-  const svgHeight = 400;
-  const centerX = svgWidth / 2;
-  const centerY = svgHeight / 2 + 50;
+  // Canvas & Coordinate System
+  const svgWidth = 800;
+  const svgHeight = 600;
+  const centerX = 400;
+  const centerY = 380; // Safe zone for drawing
   const lines: string[] = [];
-
-  const w = width / 2;
-  const d = depth / 2;
-  const totalHeight = height;
   
-  console.log(`[generateSofaMultiFrame] Calculated - w: ${w}, d: ${d}, totalHeight: ${totalHeight}`);
-
-  // Foundation: Plinth base (90% of footprint)
-  const plinthThickness = totalHeight * 0.05;
-  const plinthW = w * 0.9;
-  const plinthD = d * 0.9;
+  // Line Weight Hierarchy
+  const strokeWidths = {
+    thick: 3.5,      // Outer silhouette (front edges, visible outline)
+    medium: 2.2,     // Major divisions (arms, cushion separations)
+    thin: 1.2,       // Surface details (cushion seams)
+    dashed: 1.0      // Hidden edges (back corners, rear surfaces)
+  };
   
-  console.log(`[generateSofaMultiFrame] Plinth - thickness: ${plinthThickness}, plinthW: ${plinthW}, plinthD: ${plinthD}`);
-
-  const plinthCorners = [
-    { x: -plinthW, y: -plinthD, z: 0 },                // Front-left-bottom
-    { x: plinthW, y: -plinthD, z: 0 },                 // Front-right-bottom
-    { x: plinthW, y: plinthD, z: 0 },                  // Back-right-bottom
-    { x: -plinthW, y: plinthD, z: 0 },                 // Back-left-bottom
-    { x: -plinthW, y: -plinthD, z: plinthThickness },  // Front-left-top
-    { x: plinthW, y: -plinthD, z: plinthThickness },   // Front-right-top
-    { x: plinthW, y: plinthD, z: plinthThickness },    // Back-right-top
-    { x: -plinthW, y: plinthD, z: plinthThickness },   // Back-left-top
+  // Calculate scale to fit within canvas bounds (50-750 x, 50-550 y)
+  // Max usable space: 700px width, 500px height
+  // Account for isometric projection: need space for both width and depth
+  // Isometric projection: x_proj = (x - y) * cos30, y_proj = (x + y) * sin30 - z
+  // Max projected width ≈ (width + depth) * cos30, max projected height ≈ (width + depth) * sin30 + height
+  const maxProjectedWidth = (width + depth) * ISO_COS;
+  const maxProjectedHeight = (width + depth) * ISO_SIN + height;
+  const scaleX = 280 / maxProjectedWidth; // Available width / projected width
+  const scaleY = 240 / maxProjectedHeight; // Available height / projected height
+  const scale = Math.min(scaleX, scaleY) * 0.9; // Use 90% for safety margin
+  
+  console.log(`[generateSofaMultiFrame] Scale calculation - maxProjectedWidth: ${maxProjectedWidth}, maxProjectedHeight: ${maxProjectedHeight}, scale: ${scale}`);
+  
+  // Proportional Relationships (from technical drawing reference)
+  // Input dimensions are in the blueprint's internal units (typically 2 units per cm)
+  // Convert to cm for proportional calculations
+  const scaleToCm = 2; // 1cm = 2 units in blueprint system
+  const width_cm = width / scaleToCm;
+  const depth_cm = depth / scaleToCm;
+  const height_cm = height / scaleToCm;
+  
+  // Component dimensions based on technical drawing proportions
+  const armWidth = width_cm * 0.08;          // Arms are 8% of total width (AT 160 / W 2000 ≈ 0.08)
+  const seatHeight = height_cm * 0.69;       // Seat is 69% of total height (SH 450 / AH 650 ≈ 0.69)
+  const backThickness = depth_cm * 0.13;     // Back is 13% of depth (BT 120 / D 900 ≈ 0.13)
+  const baseHeight = height_cm * 0.06;       // Base is ~6% of height
+  
+  // Convert back to blueprint units
+  const armW = armWidth * scaleToCm;
+  const seatH = seatHeight * scaleToCm;
+  const backT = backThickness * scaleToCm;
+  const baseH = baseHeight * scaleToCm;
+  
+  // Scaled dimensions for isometric projection
+  const w = (width / scaleToCm) * scale;   // Scaled width
+  const d = (depth / scaleToCm) * scale;  // Scaled depth
+  const h = (height / scaleToCm) * scale; // Scaled height
+  const armW_scaled = (armWidth * scaleToCm) * scale;
+  const seatH_scaled = (seatHeight * scaleToCm) * scale;
+  const backT_scaled = (backThickness * scaleToCm) * scale;
+  const baseH_scaled = (baseHeight * scaleToCm) * scale;
+  
+  console.log(`[generateSofaMultiFrame] Component dimensions - armW: ${armW_scaled}, seatH: ${seatH_scaled}, backT: ${backT_scaled}, baseH: ${baseH_scaled}`);
+  
+  // Half-dimensions for coordinate calculations
+  const w2 = w / 2;
+  const d2 = d / 2;
+  
+  // Z-levels (in scaled blueprint units)
+  const zBase = 0;
+  const zBaseTop = baseH_scaled;
+  const zSeat = zBaseTop + seatH_scaled;
+  const zArmTop = h; // Arm height = total height (AH 650)
+  
+  // Y-levels (depth direction) for back cushions
+  const yBackFront = d2 - backT_scaled; // Back cushion front face (recessed from rear wall)
+  const yBackRear = d2; // Back cushion rear face (at rear wall)
+  
+  // Helper function to project 3D point to 2D isometric and validate bounds
+  function projectAndValidate(x: number, y: number, z: number): { x: number; y: number; valid: boolean } {
+    const proj = isometricProject(x, y, z);
+    const px = centerX + proj.x;
+    const py = centerY + proj.y;
+    const valid = px >= 50 && px <= 750 && py >= 50 && py <= 550;
+    if (!valid) {
+      console.warn(`[generateSofaMultiFrame] Coordinate out of bounds: (${px}, ${py}) from 3D (${x}, ${y}, ${z})`);
+    }
+    return { x: px, y: py, valid };
+  }
+  
+  // Determine number of seat cushions (2-3 based on width)
+  const width_cm_for_cushions = width / scaleToCm;
+  let cushionCount = Math.floor(width_cm_for_cushions / 65);
+  if (cushionCount < 2) cushionCount = 2;
+  if (cushionCount > 3) cushionCount = 3;
+  
+  console.log(`[generateSofaMultiFrame] Cushion count: ${cushionCount}`);
+  
+  // Drawing order: back to front (dashed → back → front)
+  // Layer 1: Hidden edges (dashed lines)
+  const hiddenLines: string[] = [];
+  
+  // Layer 2: Back structural elements
+  const backLines: string[] = [];
+  
+  // Layer 3: Seat platform
+  const seatLines: string[] = [];
+  
+  // Layer 4: Front-facing elements
+  const frontLines: string[] = [];
+  
+  // Layer 5: Base/plinth
+  const baseLines: string[] = [];
+  
+  // ============================================================
+  // COMPONENT 1: BASE/PLINTH (recessed 15-20mm from main body)
+  // ============================================================
+  const baseRecess = 0.15 * scale; // 15mm recess in scaled units
+  const baseW2 = w2 - baseRecess;
+  const baseD2 = d2 - baseRecess;
+  
+  // Base corners (bottom and top)
+  const baseBottom = [
+    { x: -baseW2, y: -baseD2, z: zBase },
+    { x: baseW2, y: -baseD2, z: zBase },
+    { x: baseW2, y: baseD2, z: zBase },
+    { x: -baseW2, y: baseD2, z: zBase }
   ];
-
-  const plinthProjected = plinthCorners.map(corner => {
-    const proj = isometricProject(corner.x, corner.y, corner.z);
-    return { x: centerX + proj.x, y: centerY + proj.y };
-  });
-
-  // Plinth faces and vertical edges (simple wireframe)
-  // Bottom
-  lines.push(svgLine(plinthProjected[0].x, plinthProjected[0].y, plinthProjected[1].x, plinthProjected[1].y));
-  lines.push(svgLine(plinthProjected[1].x, plinthProjected[1].y, plinthProjected[2].x, plinthProjected[2].y));
-  lines.push(svgLine(plinthProjected[2].x, plinthProjected[2].y, plinthProjected[3].x, plinthProjected[3].y));
-  lines.push(svgLine(plinthProjected[3].x, plinthProjected[3].y, plinthProjected[0].x, plinthProjected[0].y));
-  // Top
-  lines.push(svgLine(plinthProjected[4].x, plinthProjected[4].y, plinthProjected[5].x, plinthProjected[5].y));
-  lines.push(svgLine(plinthProjected[5].x, plinthProjected[5].y, plinthProjected[6].x, plinthProjected[6].y));
-  lines.push(svgLine(plinthProjected[6].x, plinthProjected[6].y, plinthProjected[7].x, plinthProjected[7].y));
-  lines.push(svgLine(plinthProjected[7].x, plinthProjected[7].y, plinthProjected[4].x, plinthProjected[4].y));
-  // Vertical edges - REMOVED corner verticals where arms occupy same (x, y) coordinates
-  // Plinth corner verticals at (±plinthW, ±plinthD) are redundant with arm verticals at (±seatW, ±seatD)
-  // Since seatW = plinthW and seatD = plinthD, all 4 corner verticals are removed
-  // Arms will provide the vertical structure at these corners
-
-  // Seat bays: divide width into bays of ~65cm
-  const scale = 2; // 1cm = 2 units (from generateBlueprintSVG)
-  const width_cm = width / scale;
-  let seatCount = Math.floor(width_cm / 65);
-  if (seatCount < 2) seatCount = 2; // Ensure at least 2 bays for sofas
+  const baseTop = baseBottom.map(p => ({ ...p, z: zBaseTop }));
   
-  console.log(`[generateSofaMultiFrame] Seat bays - scale: ${scale}, width_cm: ${width_cm}, seatCount: ${seatCount}`);
-
-  const seatHeight = totalHeight * 0.45;
-  const seatFrameZ = seatHeight;
+  const baseBottomProj = baseBottom.map(p => projectAndValidate(p.x, p.y, p.z));
+  const baseTopProj = baseTop.map(p => projectAndValidate(p.x, p.y, p.z));
   
-  console.log(`[generateSofaMultiFrame] Seat frame - seatHeight: ${seatHeight}, seatFrameZ: ${seatFrameZ}`);
-
-  // Seat frame footprint (aligned with plinth)
-  const seatW = plinthW;
-  const seatD = plinthD;
-
-  // Bay boundaries along X
-  const bayWidth = (seatW * 2) / seatCount;
-  const bayBoundaries: number[] = [];
-  for (let i = 0; i <= seatCount; i++) {
-    bayBoundaries.push(-seatW + i * bayWidth);
+  // Base bottom face (hidden edges dashed)
+  baseLines.push(svgLine(baseBottomProj[0].x, baseBottomProj[0].y, baseBottomProj[1].x, baseBottomProj[1].y, strokeWidths.thick)); // Front
+  baseLines.push(svgLine(baseBottomProj[1].x, baseBottomProj[1].y, baseBottomProj[2].x, baseBottomProj[2].y, strokeWidths.thick)); // Right
+  hiddenLines.push(svgLine(baseBottomProj[2].x, baseBottomProj[2].y, baseBottomProj[3].x, baseBottomProj[3].y, strokeWidths.dashed, '5,3')); // Back (dashed)
+  baseLines.push(svgLine(baseBottomProj[3].x, baseBottomProj[3].y, baseBottomProj[0].x, baseBottomProj[0].y, strokeWidths.thick)); // Left
+  
+  // Base top face
+  baseLines.push(svgLine(baseTopProj[0].x, baseTopProj[0].y, baseTopProj[1].x, baseTopProj[1].y, strokeWidths.thick)); // Front
+  baseLines.push(svgLine(baseTopProj[1].x, baseTopProj[1].y, baseTopProj[2].x, baseTopProj[2].y, strokeWidths.thick)); // Right
+  hiddenLines.push(svgLine(baseTopProj[2].x, baseTopProj[2].y, baseTopProj[3].x, baseTopProj[3].y, strokeWidths.dashed, '5,3')); // Back (dashed)
+  baseLines.push(svgLine(baseTopProj[3].x, baseTopProj[3].y, baseTopProj[0].x, baseTopProj[0].y, strokeWidths.thick)); // Left
+  
+  // Base verticals (front only, back are hidden)
+  baseLines.push(svgLine(baseBottomProj[0].x, baseBottomProj[0].y, baseTopProj[0].x, baseTopProj[0].y, strokeWidths.thick)); // Front-left
+  baseLines.push(svgLine(baseBottomProj[1].x, baseBottomProj[1].y, baseTopProj[1].x, baseTopProj[1].y, strokeWidths.thick)); // Front-right
+  hiddenLines.push(svgLine(baseBottomProj[2].x, baseBottomProj[2].y, baseTopProj[2].x, baseTopProj[2].y, strokeWidths.dashed, '5,3')); // Back-right (dashed)
+  hiddenLines.push(svgLine(baseBottomProj[3].x, baseBottomProj[3].y, baseTopProj[3].x, baseTopProj[3].y, strokeWidths.dashed, '5,3')); // Back-left (dashed)
+  
+  // ============================================================
+  // COMPONENT 2: LEFT ARM (solid rectangular volume)
+  // ============================================================
+  const leftArmOuterX = -w2;
+  const leftArmInnerX = -w2 + armW_scaled;
+  
+  const leftArmPoints = {
+    frontBottomOuter: { x: leftArmOuterX, y: -d2, z: zBaseTop },
+    frontTopOuter: { x: leftArmOuterX, y: -d2, z: zArmTop },
+    backBottomOuter: { x: leftArmOuterX, y: d2, z: zBaseTop },
+    backTopOuter: { x: leftArmOuterX, y: d2, z: zArmTop },
+    frontBottomInner: { x: leftArmInnerX, y: -d2, z: zBaseTop },
+    frontTopInner: { x: leftArmInnerX, y: -d2, z: zArmTop },
+    backBottomInner: { x: leftArmInnerX, y: d2, z: zBaseTop },
+    backTopInner: { x: leftArmInnerX, y: d2, z: zArmTop }
+  };
+  
+  const leftArmProj = Object.entries(leftArmPoints).reduce((acc, [key, point]) => {
+    acc[key] = projectAndValidate(point.x, point.y, point.z);
+    return acc;
+  }, {} as Record<string, { x: number; y: number; valid: boolean }>);
+  
+  // Left arm front face (visible)
+  frontLines.push(svgLine(leftArmProj.frontBottomOuter.x, leftArmProj.frontBottomOuter.y, leftArmProj.frontTopOuter.x, leftArmProj.frontTopOuter.y, strokeWidths.medium)); // Outer vertical
+  frontLines.push(svgLine(leftArmProj.frontBottomInner.x, leftArmProj.frontBottomInner.y, leftArmProj.frontTopInner.x, leftArmProj.frontTopInner.y, strokeWidths.medium)); // Inner vertical
+  frontLines.push(svgLine(leftArmProj.frontBottomOuter.x, leftArmProj.frontBottomOuter.y, leftArmProj.frontBottomInner.x, leftArmProj.frontBottomInner.y, strokeWidths.medium)); // Bottom horizontal
+  frontLines.push(svgLine(leftArmProj.frontTopOuter.x, leftArmProj.frontTopOuter.y, leftArmProj.frontTopInner.x, leftArmProj.frontTopInner.y, strokeWidths.medium)); // Top horizontal
+  
+  // Left arm back face (hidden, dashed)
+  hiddenLines.push(svgLine(leftArmProj.backBottomOuter.x, leftArmProj.backBottomOuter.y, leftArmProj.backTopOuter.x, leftArmProj.backTopOuter.y, strokeWidths.dashed, '5,3')); // Outer vertical
+  hiddenLines.push(svgLine(leftArmProj.backBottomInner.x, leftArmProj.backBottomInner.y, leftArmProj.backTopInner.x, leftArmProj.backTopInner.y, strokeWidths.dashed, '5,3')); // Inner vertical
+  hiddenLines.push(svgLine(leftArmProj.backBottomOuter.x, leftArmProj.backBottomOuter.y, leftArmProj.backBottomInner.x, leftArmProj.backBottomInner.y, strokeWidths.dashed, '5,3')); // Bottom horizontal
+  hiddenLines.push(svgLine(leftArmProj.backTopOuter.x, leftArmProj.backTopOuter.y, leftArmProj.backTopInner.x, leftArmProj.backTopInner.y, strokeWidths.dashed, '5,3')); // Top horizontal
+  
+  // Left arm connecting edges
+  frontLines.push(svgLine(leftArmProj.frontTopOuter.x, leftArmProj.frontTopOuter.y, leftArmProj.backTopOuter.x, leftArmProj.backTopOuter.y, strokeWidths.medium)); // Top outer
+  hiddenLines.push(svgLine(leftArmProj.frontTopInner.x, leftArmProj.frontTopInner.y, leftArmProj.backTopInner.x, leftArmProj.backTopInner.y, strokeWidths.dashed, '5,3')); // Top inner (dashed)
+  
+  // ============================================================
+  // COMPONENT 3: RIGHT ARM (mirror of left)
+  // ============================================================
+  const rightArmOuterX = w2;
+  const rightArmInnerX = w2 - armW_scaled;
+  
+  const rightArmPoints = {
+    frontBottomOuter: { x: rightArmOuterX, y: -d2, z: zBaseTop },
+    frontTopOuter: { x: rightArmOuterX, y: -d2, z: zArmTop },
+    backBottomOuter: { x: rightArmOuterX, y: d2, z: zBaseTop },
+    backTopOuter: { x: rightArmOuterX, y: d2, z: zArmTop },
+    frontBottomInner: { x: rightArmInnerX, y: -d2, z: zBaseTop },
+    frontTopInner: { x: rightArmInnerX, y: -d2, z: zArmTop },
+    backBottomInner: { x: rightArmInnerX, y: d2, z: zBaseTop },
+    backTopInner: { x: rightArmInnerX, y: d2, z: zArmTop }
+  };
+  
+  const rightArmProj = Object.entries(rightArmPoints).reduce((acc, [key, point]) => {
+    acc[key] = projectAndValidate(point.x, point.y, point.z);
+    return acc;
+  }, {} as Record<string, { x: number; y: number; valid: boolean }>);
+  
+  // Right arm front face (visible)
+  frontLines.push(svgLine(rightArmProj.frontBottomOuter.x, rightArmProj.frontBottomOuter.y, rightArmProj.frontTopOuter.x, rightArmProj.frontTopOuter.y, strokeWidths.medium)); // Outer vertical
+  frontLines.push(svgLine(rightArmProj.frontBottomInner.x, rightArmProj.frontBottomInner.y, rightArmProj.frontTopInner.x, rightArmProj.frontTopInner.y, strokeWidths.medium)); // Inner vertical
+  frontLines.push(svgLine(rightArmProj.frontBottomOuter.x, rightArmProj.frontBottomOuter.y, rightArmProj.frontBottomInner.x, rightArmProj.frontBottomInner.y, strokeWidths.medium)); // Bottom horizontal
+  frontLines.push(svgLine(rightArmProj.frontTopOuter.x, rightArmProj.frontTopOuter.y, rightArmProj.frontTopInner.x, rightArmProj.frontTopInner.y, strokeWidths.medium)); // Top horizontal
+  
+  // Right arm back face (hidden, dashed)
+  hiddenLines.push(svgLine(rightArmProj.backBottomOuter.x, rightArmProj.backBottomOuter.y, rightArmProj.backTopOuter.x, rightArmProj.backTopOuter.y, strokeWidths.dashed, '5,3')); // Outer vertical
+  hiddenLines.push(svgLine(rightArmProj.backBottomInner.x, rightArmProj.backBottomInner.y, rightArmProj.backTopInner.x, rightArmProj.backTopInner.y, strokeWidths.dashed, '5,3')); // Inner vertical
+  hiddenLines.push(svgLine(rightArmProj.backBottomOuter.x, rightArmProj.backBottomOuter.y, rightArmProj.backBottomInner.x, rightArmProj.backBottomInner.y, strokeWidths.dashed, '5,3')); // Bottom horizontal
+  hiddenLines.push(svgLine(rightArmProj.backTopOuter.x, rightArmProj.backTopOuter.y, rightArmProj.backTopInner.x, rightArmProj.backTopInner.y, strokeWidths.dashed, '5,3')); // Top horizontal
+  
+  // Right arm connecting edges
+  frontLines.push(svgLine(rightArmProj.frontTopOuter.x, rightArmProj.frontTopOuter.y, rightArmProj.backTopOuter.x, rightArmProj.backTopOuter.y, strokeWidths.medium)); // Top outer
+  hiddenLines.push(svgLine(rightArmProj.frontTopInner.x, rightArmProj.frontTopInner.y, rightArmProj.backTopInner.x, rightArmProj.backTopInner.y, strokeWidths.dashed, '5,3')); // Top inner (dashed)
+  
+  // ============================================================
+  // COMPONENT 4: SEAT PLATFORM (between arms, showing top surface)
+  // ============================================================
+  const seatLeftX = leftArmInnerX;
+  const seatRightX = rightArmInnerX;
+  
+  // Seat top surface corners
+  const seatTopCorners = [
+    { x: seatLeftX, y: -d2, z: zSeat },
+    { x: seatRightX, y: -d2, z: zSeat },
+    { x: seatRightX, y: d2, z: zSeat },
+    { x: seatLeftX, y: d2, z: zSeat }
+  ];
+  
+  const seatTopProj = seatTopCorners.map(p => projectAndValidate(p.x, p.y, p.z));
+  
+  // Seat top surface edges
+  frontLines.push(svgLine(seatTopProj[0].x, seatTopProj[0].y, seatTopProj[1].x, seatTopProj[1].y, strokeWidths.thick)); // Front edge (THICK - important outline)
+  frontLines.push(svgLine(seatTopProj[1].x, seatTopProj[1].y, seatTopProj[2].x, seatTopProj[2].y, strokeWidths.medium)); // Right edge
+  hiddenLines.push(svgLine(seatTopProj[2].x, seatTopProj[2].y, seatTopProj[3].x, seatTopProj[3].y, strokeWidths.dashed, '5,3')); // Back edge (dashed)
+  frontLines.push(svgLine(seatTopProj[3].x, seatTopProj[3].y, seatTopProj[0].x, seatTopProj[0].y, strokeWidths.medium)); // Left edge
+  
+  // Seat cushion divisions (2-3 cushions)
+  const cushionWidth = (seatRightX - seatLeftX) / cushionCount;
+  for (let i = 1; i < cushionCount; i++) {
+    const divX = seatLeftX + i * cushionWidth;
+    const divStart = projectAndValidate(divX, -d2, zSeat);
+    const divEnd = projectAndValidate(divX, d2, zSeat);
+    frontLines.push(svgLine(divStart.x, divStart.y, divEnd.x, divEnd.y, strokeWidths.thin)); // Cushion division (thin)
   }
-
-  // PRIMARY STRUCTURE: Outer seat frame perimeter only (not per-bay)
-  // Front rail (continuous)
-  const frontLeftProj = isometricProject(-seatW, -seatD, seatFrameZ);
-  const frontRightProj = isometricProject(seatW, -seatD, seatFrameZ);
-  lines.push(svgLine(centerX + frontLeftProj.x, centerY + frontLeftProj.y, centerX + frontRightProj.x, centerY + frontRightProj.y));
   
-  // Back rail (continuous)
-  const backLeftProj = isometricProject(-seatW, seatD, seatFrameZ);
-  const backRightProj = isometricProject(seatW, seatD, seatFrameZ);
-  lines.push(svgLine(centerX + backLeftProj.x, centerY + backLeftProj.y, centerX + backRightProj.x, centerY + backRightProj.y));
+  // ============================================================
+  // COMPONENT 5: BACK CUSHIONS (against back wall, showing front faces)
+  // ============================================================
+  const backCushionBottomZ = zSeat;
+  const backCushionTopZ = zArmTop;
   
-  // Left side rail (continuous)
-  lines.push(svgLine(centerX + frontLeftProj.x, centerY + frontLeftProj.y, centerX + backLeftProj.x, centerY + backLeftProj.y));
+  // Back cushion Y coordinates (depth direction) - use pre-calculated values
+  const backCushionFrontY = yBackFront; // Front face (recessed by back thickness)
+  const backCushionRearY = yBackRear; // Rear face (at rear wall)
   
-  // Right side rail (continuous)
-  lines.push(svgLine(centerX + frontRightProj.x, centerY + frontRightProj.y, centerX + backRightProj.x, centerY + backRightProj.y));
-
-  // REMOVED: Interior vertical supports (secondary structure that competed with primary silhouette)
-  // Primary load paths are provided by: plinth foundation, seat frame perimeter, and arm outer edges
-
-  // Back support: continuous back frame aligned with bay divisions
-  // Define backFrameTopZ BEFORE arms (used in addArmFrame)
-  const backFrameBottomZ = seatFrameZ;
-  const backFrameTopZ = totalHeight;
+  // Back cushion front face corners (visible from front)
+  const backCushionFrontCorners = [
+    { x: seatLeftX, y: backCushionFrontY, z: backCushionBottomZ },
+    { x: seatRightX, y: backCushionFrontY, z: backCushionBottomZ },
+    { x: seatRightX, y: backCushionFrontY, z: backCushionTopZ },
+    { x: seatLeftX, y: backCushionFrontY, z: backCushionTopZ }
+  ];
   
-  console.log(`[generateSofaMultiFrame] Back frame - backFrameBottomZ: ${backFrameBottomZ}, backFrameTopZ: ${backFrameTopZ}`);
-
-  // Arm structures: Left and Right arms as vertical rectangular frames
-  // Arms aligned to seat frame perimeter (±seatW), span full seat depth, from plinth top to backFrameTopZ
-  const armWidth = width * 0.1; // 10% of total width
-  const rightArmOuterX = seatW; // Aligned to seat frame, not full width
-  const rightArmInnerX = seatW - armWidth;
-  const leftArmOuterX = -seatW; // Aligned to seat frame, not full width
-  const leftArmInnerX = -seatW + armWidth;
+  const backCushionFrontProj = backCushionFrontCorners.map(p => projectAndValidate(p.x, p.y, p.z));
   
-  console.log(`[generateSofaMultiFrame] Arms - armWidth: ${armWidth}, leftArmInnerX: ${leftArmInnerX}, leftArmOuterX: ${leftArmOuterX}, rightArmInnerX: ${rightArmInnerX}, rightArmOuterX: ${rightArmOuterX}`);
-
-  function addArmFrame(innerX: number, outerX: number) {
-    // Arm corners at three Z levels: plinth top, seat frame, and back top
-    // Bottom level (plinth top)
-    const armBottomFrontOuter = { x: outerX, y: -seatD, z: plinthThickness };
-    const armBottomBackOuter = { x: outerX, y: seatD, z: plinthThickness };
-    // Middle level (seat frame - authoritative connection plane)
-    const armSeatFrontOuter = { x: outerX, y: -seatD, z: seatFrameZ };
-    const armSeatBackOuter = { x: outerX, y: seatD, z: seatFrameZ };
-    // Top level (back frame top)
-    const armTopFrontOuter = { x: outerX, y: -seatD, z: backFrameTopZ };
-    const armTopBackOuter = { x: outerX, y: seatD, z: backFrameTopZ };
-
-    // Project all points
-    const projBottomFront = isometricProject(armBottomFrontOuter.x, armBottomFrontOuter.y, armBottomFrontOuter.z);
-    const projBottomBack = isometricProject(armBottomBackOuter.x, armBottomBackOuter.y, armBottomBackOuter.z);
-    const projSeatFront = isometricProject(armSeatFrontOuter.x, armSeatFrontOuter.y, armSeatFrontOuter.z);
-    const projSeatBack = isometricProject(armSeatBackOuter.x, armSeatBackOuter.y, armSeatBackOuter.z);
-    const projTopFront = isometricProject(armTopFrontOuter.x, armTopFrontOuter.y, armTopFrontOuter.z);
-    const projTopBack = isometricProject(armTopBackOuter.x, armTopBackOuter.y, armTopBackOuter.z);
-
-    // PRIMARY STRUCTURE: Outer vertical edges split into two segments
-    // Segment 1: Plinth → Seat frame (foundation to authoritative plane)
-    lines.push(svgLine(
-      centerX + projBottomFront.x, centerY + projBottomFront.y,
-      centerX + projSeatFront.x, centerY + projSeatFront.y
-    )); // Front-outer: plinth → seat
-    lines.push(svgLine(
-      centerX + projBottomBack.x, centerY + projBottomBack.y,
-      centerX + projSeatBack.x, centerY + projSeatBack.y
-    )); // Back-outer: plinth → seat
-    
-    // Segment 2: Seat frame → Back top (authoritative plane to back structure)
-    lines.push(svgLine(
-      centerX + projSeatFront.x, centerY + projSeatFront.y,
-      centerX + projTopFront.x, centerY + projTopFront.y
-    )); // Front-outer: seat → back top
-    lines.push(svgLine(
-      centerX + projSeatBack.x, centerY + projSeatBack.y,
-      centerX + projTopBack.x, centerY + projTopBack.y
-    )); // Back-outer: seat → back top
+  // Back cushion front face outline (visible, medium weight)
+  frontLines.push(svgLine(backCushionFrontProj[0].x, backCushionFrontProj[0].y, backCushionFrontProj[1].x, backCushionFrontProj[1].y, strokeWidths.medium)); // Bottom
+  frontLines.push(svgLine(backCushionFrontProj[1].x, backCushionFrontProj[1].y, backCushionFrontProj[2].x, backCushionFrontProj[2].y, strokeWidths.medium)); // Right
+  frontLines.push(svgLine(backCushionFrontProj[2].x, backCushionFrontProj[2].y, backCushionFrontProj[3].x, backCushionFrontProj[3].y, strokeWidths.medium)); // Top
+  frontLines.push(svgLine(backCushionFrontProj[3].x, backCushionFrontProj[3].y, backCushionFrontProj[0].x, backCushionFrontProj[0].y, strokeWidths.medium)); // Left
+  
+  // Back cushion divisions (matching seat cushions, thin lines)
+  for (let i = 1; i < cushionCount; i++) {
+    const divX = seatLeftX + i * cushionWidth;
+    const divBottom = projectAndValidate(divX, backCushionFrontY, backCushionBottomZ);
+    const divTop = projectAndValidate(divX, backCushionFrontY, backCushionTopZ);
+    frontLines.push(svgLine(divBottom.x, divBottom.y, divTop.x, divTop.y, strokeWidths.thin)); // Cushion division (thin)
   }
-
-  // Left and right arms
-  addArmFrame(leftArmInnerX, leftArmOuterX);
-  addArmFrame(rightArmInnerX, rightArmOuterX);
-
-  // PRIMARY STRUCTURE: Back frame rails (bottom and top)
-  // Bottom rail: anchors to seat frame back rail (authoritative connection plane)
-  const backBottomLeftProj = isometricProject(-seatW, seatD, backFrameBottomZ);
-  const backBottomRightProj = isometricProject(seatW, seatD, backFrameBottomZ);
-  lines.push(svgLine(centerX + backBottomLeftProj.x, centerY + backBottomLeftProj.y, centerX + backBottomRightProj.x, centerY + backBottomRightProj.y));
   
-  // Top rail: continuous across back structure
-  const backTopLeftProj = isometricProject(-seatW, seatD, backFrameTopZ);
-  const backTopRightProj = isometricProject(seatW, seatD, backFrameTopZ);
-  lines.push(svgLine(centerX + backTopLeftProj.x, centerY + backTopLeftProj.y, centerX + backTopRightProj.x, centerY + backTopRightProj.y));
+  // Back cushion rear face (hidden, dashed)
+  const backCushionRearCorners = [
+    { x: seatLeftX, y: backCushionRearY, z: backCushionBottomZ },
+    { x: seatRightX, y: backCushionRearY, z: backCushionBottomZ },
+    { x: seatRightX, y: backCushionRearY, z: backCushionTopZ },
+    { x: seatLeftX, y: backCushionRearY, z: backCushionTopZ }
+  ];
   
-  // REMOVED: Interior vertical back supports (secondary structure that competed with primary silhouette)
-  // Back structure is defined by: back frame bottom rail (anchored to seat), top rail, and arm back-outer verticals
-
-  // Dimension annotations layer (optional overlay) - using reusable helper
+  const backCushionRearProj = backCushionRearCorners.map(p => projectAndValidate(p.x, p.y, p.z));
+  
+  hiddenLines.push(svgLine(backCushionRearProj[0].x, backCushionRearProj[0].y, backCushionRearProj[1].x, backCushionRearProj[1].y, strokeWidths.dashed, '5,3')); // Bottom (dashed)
+  hiddenLines.push(svgLine(backCushionRearProj[1].x, backCushionRearProj[1].y, backCushionRearProj[2].x, backCushionRearProj[2].y, strokeWidths.dashed, '5,3')); // Right (dashed)
+  hiddenLines.push(svgLine(backCushionRearProj[2].x, backCushionRearProj[2].y, backCushionRearProj[3].x, backCushionRearProj[3].y, strokeWidths.dashed, '5,3')); // Top (dashed)
+  hiddenLines.push(svgLine(backCushionRearProj[3].x, backCushionRearProj[3].y, backCushionRearProj[0].x, backCushionRearProj[0].y, strokeWidths.dashed, '5,3')); // Left (dashed)
+  
+  // ============================================================
+  // ASSEMBLE SVG IN CORRECT DRAWING ORDER (back to front)
+  // ============================================================
+  const allLines = [...hiddenLines, ...backLines, ...seatLines, ...frontLines, ...baseLines];
+  
+  // Dimension annotations layer (optional overlay)
   const dimensionElements: string[] = [];
   if (showDimensions) {
     const widthPoints = [
-      { x: -w, y: -d, z: totalHeight },  // Front-left-top
-      { x: w, y: -d, z: totalHeight }    // Front-right-top
+      { x: -w2, y: -d2, z: zArmTop },
+      { x: w2, y: -d2, z: zArmTop }
     ];
     const depthPoints = [
-      { x: w, y: -d, z: totalHeight },   // Right-front-top
-      { x: w, y: d, z: totalHeight }     // Right-back-top
+      { x: w2, y: -d2, z: zArmTop },
+      { x: w2, y: d2, z: zArmTop }
     ];
     const heightPoints = [
-      { x: w, y: -d, z: 0 },             // Floor (front-right)
-      { x: w, y: d, z: backFrameTopZ }   // Top of back frame
+      { x: w2, y: -d2, z: zBase },
+      { x: w2, y: -d2, z: zArmTop }
     ];
-
+    
     dimensionElements.push(...addDimensionOverlay(
       widthPoints,
       depthPoints,
@@ -1029,43 +1165,41 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
       2.5
     ));
   }
-
-  const allElements = [...lines, ...dimensionElements];
   
-  console.log(`[generateSofaMultiFrame] Final - lines count: ${lines.length}, dimensionElements count: ${dimensionElements.length}, allElements count: ${allElements.length}`);
+  const allElements = [...allLines, ...dimensionElements];
   
-  // Validate all calculated values
-  console.log(`[generateSofaMultiFrame] Z values summary - plinthThickness: ${plinthThickness}, seatFrameZ: ${seatFrameZ}, backFrameBottomZ: ${backFrameBottomZ}, backFrameTopZ: ${backFrameTopZ}`);
-  console.log(`[generateSofaMultiFrame] Division results - bayWidth: ${bayWidth}, bayBoundaries count: ${bayBoundaries.length}`);
+  // Validate coordinates are within bounds
+  const allProjectedPoints = [
+    ...baseBottomProj, ...baseTopProj,
+    ...Object.values(leftArmProj),
+    ...Object.values(rightArmProj),
+    ...seatTopProj,
+    ...backCushionFrontProj, ...backCushionRearProj
+  ];
   
+  const outOfBounds = allProjectedPoints.filter(p => !p.valid);
+  if (outOfBounds.length > 0) {
+    console.error(`[generateSofaMultiFrame] ${outOfBounds.length} coordinates out of bounds`);
+  }
+  
+  // Generate SVG string
   try {
-    const svgString = `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="background: white;">
+    const svgString = `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgWidth} ${svgHeight}">
+    <rect width="${svgWidth}" height="${svgHeight}" fill="white"/>
     ${allElements.join('\n    ')}
   </svg>`;
     
     // Validate SVG string
-    if (svgString === undefined) {
-      console.error(`[generateSofaMultiFrame] SVG string is undefined`);
-      throw new Error('SVG string is undefined');
-    }
-    if (svgString === null) {
-      console.error(`[generateSofaMultiFrame] SVG string is null`);
-      throw new Error('SVG string is null');
-    }
-    if (svgString === '') {
-      console.error(`[generateSofaMultiFrame] SVG string is empty`);
-      throw new Error('SVG string is empty');
-    }
-    if (svgString.includes('NaN') || svgString.includes('Infinity')) {
-      console.error(`[generateSofaMultiFrame] SVG contains NaN or Infinity`);
-      throw new Error('SVG contains NaN or Infinity');
+    if (!svgString || svgString.includes('NaN') || svgString.includes('Infinity')) {
+      console.error(`[generateSofaMultiFrame] SVG contains invalid values`);
+      return generateErrorSVG('Sofa SVG contains NaN or Infinity');
     }
     
-    console.log(`[generateSofaMultiFrame] SVG generated successfully, length: ${svgString.length}`);
+    console.log(`[generateSofaMultiFrame] SVG generated successfully, length: ${svgString.length}, lines: ${allLines.length}`);
     return svgString;
   } catch (error: any) {
     console.error(`[generateSofaMultiFrame] Exception during SVG assembly:`, error);
-    throw error;
+    return generateErrorSVG(`Sofa generation error: ${error.message}`);
   }
 }
 
