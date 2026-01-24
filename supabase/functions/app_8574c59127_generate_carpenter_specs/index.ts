@@ -844,7 +844,7 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
     thick: 3.5,      // Outer silhouette (front edges, visible outline)
     medium: 2.2,     // Major divisions (arms, cushion separations)
     thin: 1.2,       // Surface details (cushion seams)
-    dashed: 1.0      // Hidden edges (back corners, rear surfaces)
+    dashed: 1.2      // Hidden edges (back corners, rear surfaces)
   };
   
   // Calculate scale to fit within canvas bounds (50-750 x, 50-550 y)
@@ -942,35 +942,36 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   const baseW2 = w2 - baseRecess;
   const baseD2 = d2 - baseRecess;
   
-  // Base corners (bottom and top)
-  const baseBottom = [
-    { x: -baseW2, y: -baseD2, z: zBase },
-    { x: baseW2, y: -baseD2, z: zBase },
-    { x: baseW2, y: baseD2, z: zBase },
-    { x: -baseW2, y: baseD2, z: zBase }
-  ];
-  const baseTop = baseBottom.map(p => ({ ...p, z: zBaseTop }));
+  // Base corners (bottom and top) - define once for precision
+  const bbl = projectAndValidate(-baseW2, -baseD2, zBase); // bottom-front-left
+  const bbr = projectAndValidate(baseW2, -baseD2, zBase);  // bottom-front-right
+  const btr = projectAndValidate(baseW2, baseD2, zBase);   // bottom-back-right
+  const btl = projectAndValidate(-baseW2, baseD2, zBase);  // bottom-back-left
   
-  const baseBottomProj = baseBottom.map(p => projectAndValidate(p.x, p.y, p.z));
-  const baseTopProj = baseTop.map(p => projectAndValidate(p.x, p.y, p.z));
+  const tbl = projectAndValidate(-baseW2, -baseD2, zBaseTop); // top-front-left
+  const tbr = projectAndValidate(baseW2, -baseD2, zBaseTop);  // top-front-right
+  const ttr = projectAndValidate(baseW2, baseD2, zBaseTop);   // top-back-right
+  const ttl = projectAndValidate(-baseW2, baseD2, zBaseTop);  // top-back-left
+  
+  const dashPattern = '4,2';
   
   // Base bottom face (hidden edges dashed)
-  baseLines.push(svgLine(baseBottomProj[0].x, baseBottomProj[0].y, baseBottomProj[1].x, baseBottomProj[1].y, strokeWidths.thick)); // Front
-  baseLines.push(svgLine(baseBottomProj[1].x, baseBottomProj[1].y, baseBottomProj[2].x, baseBottomProj[2].y, strokeWidths.thick)); // Right
-  hiddenLines.push(svgLine(baseBottomProj[2].x, baseBottomProj[2].y, baseBottomProj[3].x, baseBottomProj[3].y, strokeWidths.dashed, '5,3')); // Back (dashed)
-  baseLines.push(svgLine(baseBottomProj[3].x, baseBottomProj[3].y, baseBottomProj[0].x, baseBottomProj[0].y, strokeWidths.thick)); // Left
+  baseLines.push(svgLine(bbl.x, bbl.y, bbr.x, bbr.y, strokeWidths.thick)); // Front
+  baseLines.push(svgLine(bbr.x, bbr.y, btr.x, btr.y, strokeWidths.thick)); // Right
+  hiddenLines.push(svgLine(btr.x, btr.y, btl.x, btl.y, strokeWidths.dashed, dashPattern)); // Back (dashed)
+  baseLines.push(svgLine(btl.x, btl.y, bbl.x, bbl.y, strokeWidths.thick)); // Left
   
   // Base top face
-  baseLines.push(svgLine(baseTopProj[0].x, baseTopProj[0].y, baseTopProj[1].x, baseTopProj[1].y, strokeWidths.thick)); // Front
-  baseLines.push(svgLine(baseTopProj[1].x, baseTopProj[1].y, baseTopProj[2].x, baseTopProj[2].y, strokeWidths.thick)); // Right
-  hiddenLines.push(svgLine(baseTopProj[2].x, baseTopProj[2].y, baseTopProj[3].x, baseTopProj[3].y, strokeWidths.dashed, '5,3')); // Back (dashed)
-  baseLines.push(svgLine(baseTopProj[3].x, baseTopProj[3].y, baseTopProj[0].x, baseTopProj[0].y, strokeWidths.thick)); // Left
+  baseLines.push(svgLine(tbl.x, tbl.y, tbr.x, tbr.y, strokeWidths.thick)); // Front
+  baseLines.push(svgLine(tbr.x, tbr.y, ttr.x, ttr.y, strokeWidths.thick)); // Right
+  hiddenLines.push(svgLine(ttr.x, ttr.y, ttl.x, ttl.y, strokeWidths.dashed, dashPattern)); // Back (dashed)
+  baseLines.push(svgLine(ttl.x, ttl.y, tbl.x, tbl.y, strokeWidths.thick)); // Left
   
   // Base verticals (front only, back are hidden)
-  baseLines.push(svgLine(baseBottomProj[0].x, baseBottomProj[0].y, baseTopProj[0].x, baseTopProj[0].y, strokeWidths.thick)); // Front-left
-  baseLines.push(svgLine(baseBottomProj[1].x, baseBottomProj[1].y, baseTopProj[1].x, baseTopProj[1].y, strokeWidths.thick)); // Front-right
-  hiddenLines.push(svgLine(baseBottomProj[2].x, baseBottomProj[2].y, baseTopProj[2].x, baseTopProj[2].y, strokeWidths.dashed, '5,3')); // Back-right (dashed)
-  hiddenLines.push(svgLine(baseBottomProj[3].x, baseBottomProj[3].y, baseTopProj[3].x, baseTopProj[3].y, strokeWidths.dashed, '5,3')); // Back-left (dashed)
+  baseLines.push(svgLine(bbl.x, bbl.y, tbl.x, tbl.y, strokeWidths.thick)); // Front-left
+  baseLines.push(svgLine(bbr.x, bbr.y, tbr.x, tbr.y, strokeWidths.thick)); // Front-right
+  hiddenLines.push(svgLine(btr.x, btr.y, ttr.x, ttr.y, strokeWidths.dashed, dashPattern)); // Back-right (dashed)
+  hiddenLines.push(svgLine(btl.x, btl.y, ttl.x, ttl.y, strokeWidths.dashed, dashPattern)); // Back-left (dashed)
   
   // ============================================================
   // COMPONENT 2: LEFT ARM (solid rectangular volume)
@@ -978,37 +979,31 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   const leftArmOuterX = -w2;
   const leftArmInnerX = -w2 + armW_scaled;
   
-  const leftArmPoints = {
-    frontBottomOuter: { x: leftArmOuterX, y: -d2, z: zBaseTop },
-    frontTopOuter: { x: leftArmOuterX, y: -d2, z: zArmTop },
-    backBottomOuter: { x: leftArmOuterX, y: d2, z: zBaseTop },
-    backTopOuter: { x: leftArmOuterX, y: d2, z: zArmTop },
-    frontBottomInner: { x: leftArmInnerX, y: -d2, z: zBaseTop },
-    frontTopInner: { x: leftArmInnerX, y: -d2, z: zArmTop },
-    backBottomInner: { x: leftArmInnerX, y: d2, z: zBaseTop },
-    backTopInner: { x: leftArmInnerX, y: d2, z: zArmTop }
-  };
-  
-  const leftArmProj = Object.entries(leftArmPoints).reduce((acc, [key, point]) => {
-    acc[key] = projectAndValidate(point.x, point.y, point.z);
-    return acc;
-  }, {} as Record<string, { x: number; y: number; valid: boolean }>);
+  // Define left arm points as named constants for precision
+  const lfbO = projectAndValidate(leftArmOuterX, -d2, zBaseTop); // left-front-bottom-outer
+  const lftO = projectAndValidate(leftArmOuterX, -d2, zArmTop);   // left-front-top-outer
+  const lbbO = projectAndValidate(leftArmOuterX, d2, zBaseTop);  // left-back-bottom-outer
+  const lbtO = projectAndValidate(leftArmOuterX, d2, zArmTop);   // left-back-top-outer
+  const lfbI = projectAndValidate(leftArmInnerX, -d2, zBaseTop); // left-front-bottom-inner
+  const lftI = projectAndValidate(leftArmInnerX, -d2, zArmTop);   // left-front-top-inner
+  const lbbI = projectAndValidate(leftArmInnerX, d2, zBaseTop);  // left-back-bottom-inner
+  const lbtI = projectAndValidate(leftArmInnerX, d2, zArmTop);   // left-back-top-inner
   
   // Left arm front face (visible)
-  frontLines.push(svgLine(leftArmProj.frontBottomOuter.x, leftArmProj.frontBottomOuter.y, leftArmProj.frontTopOuter.x, leftArmProj.frontTopOuter.y, strokeWidths.medium)); // Outer vertical
-  frontLines.push(svgLine(leftArmProj.frontBottomInner.x, leftArmProj.frontBottomInner.y, leftArmProj.frontTopInner.x, leftArmProj.frontTopInner.y, strokeWidths.medium)); // Inner vertical
-  frontLines.push(svgLine(leftArmProj.frontBottomOuter.x, leftArmProj.frontBottomOuter.y, leftArmProj.frontBottomInner.x, leftArmProj.frontBottomInner.y, strokeWidths.medium)); // Bottom horizontal
-  frontLines.push(svgLine(leftArmProj.frontTopOuter.x, leftArmProj.frontTopOuter.y, leftArmProj.frontTopInner.x, leftArmProj.frontTopInner.y, strokeWidths.medium)); // Top horizontal
+  frontLines.push(svgLine(lfbO.x, lfbO.y, lftO.x, lftO.y, strokeWidths.medium)); // Outer vertical
+  frontLines.push(svgLine(lfbI.x, lfbI.y, lftI.x, lftI.y, strokeWidths.medium)); // Inner vertical
+  frontLines.push(svgLine(lfbO.x, lfbO.y, lfbI.x, lfbI.y, strokeWidths.medium)); // Bottom horizontal
+  frontLines.push(svgLine(lftO.x, lftO.y, lftI.x, lftI.y, strokeWidths.medium)); // Top horizontal
   
   // Left arm back face (hidden, dashed)
-  hiddenLines.push(svgLine(leftArmProj.backBottomOuter.x, leftArmProj.backBottomOuter.y, leftArmProj.backTopOuter.x, leftArmProj.backTopOuter.y, strokeWidths.dashed, '5,3')); // Outer vertical
-  hiddenLines.push(svgLine(leftArmProj.backBottomInner.x, leftArmProj.backBottomInner.y, leftArmProj.backTopInner.x, leftArmProj.backTopInner.y, strokeWidths.dashed, '5,3')); // Inner vertical
-  hiddenLines.push(svgLine(leftArmProj.backBottomOuter.x, leftArmProj.backBottomOuter.y, leftArmProj.backBottomInner.x, leftArmProj.backBottomInner.y, strokeWidths.dashed, '5,3')); // Bottom horizontal
-  hiddenLines.push(svgLine(leftArmProj.backTopOuter.x, leftArmProj.backTopOuter.y, leftArmProj.backTopInner.x, leftArmProj.backTopInner.y, strokeWidths.dashed, '5,3')); // Top horizontal
+  hiddenLines.push(svgLine(lbbO.x, lbbO.y, lbtO.x, lbtO.y, strokeWidths.dashed, dashPattern)); // Outer vertical
+  hiddenLines.push(svgLine(lbbI.x, lbbI.y, lbtI.x, lbtI.y, strokeWidths.dashed, dashPattern)); // Inner vertical
+  hiddenLines.push(svgLine(lbbO.x, lbbO.y, lbbI.x, lbbI.y, strokeWidths.dashed, dashPattern)); // Bottom horizontal
+  hiddenLines.push(svgLine(lbtO.x, lbtO.y, lbtI.x, lbtI.y, strokeWidths.dashed, dashPattern)); // Top horizontal
   
   // Left arm connecting edges
-  frontLines.push(svgLine(leftArmProj.frontTopOuter.x, leftArmProj.frontTopOuter.y, leftArmProj.backTopOuter.x, leftArmProj.backTopOuter.y, strokeWidths.medium)); // Top outer
-  hiddenLines.push(svgLine(leftArmProj.frontTopInner.x, leftArmProj.frontTopInner.y, leftArmProj.backTopInner.x, leftArmProj.backTopInner.y, strokeWidths.dashed, '5,3')); // Top inner (dashed)
+  frontLines.push(svgLine(lftO.x, lftO.y, lbtO.x, lbtO.y, strokeWidths.medium)); // Top outer
+  hiddenLines.push(svgLine(lftI.x, lftI.y, lbtI.x, lbtI.y, strokeWidths.dashed, dashPattern)); // Top inner (dashed)
   
   // ============================================================
   // COMPONENT 3: RIGHT ARM (mirror of left)
@@ -1016,37 +1011,31 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   const rightArmOuterX = w2;
   const rightArmInnerX = w2 - armW_scaled;
   
-  const rightArmPoints = {
-    frontBottomOuter: { x: rightArmOuterX, y: -d2, z: zBaseTop },
-    frontTopOuter: { x: rightArmOuterX, y: -d2, z: zArmTop },
-    backBottomOuter: { x: rightArmOuterX, y: d2, z: zBaseTop },
-    backTopOuter: { x: rightArmOuterX, y: d2, z: zArmTop },
-    frontBottomInner: { x: rightArmInnerX, y: -d2, z: zBaseTop },
-    frontTopInner: { x: rightArmInnerX, y: -d2, z: zArmTop },
-    backBottomInner: { x: rightArmInnerX, y: d2, z: zBaseTop },
-    backTopInner: { x: rightArmInnerX, y: d2, z: zArmTop }
-  };
-  
-  const rightArmProj = Object.entries(rightArmPoints).reduce((acc, [key, point]) => {
-    acc[key] = projectAndValidate(point.x, point.y, point.z);
-    return acc;
-  }, {} as Record<string, { x: number; y: number; valid: boolean }>);
+  // Define right arm points as named constants for precision
+  const rfbO = projectAndValidate(rightArmOuterX, -d2, zBaseTop); // right-front-bottom-outer
+  const rftO = projectAndValidate(rightArmOuterX, -d2, zArmTop);   // right-front-top-outer
+  const rbbO = projectAndValidate(rightArmOuterX, d2, zBaseTop);  // right-back-bottom-outer
+  const rbtO = projectAndValidate(rightArmOuterX, d2, zArmTop);   // right-back-top-outer
+  const rfbI = projectAndValidate(rightArmInnerX, -d2, zBaseTop); // right-front-bottom-inner
+  const rftI = projectAndValidate(rightArmInnerX, -d2, zArmTop);   // right-front-top-inner
+  const rbbI = projectAndValidate(rightArmInnerX, d2, zBaseTop);  // right-back-bottom-inner
+  const rbtI = projectAndValidate(rightArmInnerX, d2, zArmTop);   // right-back-top-inner
   
   // Right arm front face (visible)
-  frontLines.push(svgLine(rightArmProj.frontBottomOuter.x, rightArmProj.frontBottomOuter.y, rightArmProj.frontTopOuter.x, rightArmProj.frontTopOuter.y, strokeWidths.medium)); // Outer vertical
-  frontLines.push(svgLine(rightArmProj.frontBottomInner.x, rightArmProj.frontBottomInner.y, rightArmProj.frontTopInner.x, rightArmProj.frontTopInner.y, strokeWidths.medium)); // Inner vertical
-  frontLines.push(svgLine(rightArmProj.frontBottomOuter.x, rightArmProj.frontBottomOuter.y, rightArmProj.frontBottomInner.x, rightArmProj.frontBottomInner.y, strokeWidths.medium)); // Bottom horizontal
-  frontLines.push(svgLine(rightArmProj.frontTopOuter.x, rightArmProj.frontTopOuter.y, rightArmProj.frontTopInner.x, rightArmProj.frontTopInner.y, strokeWidths.medium)); // Top horizontal
+  frontLines.push(svgLine(rfbO.x, rfbO.y, rftO.x, rftO.y, strokeWidths.medium)); // Outer vertical
+  frontLines.push(svgLine(rfbI.x, rfbI.y, rftI.x, rftI.y, strokeWidths.medium)); // Inner vertical
+  frontLines.push(svgLine(rfbO.x, rfbO.y, rfbI.x, rfbI.y, strokeWidths.medium)); // Bottom horizontal
+  frontLines.push(svgLine(rftO.x, rftO.y, rftI.x, rftI.y, strokeWidths.medium)); // Top horizontal
   
   // Right arm back face (hidden, dashed)
-  hiddenLines.push(svgLine(rightArmProj.backBottomOuter.x, rightArmProj.backBottomOuter.y, rightArmProj.backTopOuter.x, rightArmProj.backTopOuter.y, strokeWidths.dashed, '5,3')); // Outer vertical
-  hiddenLines.push(svgLine(rightArmProj.backBottomInner.x, rightArmProj.backBottomInner.y, rightArmProj.backTopInner.x, rightArmProj.backTopInner.y, strokeWidths.dashed, '5,3')); // Inner vertical
-  hiddenLines.push(svgLine(rightArmProj.backBottomOuter.x, rightArmProj.backBottomOuter.y, rightArmProj.backBottomInner.x, rightArmProj.backBottomInner.y, strokeWidths.dashed, '5,3')); // Bottom horizontal
-  hiddenLines.push(svgLine(rightArmProj.backTopOuter.x, rightArmProj.backTopOuter.y, rightArmProj.backTopInner.x, rightArmProj.backTopInner.y, strokeWidths.dashed, '5,3')); // Top horizontal
+  hiddenLines.push(svgLine(rbbO.x, rbbO.y, rbtO.x, rbtO.y, strokeWidths.dashed, dashPattern)); // Outer vertical
+  hiddenLines.push(svgLine(rbbI.x, rbbI.y, rbtI.x, rbtI.y, strokeWidths.dashed, dashPattern)); // Inner vertical
+  hiddenLines.push(svgLine(rbbO.x, rbbO.y, rbbI.x, rbbI.y, strokeWidths.dashed, dashPattern)); // Bottom horizontal
+  hiddenLines.push(svgLine(rbtO.x, rbtO.y, rbtI.x, rbtI.y, strokeWidths.dashed, dashPattern)); // Top horizontal
   
   // Right arm connecting edges
-  frontLines.push(svgLine(rightArmProj.frontTopOuter.x, rightArmProj.frontTopOuter.y, rightArmProj.backTopOuter.x, rightArmProj.backTopOuter.y, strokeWidths.medium)); // Top outer
-  hiddenLines.push(svgLine(rightArmProj.frontTopInner.x, rightArmProj.frontTopInner.y, rightArmProj.backTopInner.x, rightArmProj.backTopInner.y, strokeWidths.dashed, '5,3')); // Top inner (dashed)
+  frontLines.push(svgLine(rftO.x, rftO.y, rbtO.x, rbtO.y, strokeWidths.medium)); // Top outer
+  hiddenLines.push(svgLine(rftI.x, rftI.y, rbtI.x, rbtI.y, strokeWidths.dashed, dashPattern)); // Top inner (dashed)
   
   // ============================================================
   // COMPONENT 4: SEAT PLATFORM (between arms, showing top surface)
@@ -1054,21 +1043,17 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   const seatLeftX = leftArmInnerX;
   const seatRightX = rightArmInnerX;
   
-  // Seat top surface corners
-  const seatTopCorners = [
-    { x: seatLeftX, y: -d2, z: zSeat },
-    { x: seatRightX, y: -d2, z: zSeat },
-    { x: seatRightX, y: d2, z: zSeat },
-    { x: seatLeftX, y: d2, z: zSeat }
-  ];
-  
-  const seatTopProj = seatTopCorners.map(p => projectAndValidate(p.x, p.y, p.z));
+  // Seat top surface corners - define once for precision
+  const slf = projectAndValidate(seatLeftX, -d2, zSeat); // seat-left-front
+  const srf = projectAndValidate(seatRightX, -d2, zSeat);  // seat-right-front
+  const srb = projectAndValidate(seatRightX, d2, zSeat);   // seat-right-back
+  const slb = projectAndValidate(seatLeftX, d2, zSeat);  // seat-left-back
   
   // Seat top surface edges
-  frontLines.push(svgLine(seatTopProj[0].x, seatTopProj[0].y, seatTopProj[1].x, seatTopProj[1].y, strokeWidths.thick)); // Front edge (THICK - important outline)
-  frontLines.push(svgLine(seatTopProj[1].x, seatTopProj[1].y, seatTopProj[2].x, seatTopProj[2].y, strokeWidths.medium)); // Right edge
-  hiddenLines.push(svgLine(seatTopProj[2].x, seatTopProj[2].y, seatTopProj[3].x, seatTopProj[3].y, strokeWidths.dashed, '5,3')); // Back edge (dashed)
-  frontLines.push(svgLine(seatTopProj[3].x, seatTopProj[3].y, seatTopProj[0].x, seatTopProj[0].y, strokeWidths.medium)); // Left edge
+  frontLines.push(svgLine(slf.x, slf.y, srf.x, srf.y, strokeWidths.thick)); // Front edge (THICK - important outline)
+  frontLines.push(svgLine(srf.x, srf.y, srb.x, srb.y, strokeWidths.medium)); // Right edge
+  hiddenLines.push(svgLine(srb.x, srb.y, slb.x, slb.y, strokeWidths.dashed, dashPattern)); // Back edge (dashed)
+  frontLines.push(svgLine(slb.x, slb.y, slf.x, slf.y, strokeWidths.medium)); // Left edge
   
   // Seat cushion divisions (2-3 cushions)
   const cushionWidth = (seatRightX - seatLeftX) / cushionCount;
@@ -1089,49 +1074,50 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   const backCushionFrontY = yBackFront; // Front face (recessed by back thickness)
   const backCushionRearY = yBackRear; // Rear face (at rear wall)
   
-  // Back cushion front face corners (visible from front)
-  const backCushionFrontCorners = [
-    { x: seatLeftX, y: backCushionFrontY, z: backCushionBottomZ },
-    { x: seatRightX, y: backCushionFrontY, z: backCushionBottomZ },
-    { x: seatRightX, y: backCushionFrontY, z: backCushionTopZ },
-    { x: seatLeftX, y: backCushionFrontY, z: backCushionTopZ }
-  ];
+  // Back cushion corners (front face) - define once for precision
+  const cfb = projectAndValidate(seatLeftX, backCushionFrontY, backCushionBottomZ); // cushion-front-bottom-left
+  const cfbR = projectAndValidate(seatRightX, backCushionFrontY, backCushionBottomZ); // cushion-front-bottom-right
+  const cftR = projectAndValidate(seatRightX, backCushionFrontY, backCushionTopZ);    // cushion-front-top-right
+  const cft = projectAndValidate(seatLeftX, backCushionFrontY, backCushionTopZ);      // cushion-front-top-left
   
-  const backCushionFrontProj = backCushionFrontCorners.map(p => projectAndValidate(p.x, p.y, p.z));
+  // Back cushion corners (rear face) - define once for precision
+  const crb = projectAndValidate(seatLeftX, backCushionRearY, backCushionBottomZ);  // cushion-rear-bottom-left
+  const crbR = projectAndValidate(seatRightX, backCushionRearY, backCushionBottomZ); // cushion-rear-bottom-right
+  const crtR = projectAndValidate(seatRightX, backCushionRearY, backCushionTopZ);     // cushion-rear-top-right
+  const crt = projectAndValidate(seatLeftX, backCushionRearY, backCushionTopZ);       // cushion-rear-top-left
   
   // Back cushion front face outline (visible, medium weight)
-  frontLines.push(svgLine(backCushionFrontProj[0].x, backCushionFrontProj[0].y, backCushionFrontProj[1].x, backCushionFrontProj[1].y, strokeWidths.medium)); // Bottom
-  frontLines.push(svgLine(backCushionFrontProj[1].x, backCushionFrontProj[1].y, backCushionFrontProj[2].x, backCushionFrontProj[2].y, strokeWidths.medium)); // Right
-  frontLines.push(svgLine(backCushionFrontProj[2].x, backCushionFrontProj[2].y, backCushionFrontProj[3].x, backCushionFrontProj[3].y, strokeWidths.medium)); // Top
-  frontLines.push(svgLine(backCushionFrontProj[3].x, backCushionFrontProj[3].y, backCushionFrontProj[0].x, backCushionFrontProj[0].y, strokeWidths.medium)); // Left
+  frontLines.push(svgLine(cfb.x, cfb.y, cfbR.x, cfbR.y, strokeWidths.medium)); // Bottom
+  frontLines.push(svgLine(cfbR.x, cfbR.y, cftR.x, cftR.y, strokeWidths.medium)); // Right
+  frontLines.push(svgLine(cftR.x, cftR.y, cft.x, cft.y, strokeWidths.medium)); // Top
+  frontLines.push(svgLine(cft.x, cft.y, cfb.x, cfb.y, strokeWidths.medium)); // Left
   
   // Back cushion divisions (matching seat cushions, thin lines)
   for (let i = 1; i < cushionCount; i++) {
     const divX = seatLeftX + i * cushionWidth;
-    const divBottom = projectAndValidate(divX, backCushionFrontY, backCushionBottomZ);
-    const divTop = projectAndValidate(divX, backCushionFrontY, backCushionTopZ);
-    frontLines.push(svgLine(divBottom.x, divBottom.y, divTop.x, divTop.y, strokeWidths.thin)); // Cushion division (thin)
+    const divFrontBottom = projectAndValidate(divX, backCushionFrontY, backCushionBottomZ);
+    const divFrontTop = projectAndValidate(divX, backCushionFrontY, backCushionTopZ);
+    const divRearTop = projectAndValidate(divX, backCushionRearY, backCushionTopZ);
+    
+    frontLines.push(svgLine(divFrontBottom.x, divFrontBottom.y, divFrontTop.x, divFrontTop.y, strokeWidths.thin)); // Cushion division front (thin)
+    frontLines.push(svgLine(divFrontTop.x, divFrontTop.y, divRearTop.x, divRearTop.y, strokeWidths.thin)); // Cushion division top depth (thin)
   }
   
+  // Back cushion depth edges (connecting front and rear faces)
+  frontLines.push(svgLine(cft.x, cft.y, crt.x, crt.y, strokeWidths.thin)); // Top-left depth
+  frontLines.push(svgLine(cftR.x, cftR.y, crtR.x, crtR.y, strokeWidths.thin)); // Top-right depth
+  frontLines.push(svgLine(cfbR.x, cfbR.y, crbR.x, crbR.y, strokeWidths.thin)); // Bottom-right depth
+  
   // Back cushion rear face (hidden, dashed)
-  const backCushionRearCorners = [
-    { x: seatLeftX, y: backCushionRearY, z: backCushionBottomZ },
-    { x: seatRightX, y: backCushionRearY, z: backCushionBottomZ },
-    { x: seatRightX, y: backCushionRearY, z: backCushionTopZ },
-    { x: seatLeftX, y: backCushionRearY, z: backCushionTopZ }
-  ];
-  
-  const backCushionRearProj = backCushionRearCorners.map(p => projectAndValidate(p.x, p.y, p.z));
-  
-  hiddenLines.push(svgLine(backCushionRearProj[0].x, backCushionRearProj[0].y, backCushionRearProj[1].x, backCushionRearProj[1].y, strokeWidths.dashed, '5,3')); // Bottom (dashed)
-  hiddenLines.push(svgLine(backCushionRearProj[1].x, backCushionRearProj[1].y, backCushionRearProj[2].x, backCushionRearProj[2].y, strokeWidths.dashed, '5,3')); // Right (dashed)
-  hiddenLines.push(svgLine(backCushionRearProj[2].x, backCushionRearProj[2].y, backCushionRearProj[3].x, backCushionRearProj[3].y, strokeWidths.dashed, '5,3')); // Top (dashed)
-  hiddenLines.push(svgLine(backCushionRearProj[3].x, backCushionRearProj[3].y, backCushionRearProj[0].x, backCushionRearProj[0].y, strokeWidths.dashed, '5,3')); // Left (dashed)
+  hiddenLines.push(svgLine(crb.x, crb.y, crbR.x, crbR.y, strokeWidths.dashed, dashPattern)); // Bottom
+  hiddenLines.push(svgLine(crbR.x, crbR.y, crtR.x, crtR.y, strokeWidths.dashed, dashPattern)); // Right
+  hiddenLines.push(svgLine(crtR.x, crtR.y, crt.x, crt.y, strokeWidths.dashed, dashPattern)); // Top
+  hiddenLines.push(svgLine(crt.x, crt.y, crb.x, crb.y, strokeWidths.dashed, dashPattern)); // Left
   
   // ============================================================
   // ASSEMBLE SVG IN CORRECT DRAWING ORDER (back to front)
   // ============================================================
-  const allLines = [...hiddenLines, ...backLines, ...seatLines, ...frontLines, ...baseLines];
+  const allLines = [...baseLines, ...hiddenLines, ...backLines, ...seatLines, ...frontLines];
   
   // Dimension annotations layer (optional overlay)
   const dimensionElements: string[] = [];
@@ -1164,11 +1150,11 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   
   // Validate coordinates are within bounds
   const allProjectedPoints = [
-    ...baseBottomProj, ...baseTopProj,
-    ...Object.values(leftArmProj),
-    ...Object.values(rightArmProj),
-    ...seatTopProj,
-    ...backCushionFrontProj, ...backCushionRearProj
+    bbl, bbr, btr, btl, tbl, tbr, ttr, ttl,
+    lfbO, lftO, lbbO, lbtO, lfbI, lftI, lbbI, lbtI,
+    rfbO, rftO, rbbO, rbtO, rfbI, rftI, rbbI, rbtI,
+    slf, srf, srb, slb,
+    cfb, cfbR, cftR, cft, crb, crbR, crtR, crt
   ];
   
   const outOfBounds = allProjectedPoints.filter(p => !p.valid);
