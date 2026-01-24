@@ -855,9 +855,9 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   const maxProjectedWidth = (width + depth) * ISO_COS;  // width and depth are in cm
   const maxProjectedHeight = (width + depth) * ISO_SIN + height;
   
-  // Target canvas usage: 65% of available space (455px width, 325px height)
-  const targetWidth = 455;   // 65% of 700px available width
-  const targetHeight = 325;  // 65% of 500px available height
+  // Target canvas usage: 70% of available space for better visibility in PDFs
+  const targetWidth = 550;   // 78% of 700px available width
+  const targetHeight = 400;  // 80% of 500px available height
   
   const scaleX = targetWidth / maxProjectedWidth;
   const scaleY = targetHeight / maxProjectedHeight;
