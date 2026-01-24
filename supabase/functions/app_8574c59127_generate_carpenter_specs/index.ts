@@ -1101,7 +1101,7 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   }
   
   // ============================================================
-  // COMPONENT 5: BACK CUSHIONS (attached to rear seat rail)
+  // COMPONENT 5: BACKREST STRUCTURE (structural frame, not upholstery)
   // ============================================================
   const backCushionBottomZ = zSeat;
   const backCushionTopZ = zArmTop;
@@ -1110,10 +1110,17 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   const backCushionFrontY = yBackFront; // Front face (recessed by back thickness)
   const backCushionRearY = yBackRear; // Rear face (at rear wall)
   
-  // CRITICAL: Backrest bottom MUST reference seat frame rear points
-  // Back cushion bottom corners (SHARED with seat rear rail)
-  const cfb = seatFrame.rearLeft;   // cushion-front-bottom-left (SAME OBJECT as seat rear-left)
-  const cfbR = seatFrame.rearRight; // cushion-front-bottom-right (SAME OBJECT as seat rear-right)
+  // CRITICAL: Add explicit backrest bottom rail at seatFrameZ (structural member)
+  // This rail is the receiving member for backrest posts
+  const backrestBottomRailLeft = seatFrame.rearLeft;   // SAME OBJECT as seat rear-left
+  const backrestBottomRailRight = seatFrame.rearRight; // SAME OBJECT as seat rear-right
+  
+  // Draw backrest bottom rail as structural element (MEDIUM weight)
+  backLines.push(svgLine(backrestBottomRailLeft.x, backrestBottomRailLeft.y, backrestBottomRailRight.x, backrestBottomRailRight.y, strokeWidths.medium)); // Backrest bottom rail
+  
+  // Back cushion bottom corners (SHARED with backrest bottom rail)
+  const cfb = backrestBottomRailLeft;   // cushion-front-bottom-left (SAME OBJECT)
+  const cfbR = backrestBottomRailRight; // cushion-front-bottom-right (SAME OBJECT)
   
   // Back cushion top corners (front face)
   const cftR = projectAndValidate(seatRightX, backCushionFrontY, backCushionTopZ);    // cushion-front-top-right
@@ -1126,19 +1133,24 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   const crt = projectAndValidate(seatLeftX, backCushionRearY, backCushionTopZ);       // cushion-rear-top-left
   
   // Back cushion front face outline (visible, medium weight)
-  frontLines.push(svgLine(cfb.x, cfb.y, cfbR.x, cfbR.y, strokeWidths.medium)); // Bottom
-  frontLines.push(svgLine(cfbR.x, cfbR.y, cftR.x, cftR.y, strokeWidths.medium)); // Right
-  frontLines.push(svgLine(cftR.x, cftR.y, cft.x, cft.y, strokeWidths.medium)); // Top
-  frontLines.push(svgLine(cft.x, cft.y, cfb.x, cfb.y, strokeWidths.medium)); // Left
+  // NOTE: Bottom edge is the backrest bottom rail (already drawn above)
+  // Do NOT redraw the bottom edge here to avoid duplicate lines
+  frontLines.push(svgLine(cfbR.x, cfbR.y, cftR.x, cftR.y, strokeWidths.medium)); // Right vertical
+  frontLines.push(svgLine(cftR.x, cftR.y, cft.x, cft.y, strokeWidths.medium)); // Top horizontal
+  frontLines.push(svgLine(cft.x, cft.y, cfb.x, cfb.y, strokeWidths.medium)); // Left vertical
   
   // Back cushion divisions (matching seat cushions, thin lines)
+  // Backrest vertical posts terminate at the backrest bottom rail
   for (let i = 1; i < cushionCount; i++) {
     const divX = seatLeftX + i * cushionWidth;
-    const divFrontBottom = projectAndValidate(divX, backCushionFrontY, backCushionBottomZ);
+    // Backrest post bottom (at backrest bottom rail level - seatFrameZ)
+    const divPostBottom = projectAndValidate(divX, d2, backCushionBottomZ); // At rear seat rail
+    // Backrest post top (at front face of cushion)
     const divFrontTop = projectAndValidate(divX, backCushionFrontY, backCushionTopZ);
     const divRearTop = projectAndValidate(divX, backCushionRearY, backCushionTopZ);
     
-    frontLines.push(svgLine(divFrontBottom.x, divFrontBottom.y, divFrontTop.x, divFrontTop.y, strokeWidths.thin)); // Cushion division front (thin)
+    // Backrest vertical post (terminates at bottom rail)
+    frontLines.push(svgLine(divPostBottom.x, divPostBottom.y, divFrontTop.x, divFrontTop.y, strokeWidths.thin)); // Backrest post (thin)
     frontLines.push(svgLine(divFrontTop.x, divFrontTop.y, divRearTop.x, divRearTop.y, strokeWidths.thin)); // Cushion division top depth (thin)
   }
   
