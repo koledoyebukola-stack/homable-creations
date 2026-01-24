@@ -68,9 +68,16 @@ function resolveBlueprintType(
 ): BlueprintType {
   const searchText = `${category || ''} ${itemName}`.toLowerCase();
   
-  // Rule 1: IF width ≥ 180cm → SOFA_MULTI
-  if (width_cm >= 180) {
-    return BlueprintType.SOFA_MULTI;
+  // Rule 1: SEMANTIC/CATEGORY CHECKS FIRST (before size-based heuristics)
+  // Storage furniture (sideboard, cabinet, console, storage) → STORAGE_BOX
+  if (searchText.includes('sideboard') || 
+      searchText.includes('cabinet') || 
+      searchText.includes('console') || 
+      searchText.includes('storage') ||
+      searchText.includes('wardrobe') ||
+      searchText.includes('dresser') ||
+      searchText.includes('chest')) {
+    return BlueprintType.STORAGE_BOX;
   }
   
   // Rule 2: IF item contains "sofa" OR "couch" → SOFA_MULTI
@@ -98,7 +105,22 @@ function resolveBlueprintType(
     return BlueprintType.BENCH;
   }
   
-  // Rule 6: ELSE → STORAGE_BOX
+  // Rule 6: LAST-RESORT SIZE-BASED SOFA DETECTION
+  // Only classify as sofa if width ≥ 180cm AND sofa-like proportions
+  // Sofa proportions: width >> depth (typically 2:1 or more), and reasonable height range
+  // This prevents wide storage furniture from being misclassified
+  if (width_cm >= 180) {
+    // Check for sofa-like proportions: width should be significantly larger than depth
+    // Typical sofa: width 180-240cm, depth 80-100cm (ratio ~2:1 to 2.5:1)
+    const widthDepthRatio = width_cm / depth_cm;
+    if (widthDepthRatio >= 1.8) {
+      return BlueprintType.SOFA_MULTI;
+    }
+    // If wide but not sofa-proportioned, treat as storage
+    return BlueprintType.STORAGE_BOX;
+  }
+  
+  // Rule 7: DEFAULT → STORAGE_BOX
   return BlueprintType.STORAGE_BOX;
 }
 
