@@ -1147,17 +1147,14 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
     const divPostBottom = projectAndValidate(divX, d2, backCushionBottomZ); // At rear seat rail
     // Backrest post top (at front face of cushion)
     const divFrontTop = projectAndValidate(divX, backCushionFrontY, backCushionTopZ);
-    const divRearTop = projectAndValidate(divX, backCushionRearY, backCushionTopZ);
     
     // Backrest vertical post (terminates at bottom rail)
     frontLines.push(svgLine(divPostBottom.x, divPostBottom.y, divFrontTop.x, divFrontTop.y, strokeWidths.thin)); // Backrest post (thin)
-    frontLines.push(svgLine(divFrontTop.x, divFrontTop.y, divRearTop.x, divRearTop.y, strokeWidths.thin)); // Cushion division top depth (thin)
+    // REMOVED: Diagonal line from front-top to rear-top (not a structural element)
   }
   
-  // Back cushion depth edges (connecting front and rear faces)
-  frontLines.push(svgLine(cft.x, cft.y, crt.x, crt.y, strokeWidths.thin)); // Top-left depth
-  frontLines.push(svgLine(cftR.x, cftR.y, crtR.x, crtR.y, strokeWidths.thin)); // Top-right depth
-  frontLines.push(svgLine(cfbR.x, cfbR.y, crbR.x, crbR.y, strokeWidths.thin)); // Bottom-right depth
+  // REMOVED: Back cushion depth edges (diagonal lines connecting front and rear faces)
+  // These diagonals are not part of the real sofa frame structure and create visual noise
   
   // Back cushion rear face (hidden, dashed)
   hiddenLines.push(svgLine(crb.x, crb.y, crbR.x, crbR.y, strokeWidths.dashed, dashPattern)); // Bottom
