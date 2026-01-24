@@ -854,9 +854,14 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   // Max projected width ≈ (width + depth) * cos30, max projected height ≈ (width + depth) * sin30 + height
   const maxProjectedWidth = (width + depth) * ISO_COS;  // width and depth are in cm
   const maxProjectedHeight = (width + depth) * ISO_SIN + height;
-  const scaleX = 280 / maxProjectedWidth; // Available width / projected width
-  const scaleY = 240 / maxProjectedHeight; // Available height / projected height
-  const scale = Math.min(scaleX, scaleY) * 0.9; // Use 90% for safety margin
+  
+  // Target canvas usage: 65% of available space (455px width, 325px height)
+  const targetWidth = 455;   // 65% of 700px available width
+  const targetHeight = 325;  // 65% of 500px available height
+  
+  const scaleX = targetWidth / maxProjectedWidth;
+  const scaleY = targetHeight / maxProjectedHeight;
+  const scale = Math.min(scaleX, scaleY);  // No additional reduction needed
   
   console.log(`[generateSofaMultiFrame] Scale calculation - maxProjectedWidth: ${maxProjectedWidth}, maxProjectedHeight: ${maxProjectedHeight}, scale: ${scale}`);
   
