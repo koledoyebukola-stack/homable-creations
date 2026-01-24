@@ -865,13 +865,14 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   
   console.log(`[generateSofaMultiFrame] Scale calculation - maxProjectedWidth: ${maxProjectedWidth}, maxProjectedHeight: ${maxProjectedHeight}, scale: ${scale}`);
   
-  // Proportional Relationships (from technical drawing reference)
+  // Proportional Relationships - Adjusted for standard sofa construction
   // Input dimensions are ALREADY in centimeters from OpenAI
   // No conversion needed - use directly
-  const armWidth = width * 0.08;          // Arms are 8% of total width (AT 160 / W 2000 ≈ 0.08)
-  const seatHeight = height * 0.69;       // Seat is 69% of total height (SH 450 / AH 650 ≈ 0.69)
-  const backThickness = depth * 0.13;     // Back is 13% of depth (BT 120 / D 900 ≈ 0.13)
-  const baseHeight = height * 0.06;       // Base is ~6% of height
+  // Adjusted proportions for standard sofa construction
+  const armWidth = width * 0.11;          // Arms are 11% of total width (20-22cm for 200cm sofa)
+  const seatHeight = height * 0.53;       // Seat is 53% of total height (45cm for 85cm sofa)
+  const backThickness = depth * 0.22;     // Back is 22% of depth (20cm for 90cm sofa - proper cushion depth)
+  const baseHeight = height * 0.06;       // Base is ~6% of height (unchanged)
   
   // Scaled dimensions for isometric projection
   const w = width * scale;   // Scaled width
