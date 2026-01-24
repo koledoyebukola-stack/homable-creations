@@ -974,31 +974,58 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   hiddenLines.push(svgLine(btl.x, btl.y, ttl.x, ttl.y, strokeWidths.dashed, dashPattern)); // Back-left (dashed)
   
   // ============================================================
+  // AUTHORITATIVE SEAT FRAME (all components reference these)
+  // ============================================================
+  const seatLeftX = -w2 + armW_scaled;
+  const seatRightX = w2 - armW_scaled;
+  const seatThickness = 0.05 * scale; // 5mm seat thickness
+  
+  // Define seat frame coordinates FIRST - these are authoritative
+  const seatFrame = {
+    frontLeft: projectAndValidate(seatLeftX, -d2, zSeat),
+    frontRight: projectAndValidate(seatRightX, -d2, zSeat),
+    rearLeft: projectAndValidate(seatLeftX, d2, zSeat),
+    rearRight: projectAndValidate(seatRightX, d2, zSeat)
+  };
+  
+  // ============================================================
   // COMPONENT 2: LEFT ARM (solid rectangular volume)
   // ============================================================
   const leftArmOuterX = -w2;
-  const leftArmInnerX = -w2 + armW_scaled;
   
-  // Define left arm points as named constants for precision
+  // Define left arm outer points
   const lfbO = projectAndValidate(leftArmOuterX, -d2, zBaseTop); // left-front-bottom-outer
   const lftO = projectAndValidate(leftArmOuterX, -d2, zArmTop);   // left-front-top-outer
   const lbbO = projectAndValidate(leftArmOuterX, d2, zBaseTop);  // left-back-bottom-outer
   const lbtO = projectAndValidate(leftArmOuterX, d2, zArmTop);   // left-back-top-outer
-  const lfbI = projectAndValidate(leftArmInnerX, -d2, zBaseTop); // left-front-bottom-inner
-  const lftI = projectAndValidate(leftArmInnerX, -d2, zArmTop);   // left-front-top-inner
-  const lbbI = projectAndValidate(leftArmInnerX, d2, zBaseTop);  // left-back-bottom-inner
-  const lbtI = projectAndValidate(leftArmInnerX, d2, zArmTop);   // left-back-top-inner
+  
+  // CRITICAL: Arm inner edges MUST reference seat frame points
+  // Left arm inner points at base level (for vertical termination)
+  const lfbI_base = projectAndValidate(seatLeftX, -d2, zBaseTop); // left-front-bottom-inner at base
+  const lbbI_base = projectAndValidate(seatLeftX, d2, zBaseTop);  // left-back-bottom-inner at base
+  
+  // Left arm inner points at seat level (SHARED with seat frame)
+  const lfbI_seat = seatFrame.frontLeft; // SAME OBJECT as seat front-left
+  const lbbI_seat = seatFrame.rearLeft;   // SAME OBJECT as seat rear-left
+  
+  // Left arm inner points at top level
+  const lftI = projectAndValidate(seatLeftX, -d2, zArmTop);   // left-front-top-inner
+  const lbtI = projectAndValidate(seatLeftX, d2, zArmTop);   // left-back-top-inner
   
   // Left arm front face (visible)
   frontLines.push(svgLine(lfbO.x, lfbO.y, lftO.x, lftO.y, strokeWidths.medium)); // Outer vertical
-  frontLines.push(svgLine(lfbI.x, lfbI.y, lftI.x, lftI.y, strokeWidths.medium)); // Inner vertical
-  frontLines.push(svgLine(lfbO.x, lfbO.y, lfbI.x, lfbI.y, strokeWidths.medium)); // Bottom horizontal
+  // Inner vertical: Split into two segments to show termination at seat
+  frontLines.push(svgLine(lfbI_base.x, lfbI_base.y, lfbI_seat.x, lfbI_seat.y, strokeWidths.medium)); // Base to seat (terminates at seat)
+  frontLines.push(svgLine(lfbI_seat.x, lfbI_seat.y, lftI.x, lftI.y, strokeWidths.medium)); // Seat to top
+  frontLines.push(svgLine(lfbO.x, lfbO.y, lfbI_base.x, lfbI_base.y, strokeWidths.medium)); // Bottom horizontal
   frontLines.push(svgLine(lftO.x, lftO.y, lftI.x, lftI.y, strokeWidths.medium)); // Top horizontal
   
   // Left arm back face (hidden, dashed)
   hiddenLines.push(svgLine(lbbO.x, lbbO.y, lbtO.x, lbtO.y, strokeWidths.dashed, dashPattern)); // Outer vertical
-  hiddenLines.push(svgLine(lbbI.x, lbbI.y, lbtI.x, lbtI.y, strokeWidths.dashed, dashPattern)); // Inner vertical
-  hiddenLines.push(svgLine(lbbO.x, lbbO.y, lbbI.x, lbbI.y, strokeWidths.dashed, dashPattern)); // Bottom horizontal
+  // Inner vertical: Split into two segments to show termination at seat
+  hiddenLines.push(svgLine(lbbI_base.x, lbbI_base.y, lbbI_seat.x, lbbI_seat.y, strokeWidths.dashed, dashPattern)); // Base to seat (terminates at seat)
+  hiddenLines.push(svgLine(lbbI_seat.x, lbbI_seat.y, lbtI.x, lbtI.y, strokeWidths.dashed, dashPattern)); // Seat to top
+  hiddenLines.push(svgLine(lbbO.x, lbbO.y, lbbI_base.x, lbbI_base.y, strokeWidths.dashed, dashPattern)); // Bottom horizontal
   hiddenLines.push(svgLine(lbtO.x, lbtO.y, lbtI.x, lbtI.y, strokeWidths.dashed, dashPattern)); // Top horizontal
   
   // Left arm connecting edges
@@ -1009,28 +1036,40 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   // COMPONENT 3: RIGHT ARM (mirror of left)
   // ============================================================
   const rightArmOuterX = w2;
-  const rightArmInnerX = w2 - armW_scaled;
   
-  // Define right arm points as named constants for precision
+  // Define right arm outer points
   const rfbO = projectAndValidate(rightArmOuterX, -d2, zBaseTop); // right-front-bottom-outer
   const rftO = projectAndValidate(rightArmOuterX, -d2, zArmTop);   // right-front-top-outer
   const rbbO = projectAndValidate(rightArmOuterX, d2, zBaseTop);  // right-back-bottom-outer
   const rbtO = projectAndValidate(rightArmOuterX, d2, zArmTop);   // right-back-top-outer
-  const rfbI = projectAndValidate(rightArmInnerX, -d2, zBaseTop); // right-front-bottom-inner
-  const rftI = projectAndValidate(rightArmInnerX, -d2, zArmTop);   // right-front-top-inner
-  const rbbI = projectAndValidate(rightArmInnerX, d2, zBaseTop);  // right-back-bottom-inner
-  const rbtI = projectAndValidate(rightArmInnerX, d2, zArmTop);   // right-back-top-inner
+  
+  // CRITICAL: Arm inner edges MUST reference seat frame points
+  // Right arm inner points at base level (for vertical termination)
+  const rfbI_base = projectAndValidate(seatRightX, -d2, zBaseTop); // right-front-bottom-inner at base
+  const rbbI_base = projectAndValidate(seatRightX, d2, zBaseTop);  // right-back-bottom-inner at base
+  
+  // Right arm inner points at seat level (SHARED with seat frame)
+  const rfbI_seat = seatFrame.frontRight; // SAME OBJECT as seat front-right
+  const rbbI_seat = seatFrame.rearRight;   // SAME OBJECT as seat rear-right
+  
+  // Right arm inner points at top level
+  const rftI = projectAndValidate(seatRightX, -d2, zArmTop);   // right-front-top-inner
+  const rbtI = projectAndValidate(seatRightX, d2, zArmTop);   // right-back-top-inner
   
   // Right arm front face (visible)
   frontLines.push(svgLine(rfbO.x, rfbO.y, rftO.x, rftO.y, strokeWidths.medium)); // Outer vertical
-  frontLines.push(svgLine(rfbI.x, rfbI.y, rftI.x, rftI.y, strokeWidths.medium)); // Inner vertical
-  frontLines.push(svgLine(rfbO.x, rfbO.y, rfbI.x, rfbI.y, strokeWidths.medium)); // Bottom horizontal
+  // Inner vertical: Split into two segments to show termination at seat
+  frontLines.push(svgLine(rfbI_base.x, rfbI_base.y, rfbI_seat.x, rfbI_seat.y, strokeWidths.medium)); // Base to seat (terminates at seat)
+  frontLines.push(svgLine(rfbI_seat.x, rfbI_seat.y, rftI.x, rftI.y, strokeWidths.medium)); // Seat to top
+  frontLines.push(svgLine(rfbO.x, rfbO.y, rfbI_base.x, rfbI_base.y, strokeWidths.medium)); // Bottom horizontal
   frontLines.push(svgLine(rftO.x, rftO.y, rftI.x, rftI.y, strokeWidths.medium)); // Top horizontal
   
   // Right arm back face (hidden, dashed)
   hiddenLines.push(svgLine(rbbO.x, rbbO.y, rbtO.x, rbtO.y, strokeWidths.dashed, dashPattern)); // Outer vertical
-  hiddenLines.push(svgLine(rbbI.x, rbbI.y, rbtI.x, rbtI.y, strokeWidths.dashed, dashPattern)); // Inner vertical
-  hiddenLines.push(svgLine(rbbO.x, rbbO.y, rbbI.x, rbbI.y, strokeWidths.dashed, dashPattern)); // Bottom horizontal
+  // Inner vertical: Split into two segments to show termination at seat
+  hiddenLines.push(svgLine(rbbI_base.x, rbbI_base.y, rbbI_seat.x, rbbI_seat.y, strokeWidths.dashed, dashPattern)); // Base to seat (terminates at seat)
+  hiddenLines.push(svgLine(rbbI_seat.x, rbbI_seat.y, rbtI.x, rbtI.y, strokeWidths.dashed, dashPattern)); // Seat to top
+  hiddenLines.push(svgLine(rbbO.x, rbbO.y, rbbI_base.x, rbbI_base.y, strokeWidths.dashed, dashPattern)); // Bottom horizontal
   hiddenLines.push(svgLine(rbtO.x, rbtO.y, rbtI.x, rbtI.y, strokeWidths.dashed, dashPattern)); // Top horizontal
   
   // Right arm connecting edges
@@ -1038,21 +1077,18 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   hiddenLines.push(svgLine(rftI.x, rftI.y, rbtI.x, rbtI.y, strokeWidths.dashed, dashPattern)); // Top inner (dashed)
   
   // ============================================================
-  // COMPONENT 4: SEAT PLATFORM (between arms, showing top surface)
+  // COMPONENT 4: SEAT PLATFORM (ONLY top surface, no bottom face)
   // ============================================================
-  const seatLeftX = leftArmInnerX;
-  const seatRightX = rightArmInnerX;
+  // Seat frame coordinates already defined above - use them directly
+  const slf = seatFrame.frontLeft;  // seat-left-front (SAME OBJECT)
+  const srf = seatFrame.frontRight; // seat-right-front (SAME OBJECT)
+  const srb = seatFrame.rearRight;  // seat-right-back (SAME OBJECT)
+  const slb = seatFrame.rearLeft;   // seat-left-back (SAME OBJECT)
   
-  // Seat top surface corners - define once for precision
-  const slf = projectAndValidate(seatLeftX, -d2, zSeat); // seat-left-front
-  const srf = projectAndValidate(seatRightX, -d2, zSeat);  // seat-right-front
-  const srb = projectAndValidate(seatRightX, d2, zSeat);   // seat-right-back
-  const slb = projectAndValidate(seatLeftX, d2, zSeat);  // seat-left-back
-  
-  // Seat top surface edges
+  // Seat top surface edges ONLY (no bottom face - eliminates redundant lines)
   frontLines.push(svgLine(slf.x, slf.y, srf.x, srf.y, strokeWidths.thick)); // Front edge (THICK - important outline)
   frontLines.push(svgLine(srf.x, srf.y, srb.x, srb.y, strokeWidths.medium)); // Right edge
-  hiddenLines.push(svgLine(srb.x, srb.y, slb.x, slb.y, strokeWidths.dashed, dashPattern)); // Back edge (dashed)
+  hiddenLines.push(svgLine(srb.x, srb.y, slb.x, slb.y, strokeWidths.dashed, dashPattern)); // Back edge (dashed) - THIS IS THE REAR RAIL
   frontLines.push(svgLine(slb.x, slb.y, slf.x, slf.y, strokeWidths.medium)); // Left edge
   
   // Seat cushion divisions (2-3 cushions)
@@ -1065,7 +1101,7 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   }
   
   // ============================================================
-  // COMPONENT 5: BACK CUSHIONS (against back wall, showing front faces)
+  // COMPONENT 5: BACK CUSHIONS (attached to rear seat rail)
   // ============================================================
   const backCushionBottomZ = zSeat;
   const backCushionTopZ = zArmTop;
@@ -1074,9 +1110,12 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   const backCushionFrontY = yBackFront; // Front face (recessed by back thickness)
   const backCushionRearY = yBackRear; // Rear face (at rear wall)
   
-  // Back cushion corners (front face) - define once for precision
-  const cfb = projectAndValidate(seatLeftX, backCushionFrontY, backCushionBottomZ); // cushion-front-bottom-left
-  const cfbR = projectAndValidate(seatRightX, backCushionFrontY, backCushionBottomZ); // cushion-front-bottom-right
+  // CRITICAL: Backrest bottom MUST reference seat frame rear points
+  // Back cushion bottom corners (SHARED with seat rear rail)
+  const cfb = seatFrame.rearLeft;   // cushion-front-bottom-left (SAME OBJECT as seat rear-left)
+  const cfbR = seatFrame.rearRight; // cushion-front-bottom-right (SAME OBJECT as seat rear-right)
+  
+  // Back cushion top corners (front face)
   const cftR = projectAndValidate(seatRightX, backCushionFrontY, backCushionTopZ);    // cushion-front-top-right
   const cft = projectAndValidate(seatLeftX, backCushionFrontY, backCushionTopZ);      // cushion-front-top-left
   
@@ -1151,9 +1190,9 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
   // Validate coordinates are within bounds
   const allProjectedPoints = [
     bbl, bbr, btr, btl, tbl, tbr, ttr, ttl,
-    lfbO, lftO, lbbO, lbtO, lfbI, lftI, lbbI, lbtI,
-    rfbO, rftO, rbbO, rbtO, rfbI, rftI, rbbI, rbtI,
-    slf, srf, srb, slb,
+    lfbO, lftO, lbbO, lbtO, lfbI_base, lfbI_seat, lbbI_base, lbbI_seat, lftI, lbtI,
+    rfbO, rftO, rbbO, rbtO, rfbI_base, rfbI_seat, rbbI_base, rbbI_seat, rftI, rbtI,
+    slf, srf, srb, slb, // These are the same as seatFrame points
     cfb, cfbR, cftR, cft, crb, crbR, crtR, crt
   ];
   
