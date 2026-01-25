@@ -1680,18 +1680,56 @@ function generateBenchFrame(width: number, depth: number, height: number, showDi
   const svgHeight = 400;
   const centerX = svgWidth / 2;
   const centerY = svgHeight / 2 + 50;
+  
+  // Line Weight Hierarchy (match sideboard baseline)
+  const thickStroke = 3.0;    // Seat box outer edges, legs
+  const mediumStroke = 2.2;   // Rails (stretchers between legs)
+  const thinStroke = 1.0;     // Minor details (back hidden edges)
+  
   const lines: string[] = [];
   const w = width / 2;
   const d = depth / 2;
+  
   // Structural load path: Seat must be raised and supported by legs
   // Seat sits above floor, supported by 4 vertical legs at corners
   const seatThickness = height * 0.15;
   const seatBottomZ = height * 0.2; // Seat raised above floor
   const seatTopZ = seatBottomZ + seatThickness;
   
-  // Draw seat box at raised position
-  const seatLines = drawIsometricBox(width, depth, seatThickness, centerX, centerY, seatBottomZ);
-  lines.push(...seatLines);
+  // Seat box corners (8 points: 4 bottom at seatBottomZ, 4 top at seatTopZ)
+  const seatCorners = [
+    { x: -w, y: -d, z: seatBottomZ },  // Front-left-bottom
+    { x: w, y: -d, z: seatBottomZ },    // Front-right-bottom
+    { x: w, y: d, z: seatBottomZ },     // Back-right-bottom
+    { x: -w, y: d, z: seatBottomZ },    // Back-left-bottom
+    { x: -w, y: -d, z: seatTopZ },      // Front-left-top
+    { x: w, y: -d, z: seatTopZ },       // Front-right-top
+    { x: w, y: d, z: seatTopZ },        // Back-right-top
+    { x: -w, y: d, z: seatTopZ },       // Back-left-top
+  ];
+  
+  const seatProjected = seatCorners.map(corner => {
+    const proj = isometricProject(corner.x, corner.y, corner.z);
+    return { x: centerX + proj.x, y: centerY + proj.y };
+  });
+  
+  // Top face edges: thickStroke (3.0px) - this is the dominant element
+  lines.push(svgLine(seatProjected[4].x, seatProjected[4].y, seatProjected[5].x, seatProjected[5].y, thickStroke)); // Front (THICK)
+  lines.push(svgLine(seatProjected[5].x, seatProjected[5].y, seatProjected[6].x, seatProjected[6].y, thickStroke)); // Right (THICK)
+  lines.push(svgLine(seatProjected[6].x, seatProjected[6].y, seatProjected[7].x, seatProjected[7].y, thinStroke, '4,2')); // Back (DASHED THIN)
+  lines.push(svgLine(seatProjected[7].x, seatProjected[7].y, seatProjected[4].x, seatProjected[4].y, thickStroke)); // Left (THICK)
+  
+  // Bottom face edges: mediumStroke (2.2px) - secondary
+  lines.push(svgLine(seatProjected[0].x, seatProjected[0].y, seatProjected[1].x, seatProjected[1].y, mediumStroke)); // Front (MEDIUM)
+  lines.push(svgLine(seatProjected[1].x, seatProjected[1].y, seatProjected[2].x, seatProjected[2].y, mediumStroke)); // Right (MEDIUM)
+  lines.push(svgLine(seatProjected[2].x, seatProjected[2].y, seatProjected[3].x, seatProjected[3].y, thinStroke, '4,2')); // Back (DASHED THIN)
+  lines.push(svgLine(seatProjected[3].x, seatProjected[3].y, seatProjected[0].x, seatProjected[0].y, mediumStroke)); // Left (MEDIUM)
+  
+  // Vertical corner connectors: thickStroke front, thinStroke dashed back
+  lines.push(svgLine(seatProjected[0].x, seatProjected[0].y, seatProjected[4].x, seatProjected[4].y, thickStroke)); // Front-left (THICK)
+  lines.push(svgLine(seatProjected[1].x, seatProjected[1].y, seatProjected[5].x, seatProjected[5].y, thickStroke)); // Front-right (THICK)
+  lines.push(svgLine(seatProjected[2].x, seatProjected[2].y, seatProjected[6].x, seatProjected[6].y, thinStroke, '4,2')); // Back-right (DASHED THIN)
+  lines.push(svgLine(seatProjected[3].x, seatProjected[3].y, seatProjected[7].x, seatProjected[7].y, thinStroke, '4,2')); // Back-left (DASHED THIN)
   
   // Structural load path: 4 vertical legs from floor (z=0) to underside of seat (z=seatBottomZ)
   const legs = [
@@ -1700,20 +1738,31 @@ function generateBenchFrame(width: number, depth: number, height: number, showDi
     { x: w * 0.85, y: d * 0.85 },    // Back-right
     { x: -w * 0.85, y: d * 0.85 },   // Back-left
   ];
+  
   legs.forEach(leg => {
     const legTop = isometricProject(leg.x, leg.y, seatBottomZ);
     const legBottom = isometricProject(leg.x, leg.y, 0);
-    lines.push(svgLine(centerX + legTop.x, centerY + legTop.y, centerX + legBottom.x, centerY + legBottom.y));
+    const legTop3D = { x: leg.x, y: leg.y, z: seatBottomZ };
+    const legBottom3D = { x: leg.x, y: leg.y, z: 0 };
+    const hidden = isHiddenEdge(legBottom3D, legTop3D);
+    // Use thickStroke for all legs, add dash pattern for back legs only
+    lines.push(svgLine(
+      centerX + legTop.x, centerY + legTop.y,
+      centerX + legBottom.x, centerY + legBottom.y,
+      thickStroke, hidden ? '4,2' : undefined
+    ));
   });
   
+  // Rails (stretchers between legs) - secondary structure
   const legHeight = seatBottomZ; // Leg height is now seatBottomZ
   const railHeight = legHeight * 0.5;
   const frontLeftRail = isometricProject(-w * 0.85, -d * 0.85, railHeight);
   const frontRightRail = isometricProject(w * 0.85, -d * 0.85, railHeight);
-  lines.push(svgLine(centerX + frontLeftRail.x, centerY + frontLeftRail.y, centerX + frontRightRail.x, centerY + frontRightRail.y));
+  lines.push(svgLine(centerX + frontLeftRail.x, centerY + frontLeftRail.y, centerX + frontRightRail.x, centerY + frontRightRail.y, mediumStroke)); // Front rail (MEDIUM, solid)
+  
   const backLeftRail = isometricProject(-w * 0.85, d * 0.85, railHeight);
   const backRightRail = isometricProject(w * 0.85, d * 0.85, railHeight);
-  lines.push(svgLine(centerX + backLeftRail.x, centerY + backLeftRail.y, centerX + backRightRail.x, centerY + backRightRail.y));
+  lines.push(svgLine(centerX + backLeftRail.x, centerY + backLeftRail.y, centerX + backRightRail.x, centerY + backRightRail.y, mediumStroke, '4,2')); // Back rail (MEDIUM, dashed)
   
   // Dimension annotations layer (optional overlay) - using reusable helper
   const dimensionElements: string[] = [];
