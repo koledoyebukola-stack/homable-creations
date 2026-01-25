@@ -1402,13 +1402,52 @@ function generateTableFrameRectangular(width: number, depth: number, height: num
   const svgHeight = 400;
   const centerX = svgWidth / 2;
   const centerY = svgHeight / 2 + 50;
+  
+  // Line Weight Hierarchy (match sideboard baseline)
+  const thickStroke = 3.0;    // Tabletop edges, legs (dominant elements)
+  const mediumStroke = 2.2;   // Rails (secondary structure)
+  const thinStroke = 1.0;     // Minor details
+  
   const lines: string[] = [];
   const w = width / 2;
   const d = depth / 2;
   const tabletopThickness = height * 0.05;
   const tabletopBottomZ = height - tabletopThickness; // Tabletop sits on top of legs
-  const topLines = drawIsometricBox(width, depth, tabletopThickness, centerX, centerY, tabletopBottomZ);
-  lines.push(...topLines);
+  
+  // Tabletop corners (8 points: 4 bottom at tabletopBottomZ, 4 top at height)
+  const tabletopCorners = [
+    { x: -w, y: -d, z: tabletopBottomZ },  // Front-left-bottom
+    { x: w, y: -d, z: tabletopBottomZ },    // Front-right-bottom
+    { x: w, y: d, z: tabletopBottomZ },     // Back-right-bottom
+    { x: -w, y: d, z: tabletopBottomZ },    // Back-left-bottom
+    { x: -w, y: -d, z: height },            // Front-left-top
+    { x: w, y: -d, z: height },             // Front-right-top
+    { x: w, y: d, z: height },              // Back-right-top
+    { x: -w, y: d, z: height },             // Back-left-top
+  ];
+  
+  const tabletopProjected = tabletopCorners.map(corner => {
+    const proj = isometricProject(corner.x, corner.y, corner.z);
+    return { x: centerX + proj.x, y: centerY + proj.y };
+  });
+  
+  // Top face (4 edges): front/right/left with thickStroke, back with thinStroke dashed
+  lines.push(svgLine(tabletopProjected[4].x, tabletopProjected[4].y, tabletopProjected[5].x, tabletopProjected[5].y, thickStroke)); // Front (THICK)
+  lines.push(svgLine(tabletopProjected[5].x, tabletopProjected[5].y, tabletopProjected[6].x, tabletopProjected[6].y, thickStroke)); // Right (THICK)
+  lines.push(svgLine(tabletopProjected[6].x, tabletopProjected[6].y, tabletopProjected[7].x, tabletopProjected[7].y, thinStroke, '4,2')); // Back (DASHED THIN)
+  lines.push(svgLine(tabletopProjected[7].x, tabletopProjected[7].y, tabletopProjected[4].x, tabletopProjected[4].y, thickStroke)); // Left (THICK)
+  
+  // Bottom face (4 edges): front/right/left with mediumStroke, back with thinStroke dashed
+  lines.push(svgLine(tabletopProjected[0].x, tabletopProjected[0].y, tabletopProjected[1].x, tabletopProjected[1].y, mediumStroke)); // Front (MEDIUM)
+  lines.push(svgLine(tabletopProjected[1].x, tabletopProjected[1].y, tabletopProjected[2].x, tabletopProjected[2].y, mediumStroke)); // Right (MEDIUM)
+  lines.push(svgLine(tabletopProjected[2].x, tabletopProjected[2].y, tabletopProjected[3].x, tabletopProjected[3].y, thinStroke, '4,2')); // Back (DASHED THIN)
+  lines.push(svgLine(tabletopProjected[3].x, tabletopProjected[3].y, tabletopProjected[0].x, tabletopProjected[0].y, mediumStroke)); // Left (MEDIUM)
+  
+  // Vertical connectors at corners: front with thickStroke, back with thinStroke dashed
+  lines.push(svgLine(tabletopProjected[0].x, tabletopProjected[0].y, tabletopProjected[4].x, tabletopProjected[4].y, thickStroke)); // Front-left (THICK)
+  lines.push(svgLine(tabletopProjected[1].x, tabletopProjected[1].y, tabletopProjected[5].x, tabletopProjected[5].y, thickStroke)); // Front-right (THICK)
+  lines.push(svgLine(tabletopProjected[2].x, tabletopProjected[2].y, tabletopProjected[6].x, tabletopProjected[6].y, thinStroke, '4,2')); // Back-right (DASHED THIN)
+  lines.push(svgLine(tabletopProjected[3].x, tabletopProjected[3].y, tabletopProjected[7].x, tabletopProjected[7].y, thinStroke, '4,2')); // Back-left (DASHED THIN)
   
   // Structural load path: 4 vertical legs at footprint corners
   // Legs extend from floor (z=0) to underside of tabletop (z=tabletopBottomZ)
@@ -1418,18 +1457,30 @@ function generateTableFrameRectangular(width: number, depth: number, height: num
     { x: w * 0.9, y: d * 0.9 },    // Back-right
     { x: -w * 0.9, y: d * 0.9 },   // Back-left
   ];
+  
   legs.forEach(leg => {
     const legTop = isometricProject(leg.x, leg.y, tabletopBottomZ);
     const legBottom = isometricProject(leg.x, leg.y, 0);
-    lines.push(svgLine(centerX + legTop.x, centerY + legTop.y, centerX + legBottom.x, centerY + legBottom.y));
+    const legTop3D = { x: leg.x, y: leg.y, z: tabletopBottomZ };
+    const legBottom3D = { x: leg.x, y: leg.y, z: 0 };
+    const hidden = isHiddenEdge(legBottom3D, legTop3D);
+    // Use thickStroke for all legs, add dash pattern for back legs only
+    lines.push(svgLine(
+      centerX + legTop.x, centerY + legTop.y,
+      centerX + legBottom.x, centerY + legBottom.y,
+      thickStroke, hidden ? '4,2' : undefined
+    ));
   });
+  
+  // Rails (secondary structure)
   const railHeight = tabletopBottomZ * 0.3;
   const frontLeftRail = isometricProject(-w * 0.9, -d * 0.9, railHeight);
   const frontRightRail = isometricProject(w * 0.9, -d * 0.9, railHeight);
-  lines.push(svgLine(centerX + frontLeftRail.x, centerY + frontLeftRail.y, centerX + frontRightRail.x, centerY + frontRightRail.y));
+  lines.push(svgLine(centerX + frontLeftRail.x, centerY + frontLeftRail.y, centerX + frontRightRail.x, centerY + frontRightRail.y, mediumStroke)); // Front rail (MEDIUM, solid)
+  
   const backLeftRail = isometricProject(-w * 0.9, d * 0.9, railHeight);
   const backRightRail = isometricProject(w * 0.9, d * 0.9, railHeight);
-  lines.push(svgLine(centerX + backLeftRail.x, centerY + backLeftRail.y, centerX + backRightRail.x, centerY + backRightRail.y));
+  lines.push(svgLine(centerX + backLeftRail.x, centerY + backLeftRail.y, centerX + backRightRail.x, centerY + backRightRail.y, mediumStroke, '4,2')); // Back rail (MEDIUM, dashed)
   
   // Dimension annotations layer (optional overlay) - using reusable helper
   const dimensionElements: string[] = [];
