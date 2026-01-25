@@ -1268,28 +1268,9 @@ function generateSofaMultiFrame(width: number, depth: number, height: number, sh
 /**
  * Determine foundation type based on category keywords
  */
-function determineFoundationType(category: string | undefined, itemName: string): 'plinth' | 'leg-frame' {
-  const searchText = `${category || ''} ${itemName}`.toLowerCase();
-  
-  // Leg Frame keywords
-  if (searchText.includes('leg') || searchText.includes('traditional') || 
-      searchText.includes('classic') || searchText.includes('wooden')) {
-    return 'leg-frame';
-  }
-  
-  // Plinth Base keywords (default)
-  if (searchText.includes('lounge') || searchText.includes('accent') || 
-      searchText.includes('modern') || searchText.includes('contemporary')) {
-    return 'plinth';
-  }
-  
-  // Default to Plinth Base if uncertain
-  return 'plinth';
-}
-
 /**
  * Generate component-based chair blueprint
- * Components: Foundation (Plinth or Leg Frame), Seat Support Frame (Rails), Back Support Frame
+ * Components: Leg Frame (4 legs), Seat Support Frame (Rails), Back Support Frame
  * @param showDimensions - If true, adds dimension annotations (W, D, H) as overlay
  */
 function generateChairFrame(width: number, depth: number, height: number, category?: string, itemName?: string, showDimensions: boolean = false): string {
@@ -1305,96 +1286,28 @@ function generateChairFrame(width: number, depth: number, height: number, catego
   const seatHeight = height * 0.45; // Seat at 45% of total height
   const railThickness = height * 0.03; // Rail thickness
   
-  // Determine foundation type
-  const foundationType = determineFoundationType(category, itemName || '');
+  // Line Weight Hierarchy (MUST MATCH BASELINES):
+  // THICK (3.0px): Outer silhouette only (legs, seat rails outer edges, backrest posts)
+  // MEDIUM (2.2px): Major divisions (not used in chair)
+  // THIN (1.0px): Minor details (not used in simplified chair)
+  // DASHED THIN (1.0px): Hidden edges only (back-facing edges)
+  const thickStroke = 3.0;
+  const mediumStroke = 2.2;
+  const thinStroke = 1.0;
   
-  // Render order: Foundation → Legs → Seat Rails → Back Frame
-  // Component 1: Foundation (Plinth Base or Leg Frame)
-  const foundationLines: string[] = [];
+  // Render order: Legs → Seat Rails → Back Frame
   const legLines: string[] = [];
   const seatRailLines: string[] = [];
   const backFrameLines: string[] = [];
-  const internalSupportLines: string[] = [];
   
-  if (foundationType === 'plinth') {
-    // Plinth Base: Solid rectangular base, 90% of width/depth (5% inset on each side)
-    const foundationThickness = height * 0.05;
-    const plinthW = w * 0.9; // 90% of width (5% inset each side)
-    const plinthD = d * 0.9; // 90% of depth (5% inset each side)
-    
-    const plinthCorners = [
-      { x: -plinthW, y: -plinthD, z: 0 },           // Front-left-bottom
-      { x: plinthW, y: -plinthD, z: 0 },            // Front-right-bottom
-      { x: plinthW, y: plinthD, z: 0 },              // Back-right-bottom
-      { x: -plinthW, y: plinthD, z: 0 },             // Back-left-bottom
-      { x: -plinthW, y: -plinthD, z: foundationThickness },  // Front-left-top
-      { x: plinthW, y: -plinthD, z: foundationThickness },   // Front-right-top
-      { x: plinthW, y: plinthD, z: foundationThickness },    // Back-right-top
-      { x: -plinthW, y: plinthD, z: foundationThickness },   // Back-left-top
-    ];
-    
-    const plinthProjected = plinthCorners.map(corner => {
-      const proj = isometricProject(corner.x, corner.y, corner.z);
-      return { x: centerX + proj.x, y: centerY + proj.y };
-    });
-    
-    // Plinth bottom face (4 edges) - 2.5px solid (outer structural edge)
-    const bottomEdges = [
-      [plinthCorners[0], plinthCorners[1]], // Front
-      [plinthCorners[1], plinthCorners[2]], // Right
-      [plinthCorners[2], plinthCorners[3]], // Back
-      [plinthCorners[3], plinthCorners[0]], // Left
-    ];
-    bottomEdges.forEach(([p1, p2], idx) => {
-      const hidden = isHiddenEdge(p1, p2);
-      foundationLines.push(svgLine(
-        plinthProjected[idx].x, plinthProjected[idx].y,
-        plinthProjected[(idx + 1) % 4].x, plinthProjected[(idx + 1) % 4].y,
-        2.5, hidden ? '3,3' : undefined
-      ));
-    });
-    
-    // Plinth top face (4 edges) - 2.5px solid (outer structural edge)
-    const topEdges = [
-      [plinthCorners[4], plinthCorners[5]], // Front
-      [plinthCorners[5], plinthCorners[6]], // Right
-      [plinthCorners[6], plinthCorners[7]], // Back
-      [plinthCorners[7], plinthCorners[4]], // Left
-    ];
-    topEdges.forEach(([p1, p2], idx) => {
-      const hidden = isHiddenEdge(p1, p2);
-      foundationLines.push(svgLine(
-        plinthProjected[4 + idx].x, plinthProjected[4 + idx].y,
-        plinthProjected[4 + ((idx + 1) % 4)].x, plinthProjected[4 + ((idx + 1) % 4)].y,
-        2.5, hidden ? '3,3' : undefined
-      ));
-    });
-    
-    // Plinth vertical edges (4 edges) - 2.5px solid (outer structural edge)
-    const verticalEdges = [
-      [plinthCorners[0], plinthCorners[4]], // Front-left
-      [plinthCorners[1], plinthCorners[5]], // Front-right
-      [plinthCorners[2], plinthCorners[6]], // Back-right
-      [plinthCorners[3], plinthCorners[7]], // Back-left
-    ];
-    verticalEdges.forEach(([p1, p2], idx) => {
-      const hidden = isHiddenEdge(p1, p2);
-      foundationLines.push(svgLine(
-        plinthProjected[idx].x, plinthProjected[idx].y,
-        plinthProjected[4 + idx].x, plinthProjected[4 + idx].y,
-        2.5, hidden ? '3,3' : undefined
-      ));
-    });
-  }
-  
-  // Component 2: Seat Support Frame - Individual Rails at seatHeight
+  // Component 1: Seat Support Frame - Individual Rails at seatHeight
   // Rails form a closed rectangle: Front, Back, Left, Right
   const seatFrameZ = seatHeight; // Seat rails at 45% of total height
   const seatFrameTopZ = seatFrameZ + railThickness;
   
-  // Seat rail corners (at exact footprint corners for leg frame, or inset for plinth)
-  const seatW = foundationType === 'leg-frame' ? w : w * 0.9; // Full width for legs, inset for plinth
-  const seatD = foundationType === 'leg-frame' ? d : d * 0.9; // Full depth for legs, inset for plinth
+  // Seat rail corners (at exact footprint corners for leg frame)
+  const seatW = w; // Full width for legs
+  const seatD = d; // Full depth for legs
   
   // Define rail endpoints (corners of seat frame)
   const seatCorners = [
@@ -1413,26 +1326,22 @@ function generateChairFrame(width: number, depth: number, height: number, catego
     return { x: centerX + proj.x, y: centerY + proj.y };
   });
   
-  // Front Rail (front edge) - 2.5px solid (outer structural edge)
-  const frontRailBottom = isHiddenEdge(seatCorners[0], seatCorners[1]) ? '3,3' : undefined;
-  const frontRailTop = isHiddenEdge(seatCorners[4], seatCorners[5]) ? '3,3' : undefined;
-  seatRailLines.push(svgLine(seatProjected[0].x, seatProjected[0].y, seatProjected[1].x, seatProjected[1].y, 2.5, frontRailBottom));
-  seatRailLines.push(svgLine(seatProjected[4].x, seatProjected[4].y, seatProjected[5].x, seatProjected[5].y, 2.5, frontRailTop));
-  seatRailLines.push(svgLine(seatProjected[0].x, seatProjected[0].y, seatProjected[4].x, seatProjected[4].y, 2.5, undefined));
-  seatRailLines.push(svgLine(seatProjected[1].x, seatProjected[1].y, seatProjected[5].x, seatProjected[5].y, 2.5, undefined));
+  // Front Rail (front edge) - THICK (outer structural edge, visible)
+  seatRailLines.push(svgLine(seatProjected[0].x, seatProjected[0].y, seatProjected[1].x, seatProjected[1].y, thickStroke)); // Bottom
+  seatRailLines.push(svgLine(seatProjected[4].x, seatProjected[4].y, seatProjected[5].x, seatProjected[5].y, thickStroke)); // Top
+  seatRailLines.push(svgLine(seatProjected[0].x, seatProjected[0].y, seatProjected[4].x, seatProjected[4].y, thickStroke)); // Left vertical
+  seatRailLines.push(svgLine(seatProjected[1].x, seatProjected[1].y, seatProjected[5].x, seatProjected[5].y, thickStroke)); // Right vertical
   
-  // Back Rail (back edge) - 2.5px solid (outer structural edge, back is hidden)
-  const backRailBottom = isHiddenEdge(seatCorners[2], seatCorners[3]) ? '3,3' : undefined;
-  const backRailTop = isHiddenEdge(seatCorners[6], seatCorners[7]) ? '3,3' : undefined;
-  seatRailLines.push(svgLine(seatProjected[2].x, seatProjected[2].y, seatProjected[3].x, seatProjected[3].y, 2.5, backRailBottom || '3,3'));
-  seatRailLines.push(svgLine(seatProjected[6].x, seatProjected[6].y, seatProjected[7].x, seatProjected[7].y, 2.5, backRailTop || '3,3'));
-  seatRailLines.push(svgLine(seatProjected[2].x, seatProjected[2].y, seatProjected[6].x, seatProjected[6].y, 2.5, '3,3'));
-  seatRailLines.push(svgLine(seatProjected[3].x, seatProjected[3].y, seatProjected[7].x, seatProjected[7].y, 2.5, '3,3'));
+  // Back Rail (back edge) - THICK for outer edges, DASHED THIN for hidden edges
+  const backRailBottomHidden = isHiddenEdge(seatCorners[2], seatCorners[3]);
+  const backRailTopHidden = isHiddenEdge(seatCorners[6], seatCorners[7]);
+  seatRailLines.push(svgLine(seatProjected[2].x, seatProjected[2].y, seatProjected[3].x, seatProjected[3].y, backRailBottomHidden ? thinStroke : thickStroke, backRailBottomHidden ? '4,2' : undefined)); // Bottom
+  seatRailLines.push(svgLine(seatProjected[6].x, seatProjected[6].y, seatProjected[7].x, seatProjected[7].y, backRailTopHidden ? thinStroke : thickStroke, backRailTopHidden ? '4,2' : undefined)); // Top
+  seatRailLines.push(svgLine(seatProjected[2].x, seatProjected[2].y, seatProjected[6].x, seatProjected[6].y, thinStroke, '4,2')); // Back-right vertical (hidden)
+  seatRailLines.push(svgLine(seatProjected[3].x, seatProjected[3].y, seatProjected[7].x, seatProjected[7].y, thinStroke, '4,2')); // Back-left vertical (hidden)
   
   // Explicit rear seat rail at seat plane (seatFrameZ) - mandatory structural termination point
   // This rail connects the two rear vertical posts and anchors the backrest structure
-  // Coordinates: x ∈ [-seatW, seatW], y = seatD, z = seatFrameZ
-  // This is the same as the bottom back rail, but explicitly defined for backrest anchoring
   const rearSeatRailLeft = { x: -seatW, y: seatD, z: seatFrameZ };
   const rearSeatRailRight = { x: seatW, y: seatD, z: seatFrameZ };
   const rearSeatRailLeftProj = isometricProject(rearSeatRailLeft.x, rearSeatRailLeft.y, rearSeatRailLeft.z);
@@ -1441,79 +1350,45 @@ function generateChairFrame(width: number, depth: number, height: number, catego
   seatRailLines.push(svgLine(
     centerX + rearSeatRailLeftProj.x, centerY + rearSeatRailLeftProj.y,
     centerX + rearSeatRailRightProj.x, centerY + rearSeatRailRightProj.y,
-    2.5, rearSeatRailHidden ? '3,3' : undefined
+    rearSeatRailHidden ? thinStroke : thickStroke, rearSeatRailHidden ? '4,2' : undefined
   ));
   
-  // Left Rail (left edge) - 2.5px solid (left is hidden)
-  const leftRailBottom = isHiddenEdge(seatCorners[0], seatCorners[3]) ? '3,3' : undefined;
-  const leftRailTop = isHiddenEdge(seatCorners[4], seatCorners[7]) ? '3,3' : undefined;
-  seatRailLines.push(svgLine(seatProjected[0].x, seatProjected[0].y, seatProjected[3].x, seatProjected[3].y, 2.5, leftRailBottom || '3,3'));
-  seatRailLines.push(svgLine(seatProjected[4].x, seatProjected[4].y, seatProjected[7].x, seatProjected[7].y, 2.5, leftRailTop || '3,3'));
+  // Left Rail (left edge) - THICK for outer edges, DASHED THIN for hidden edges
+  const leftRailBottomHidden = isHiddenEdge(seatCorners[0], seatCorners[3]);
+  const leftRailTopHidden = isHiddenEdge(seatCorners[4], seatCorners[7]);
+  seatRailLines.push(svgLine(seatProjected[0].x, seatProjected[0].y, seatProjected[3].x, seatProjected[3].y, leftRailBottomHidden ? thinStroke : thickStroke, leftRailBottomHidden ? '4,2' : undefined)); // Bottom
+  seatRailLines.push(svgLine(seatProjected[4].x, seatProjected[4].y, seatProjected[7].x, seatProjected[7].y, leftRailTopHidden ? thinStroke : thickStroke, leftRailTopHidden ? '4,2' : undefined)); // Top
   
-  // Right Rail (right edge) - 2.5px solid (outer structural edge, right is visible)
-  const rightRailBottom = isHiddenEdge(seatCorners[1], seatCorners[2]) ? '3,3' : undefined;
-  const rightRailTop = isHiddenEdge(seatCorners[5], seatCorners[6]) ? '3,3' : undefined;
-  seatRailLines.push(svgLine(seatProjected[1].x, seatProjected[1].y, seatProjected[2].x, seatProjected[2].y, 2.5, rightRailBottom));
-  seatRailLines.push(svgLine(seatProjected[5].x, seatProjected[5].y, seatProjected[6].x, seatProjected[6].y, 2.5, rightRailTop));
+  // Right Rail (right edge) - THICK (outer structural edge, right is visible)
+  seatRailLines.push(svgLine(seatProjected[1].x, seatProjected[1].y, seatProjected[2].x, seatProjected[2].y, thickStroke)); // Bottom
+  seatRailLines.push(svgLine(seatProjected[5].x, seatProjected[5].y, seatProjected[6].x, seatProjected[6].y, thickStroke)); // Top
   
-  // Support connections from Foundation to Seat Rails
-  if (foundationType === 'plinth') {
-    // Plinth Base: Vertical supports from plinth top to seat rails (4 corners) - 1px dashed (internal supports)
-    const plinthThickness = height * 0.05;
-    const plinthW = w * 0.9;
-    const plinthD = d * 0.9;
-    
-    const plinthTopCorners = [
-      { x: -plinthW, y: -plinthD, z: plinthThickness },
-      { x: plinthW, y: -plinthD, z: plinthThickness },
-      { x: plinthW, y: plinthD, z: plinthThickness },
-      { x: -plinthW, y: plinthD, z: plinthThickness },
-    ];
-    
-    const seatBottomCorners = [
-      { x: -seatW, y: -seatD, z: seatFrameZ },
-      { x: seatW, y: -seatD, z: seatFrameZ },
-      { x: seatW, y: seatD, z: seatFrameZ },
-      { x: -seatW, y: seatD, z: seatFrameZ },
-    ];
-    
-    for (let i = 0; i < 4; i++) {
-      const plinthProj = isometricProject(plinthTopCorners[i].x, plinthTopCorners[i].y, plinthTopCorners[i].z);
-      const seatProj = isometricProject(seatBottomCorners[i].x, seatBottomCorners[i].y, seatBottomCorners[i].z);
-      internalSupportLines.push(svgLine(
-        centerX + plinthProj.x, centerY + plinthProj.y,
-        centerX + seatProj.x, centerY + seatProj.y,
-        1, '3,3' // 1px dashed for internal supports
-      ));
-    }
-  } else {
-    // Leg Frame: Four vertical legs at exact corners, connecting directly to seat rails
-    // 2px solid (load-bearing vertical supports)
-    const legCorners = [
-      { x: -seatW, y: -seatD, z: 0 },  // Front-left leg bottom
-      { x: seatW, y: -seatD, z: 0 },   // Front-right leg bottom
-      { x: seatW, y: seatD, z: 0 },    // Back-right leg bottom
-      { x: -seatW, y: seatD, z: 0 },   // Back-left leg bottom
-    ];
-    
-    const seatBottomCorners = [
-      { x: -seatW, y: -seatD, z: seatFrameZ },
-      { x: seatW, y: -seatD, z: seatFrameZ },
-      { x: seatW, y: seatD, z: seatFrameZ },
-      { x: -seatW, y: seatD, z: seatFrameZ },
-    ];
-    
-    for (let i = 0; i < 4; i++) {
-      const legBottomProj = isometricProject(legCorners[i].x, legCorners[i].y, legCorners[i].z);
-      const seatBottomProj = isometricProject(seatBottomCorners[i].x, seatBottomCorners[i].y, seatBottomCorners[i].z);
-      const hidden = isHiddenEdge(legCorners[i], seatBottomCorners[i]);
-      // Leg connects directly to seat rail - 2px solid (load-bearing)
-      legLines.push(svgLine(
-        centerX + legBottomProj.x, centerY + legBottomProj.y,
-        centerX + seatBottomProj.x, centerY + seatBottomProj.y,
-        2, hidden ? '3,3' : undefined
-      ));
-    }
+  // Component 2: Leg Frame - Four vertical legs at exact corners, connecting directly to seat rails
+  // THICK (load-bearing vertical supports)
+  const legCorners = [
+    { x: -seatW, y: -seatD, z: 0 },  // Front-left leg bottom
+    { x: seatW, y: -seatD, z: 0 },   // Front-right leg bottom
+    { x: seatW, y: seatD, z: 0 },    // Back-right leg bottom
+    { x: -seatW, y: seatD, z: 0 },   // Back-left leg bottom
+  ];
+  
+  const seatBottomCorners = [
+    { x: -seatW, y: -seatD, z: seatFrameZ },
+    { x: seatW, y: -seatD, z: seatFrameZ },
+    { x: seatW, y: seatD, z: seatFrameZ },
+    { x: -seatW, y: seatD, z: seatFrameZ },
+  ];
+  
+  for (let i = 0; i < 4; i++) {
+    const legBottomProj = isometricProject(legCorners[i].x, legCorners[i].y, legCorners[i].z);
+    const seatBottomProj = isometricProject(seatBottomCorners[i].x, seatBottomCorners[i].y, seatBottomCorners[i].z);
+    const hidden = isHiddenEdge(legCorners[i], seatBottomCorners[i]);
+    // Leg connects directly to seat rail - THICK (load-bearing)
+    legLines.push(svgLine(
+      centerX + legBottomProj.x, centerY + legBottomProj.y,
+      centerX + seatBottomProj.x, centerY + seatBottomProj.y,
+      hidden ? thinStroke : thickStroke, hidden ? '4,2' : undefined
+    ));
   }
   
   // Component 3: Back Support Frame - Vertical rectangular frame
@@ -1536,31 +1411,22 @@ function generateChairFrame(width: number, depth: number, height: number, catego
     return { x: centerX + proj.x, y: centerY + proj.y };
   });
   
-  // Back frame vertical edges (2 edges) - 2.5px solid (outer structural edge, back is hidden)
+  // Back frame vertical edges (2 edges) - THICK (outer structural edge)
+  // Only dash if truly hidden (y > 0)
   const leftVerticalHidden = isHiddenEdge(backFrameCorners[0], backFrameCorners[2]);
   const rightVerticalHidden = isHiddenEdge(backFrameCorners[1], backFrameCorners[3]);
-  backFrameLines.push(svgLine(backFrameProjected[0].x, backFrameProjected[0].y, backFrameProjected[2].x, backFrameProjected[2].y, 2.5, leftVerticalHidden ? '3,3' : undefined));
-  backFrameLines.push(svgLine(backFrameProjected[1].x, backFrameProjected[1].y, backFrameProjected[3].x, backFrameProjected[3].y, 2.5, rightVerticalHidden ? '3,3' : undefined));
+  backFrameLines.push(svgLine(backFrameProjected[0].x, backFrameProjected[0].y, backFrameProjected[2].x, backFrameProjected[2].y, leftVerticalHidden ? thinStroke : thickStroke, leftVerticalHidden ? '4,2' : undefined));
+  backFrameLines.push(svgLine(backFrameProjected[1].x, backFrameProjected[1].y, backFrameProjected[3].x, backFrameProjected[3].y, rightVerticalHidden ? thinStroke : thickStroke, rightVerticalHidden ? '4,2' : undefined));
   
-  // Back frame top edge - 2.5px solid (outer structural edge, back is hidden)
+  // Back frame top edge - THICK (outer structural edge)
+  // Only dash if truly hidden (y > 0)
   const topEdgeHidden = isHiddenEdge(backFrameCorners[2], backFrameCorners[3]);
-  backFrameLines.push(svgLine(backFrameProjected[2].x, backFrameProjected[2].y, backFrameProjected[3].x, backFrameProjected[3].y, 2.5, topEdgeHidden ? '3,3' : undefined));
+  backFrameLines.push(svgLine(backFrameProjected[2].x, backFrameProjected[2].y, backFrameProjected[3].x, backFrameProjected[3].y, topEdgeHidden ? thinStroke : thickStroke, topEdgeHidden ? '4,2' : undefined));
   
-  // Back frame internal supports (cross-bracing) - 1px dashed (internal support)
-  const backFrameCenterBottom = isometricProject(0, seatD, backFrameZ);
-  const backFrameCenterTop = isometricProject(0, seatD, backFrameTopZ);
-  internalSupportLines.push(svgLine(
-    centerX + backFrameCenterBottom.x, centerY + backFrameCenterBottom.y,
-    centerX + backFrameCenterTop.x, centerY + backFrameCenterTop.y,
-    1, '3,3' // 1px dashed for internal support
-  ));
-  
-  // Render in order: Foundation → Legs → Seat Rails → Back Frame → Internal Supports
-  lines.push(...foundationLines);
+  // Render in order: Legs → Seat Rails → Back Frame
   lines.push(...legLines);
   lines.push(...seatRailLines);
   lines.push(...backFrameLines);
-  lines.push(...internalSupportLines);
   
   // Dimension annotations layer (optional overlay) - using reusable helper
   const dimensionElements: string[] = [];
