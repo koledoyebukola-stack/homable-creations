@@ -1667,83 +1667,162 @@ function generateTableFrameRectangular(width: number, depth: number, height: num
 }
 
 function generateTableFrameRound(width: number, depth: number, height: number, showDimensions: boolean = false): string {
+  console.log(`[generateTableFrameRound] Input - width: ${width}, depth: ${depth}, height: ${height}`);
+  
+  // Validate inputs
+  if (!isFinite(width) || !isFinite(depth) || !isFinite(height)) {
+    console.error(`[generateTableFrameRound] Invalid input - width: ${width}, depth: ${depth}, height: ${height}`);
+    throw new Error(`Invalid dimensions: width=${width}, depth=${depth}, height=${height}`);
+  }
+  if (width <= 0 || depth <= 0 || height <= 0) {
+    console.error(`[generateTableFrameRound] Non-positive dimensions - width: ${width}, depth: ${depth}, height: ${height}`);
+    throw new Error(`Non-positive dimensions: width=${width}, depth=${depth}, height=${height}`);
+  }
+  
   const svgWidth = 400;
   const svgHeight = 400;
   const centerX = svgWidth / 2;
   const centerY = svgHeight / 2 + 50;
-  const lines: string[] = [];
-  const radius = Math.min(width, depth) / 2;
-  const tabletopThickness = height * 0.05;
-  const legHeight = height - tabletopThickness;
-  const topCirclePoints: string[] = [];
-  const bottomCirclePoints: string[] = [];
-  const segments = 32;
-  for (let i = 0; i <= segments; i++) {
-    const angle = (i / segments) * Math.PI * 2;
-    const x = Math.cos(angle) * radius;
-    const y = Math.sin(angle) * radius;
-    const topProj = isometricProject(x, y, height);
-    const bottomProj = isometricProject(x, y, height - tabletopThickness);
-    topCirclePoints.push(`${centerX + topProj.x},${centerY + topProj.y}`);
-    bottomCirclePoints.push(`${centerX + bottomProj.x},${centerY + bottomProj.y}`);
-  }
-  lines.push(`<polyline points="${topCirclePoints.join(' ')}" stroke="black" stroke-width="2" fill="none"/>`);
-  lines.push(`<polyline points="${bottomCirclePoints.join(' ')}" stroke="black" stroke-width="2" fill="none"/>`);
-  for (let i = 0; i <= segments; i += 8) {
-    const angle = (i / segments) * Math.PI * 2;
-    const x = Math.cos(angle) * radius;
-    const y = Math.sin(angle) * radius;
-    const topProj = isometricProject(x, y, height);
-    const bottomProj = isometricProject(x, y, height - tabletopThickness);
-    lines.push(svgLine(centerX + topProj.x, centerY + topProj.y, centerX + bottomProj.x, centerY + bottomProj.y));
-  }
-  const legTop = isometricProject(0, 0, height - tabletopThickness);
-  const legBottom = isometricProject(0, 0, 0);
-  lines.push(svgLine(centerX + legTop.x, centerY + legTop.y, centerX + legBottom.x, centerY + legBottom.y));
-  const baseRadius = radius * 0.3;
-  const basePoints: string[] = [];
-  for (let i = 0; i <= segments; i++) {
-    const angle = (i / segments) * Math.PI * 2;
-    const x = Math.cos(angle) * baseRadius;
-    const y = Math.sin(angle) * baseRadius;
-    const baseProj = isometricProject(x, y, legHeight * 0.2);
-    basePoints.push(`${centerX + baseProj.x},${centerY + baseProj.y}`);
-  }
-  lines.push(`<polyline points="${basePoints.join(' ')}" stroke="black" stroke-width="2" fill="none"/>`);
   
-  // Dimension annotations layer (optional overlay) - using reusable helper
-  const dimensionElements: string[] = [];
-  if (showDimensions) {
-    // Define dimension points in 3D space (using tabletop level for width/depth)
-    // For round tables, use diameter points
-    const widthPoints = [
-      { x: -radius, y: 0, z: height },  // Left-center-top
-      { x: radius, y: 0, z: height }    // Right-center-top
-    ];
-    const depthPoints = [
-      { x: 0, y: -radius, z: height },  // Front-center-top
-      { x: 0, y: radius, z: height }    // Back-center-top
-    ];
-    const heightPoints = [
-      { x: radius, y: 0, z: 0 },        // Floor (right-center)
-      { x: radius, y: 0, z: height }    // Top of table
-    ];
+  try {
+    // ============================================================
+    // 1) SINGLE AUTHORITATIVE COORDINATE SYSTEM
+    // ============================================================
+    const radius = Math.min(width, depth) / 2;
+    const tabletopThickness = height * 0.05;
+    const legHeight = height - tabletopThickness;
+    const baseRadius = radius * 0.3;
+    const baseZ = legHeight * 0.2;
     
-    dimensionElements.push(...addDimensionOverlay(
-      widthPoints,
-      depthPoints,
-      heightPoints,
-      centerX,
-      centerY,
-      15,  // offset
-      2.5  // gap
-    ));
-  }
-  
-  const allElements = [...lines, ...dimensionElements];
-  return `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="background: white;">
+    // Z coordinates (authoritative)
+    const bottomZ = 0;
+    const baseTopZ = baseZ;
+    const legTopZ = height - tabletopThickness;
+    const tabletopBottomZ = legTopZ;
+    const tabletopTopZ = height;
+    
+    // Line Weight Hierarchy (MUST MATCH BASELINES):
+    // THICK (3.0px): Outer silhouette only (tabletop rim - dominant silhouette)
+    // MEDIUM (2.2px): Central pedestal, base circle
+    // THIN (1.0px): Vertical connectors, minor details
+    // DASHED THIN (1.0px): Hidden edges only (if any)
+    const thickStroke = 3.0;
+    const mediumStroke = 2.2;
+    const thinStroke = 1.0;
+    
+    // ============================================================
+    // 2) BUILD IN EXACT ORDER: Tabletop → Pedestal → Base → Verticals → Hidden Edges
+    // ============================================================
+    const allLines: string[] = [];
+    const segments = 32;
+    
+    // ============================================================
+    // STEP 1: TABLETOP RIM (outer silhouette - THICK)
+    // ============================================================
+    const topCirclePoints: string[] = [];
+    for (let i = 0; i <= segments; i++) {
+      const angle = (i / segments) * Math.PI * 2;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+      const topProj = isometricProject(x, y, tabletopTopZ);
+      topCirclePoints.push(`${centerX + topProj.x},${centerY + topProj.y}`);
+    }
+    // Tabletop rim - THICK (dominant silhouette)
+    allLines.push(`<polyline points="${topCirclePoints.join(' ')}" stroke="black" stroke-width="${thickStroke}" stroke-linecap="round" fill="none"/>`);
+    
+    // ============================================================
+    // STEP 2: TABLETOP BOTTOM RIM (visible edge - MEDIUM)
+    // ============================================================
+    const bottomCirclePoints: string[] = [];
+    for (let i = 0; i <= segments; i++) {
+      const angle = (i / segments) * Math.PI * 2;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+      const bottomProj = isometricProject(x, y, tabletopBottomZ);
+      bottomCirclePoints.push(`${centerX + bottomProj.x},${centerY + bottomProj.y}`);
+    }
+    // Tabletop bottom rim - MEDIUM (secondary structure)
+    allLines.push(`<polyline points="${bottomCirclePoints.join(' ')}" stroke="black" stroke-width="${mediumStroke}" stroke-linecap="round" fill="none"/>`);
+    
+    // ============================================================
+    // STEP 3: TABLETOP VERTICAL CONNECTORS (THIN - showing thickness)
+    // ============================================================
+    // Draw vertical connectors at regular intervals to show tabletop thickness
+    for (let i = 0; i <= segments; i += 8) {
+      const angle = (i / segments) * Math.PI * 2;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+      const topProj = isometricProject(x, y, tabletopTopZ);
+      const bottomProj = isometricProject(x, y, tabletopBottomZ);
+      // Only draw visible connectors (front and right sides)
+      // Hidden edges (back and left) would be dashed, but for round table we keep it simple
+      if (y <= 0 || x >= 0) { // Front or right side (visible)
+        allLines.push(svgLine(centerX + topProj.x, centerY + topProj.y, centerX + bottomProj.x, centerY + bottomProj.y, thinStroke));
+      }
+    }
+    
+    // ============================================================
+    // STEP 4: CENTRAL PEDESTAL (MEDIUM - major structural element)
+    // ============================================================
+    const legTop = isometricProject(0, 0, legTopZ);
+    const legBottom = isometricProject(0, 0, bottomZ);
+    // Central pedestal - MEDIUM (major structural element)
+    allLines.push(svgLine(centerX + legTop.x, centerY + legTop.y, centerX + legBottom.x, centerY + legBottom.y, mediumStroke));
+    
+    // ============================================================
+    // STEP 5: BASE CIRCLE (MEDIUM - secondary structure)
+    // ============================================================
+    const basePoints: string[] = [];
+    for (let i = 0; i <= segments; i++) {
+      const angle = (i / segments) * Math.PI * 2;
+      const x = Math.cos(angle) * baseRadius;
+      const y = Math.sin(angle) * baseRadius;
+      const baseProj = isometricProject(x, y, baseTopZ);
+      basePoints.push(`${centerX + baseProj.x},${centerY + baseProj.y}`);
+    }
+    // Base circle - MEDIUM (secondary structure)
+    allLines.push(`<polyline points="${basePoints.join(' ')}" stroke="black" stroke-width="${mediumStroke}" stroke-linecap="round" fill="none"/>`);
+    
+    // ============================================================
+    // STEP 6: DIMENSION ANNOTATIONS (optional overlay)
+    // ============================================================
+    const dimensionElements: string[] = [];
+    if (showDimensions) {
+      // Define dimension points in 3D space (using tabletop level for width/depth)
+      // For round tables, use diameter points
+      const widthPoints = [
+        { x: -radius, y: 0, z: tabletopTopZ },  // Left-center-top
+        { x: radius, y: 0, z: tabletopTopZ }    // Right-center-top
+      ];
+      const depthPoints = [
+        { x: 0, y: -radius, z: tabletopTopZ },  // Front-center-top
+        { x: 0, y: radius, z: tabletopTopZ }    // Back-center-top
+      ];
+      const heightPoints = [
+        { x: radius, y: 0, z: bottomZ },        // Floor (right-center)
+        { x: radius, y: 0, z: tabletopTopZ }    // Top of table
+      ];
+      
+      dimensionElements.push(...addDimensionOverlay(
+        widthPoints,
+        depthPoints,
+        heightPoints,
+        centerX,
+        centerY,
+        15,  // offset
+        2.5  // gap
+      ));
+    }
+    
+    const allElements = [...allLines, ...dimensionElements];
+    return `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgWidth} ${svgHeight}">
+    <rect width="${svgWidth}" height="${svgHeight}" fill="white"/>
     ${allElements.join('\n    ')}
   </svg>`;
+  } catch (error: any) {
+    console.error(`[generateTableFrameRound] Exception:`, error);
+    throw error;
+  }
 }
 
 function generateBenchFrame(width: number, depth: number, height: number, showDimensions: boolean = false): string {
@@ -1821,132 +1900,344 @@ function generateBenchFrame(width: number, depth: number, height: number, showDi
 }
 
 function generateBedFrame(width: number, depth: number, height: number, showDimensions: boolean = false): string {
+  console.log(`[generateBedFrame] Input - width: ${width}, depth: ${depth}, height: ${height}`);
+  
+  // Validate inputs
+  if (!isFinite(width) || !isFinite(depth) || !isFinite(height)) {
+    console.error(`[generateBedFrame] Invalid input - width: ${width}, depth: ${depth}, height: ${height}`);
+    throw new Error(`Invalid dimensions: width=${width}, depth=${depth}, height=${height}`);
+  }
+  if (width <= 0 || depth <= 0 || height <= 0) {
+    console.error(`[generateBedFrame] Non-positive dimensions - width: ${width}, depth: ${depth}, height: ${height}`);
+    throw new Error(`Non-positive dimensions: width=${width}, depth=${depth}, height=${height}`);
+  }
+  
   const svgWidth = 600;
   const svgHeight = 500;
   const centerX = svgWidth / 2;
   const centerY = svgHeight / 2 + 80;
-  const lines: string[] = [];
-  const w = width / 2;
-  const d = depth / 2;
   
-  // Base platform (bed foundation)
-  const baseHeight = height * 0.1;
-  const baseLines = drawIsometricBox(width, depth, baseHeight, centerX, centerY, 0);
-  lines.push(...baseLines);
-  
-  // Headboard panel (vertical panel at head of bed)
-  const headboardHeight = height * 0.9;
-  const headboardThickness = depth * 0.15;
-  const headboardZ = baseHeight;
-  const headboardTopZ = headboardZ + headboardHeight;
-  
-  // Headboard front face (visible)
-  const hfbl = isometricProject(-w * 0.9, -d, headboardZ);
-  const hfbr = isometricProject(w * 0.9, -d, headboardZ);
-  const hftl = isometricProject(-w * 0.9, -d, headboardTopZ);
-  const hftr = isometricProject(w * 0.9, -d, headboardTopZ);
-  
-  lines.push(svgLine(centerX + hfbl.x, centerY + hfbl.y, centerX + hfbr.x, centerY + hfbr.y)); // Bottom
-  lines.push(svgLine(centerX + hfbr.x, centerY + hfbr.y, centerX + hftr.x, centerY + hftr.y)); // Right
-  lines.push(svgLine(centerX + hftr.x, centerY + hftr.y, centerX + hftl.x, centerY + hftl.y)); // Top
-  lines.push(svgLine(centerX + hftl.x, centerY + hftl.y, centerX + hfbl.x, centerY + hfbl.y)); // Left
-  
-  // Dimension annotations
-  const dimensionElements: string[] = [];
-  if (showDimensions) {
-    const widthPoints = [
-      { x: -w * 0.9, y: -d, z: headboardTopZ },
-      { x: w * 0.9, y: -d, z: headboardTopZ }
-    ];
-    const depthPoints = [
-      { x: w * 0.9, y: -d, z: headboardTopZ },
-      { x: w * 0.9, y: d, z: headboardTopZ }
-    ];
-    const heightPoints = [
-      { x: w * 0.9, y: -d, z: 0 },
-      { x: w * 0.9, y: -d, z: headboardTopZ }
+  try {
+    // ============================================================
+    // 1) SINGLE AUTHORITATIVE COORDINATE SYSTEM
+    // ============================================================
+    const dims = {
+      W: width,
+      D: depth,
+      baseH: height * 0.1,  // Base platform height (10% of total height)
+      headboardH: height * 0.9, // Headboard height (90% of total height)
+    };
+    
+    // Z coordinates (authoritative)
+    const baseBottomZ = 0;
+    const baseTopZ = dims.baseH;
+    const headboardBottomZ = dims.baseH;
+    const headboardTopZ = dims.baseH + dims.headboardH;
+    
+    // Half-dimensions for coordinate calculations
+    const W2 = dims.W / 2;
+    const D2 = dims.D / 2;
+    
+    // Line Weight Hierarchy (MUST MATCH BASELINES):
+    // THICK (3.0px): Outer silhouette only (main box perimeter)
+    // MEDIUM (2.2px): Major divisions (if any internal structure)
+    // THIN (1.0px): Minor details
+    // DASHED THIN (1.0px): Hidden edges only
+    const thickStroke = 3.0;
+    const mediumStroke = 2.2;
+    const thinStroke = 1.0;
+    
+    // ============================================================
+    // 2) BUILD IN EXACT ORDER: Base → Verticals → Headboard → Hidden Edges
+    // ============================================================
+    const allLines: string[] = [];
+    
+    // ============================================================
+    // STEP 1: BASE PLATFORM (low box frame - like shallow sideboard carcass)
+    // ============================================================
+    const baseCorners = [
+      { x: -W2, y: -D2, z: baseBottomZ }, // Front-left-bottom
+      { x: W2, y: -D2, z: baseBottomZ },  // Front-right-bottom
+      { x: W2, y: D2, z: baseBottomZ },   // Back-right-bottom
+      { x: -W2, y: D2, z: baseBottomZ },  // Back-left-bottom
+      { x: -W2, y: -D2, z: baseTopZ },    // Front-left-top
+      { x: W2, y: -D2, z: baseTopZ },      // Front-right-top
+      { x: W2, y: D2, z: baseTopZ },       // Back-right-top
+      { x: -W2, y: D2, z: baseTopZ },      // Back-left-top
     ];
     
-    dimensionElements.push(...addDimensionOverlay(
-      widthPoints,
-      depthPoints,
-      heightPoints,
-      centerX,
-      centerY,
-      15,
-      2.5
-    ));
-  }
-  
-  const allElements = [...lines, ...dimensionElements];
-  return `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="background: white;">
+    const baseProjected = baseCorners.map(c => {
+      const p = isometricProject(c.x, c.y, c.z);
+      return { x: centerX + p.x, y: centerY + p.y };
+    });
+    
+    // Base bottom face (4 edges) - THICK for external outline
+    allLines.push(svgLine(baseProjected[0].x, baseProjected[0].y, baseProjected[1].x, baseProjected[1].y, thickStroke)); // Front
+    allLines.push(svgLine(baseProjected[1].x, baseProjected[1].y, baseProjected[2].x, baseProjected[2].y, thickStroke)); // Right
+    // Back edge: DASHED THIN (hidden edge, uniform spacing)
+    allLines.push(svgLine(baseProjected[2].x, baseProjected[2].y, baseProjected[3].x, baseProjected[3].y, thinStroke, '4,2')); // Back (dashed)
+    allLines.push(svgLine(baseProjected[3].x, baseProjected[3].y, baseProjected[0].x, baseProjected[0].y, thickStroke)); // Left
+    
+    // Base top face (4 edges) - THICK for external outline
+    allLines.push(svgLine(baseProjected[4].x, baseProjected[4].y, baseProjected[5].x, baseProjected[5].y, thickStroke)); // Front
+    allLines.push(svgLine(baseProjected[5].x, baseProjected[5].y, baseProjected[6].x, baseProjected[6].y, thickStroke)); // Right
+    // Back edge: DASHED THIN (hidden edge, uniform spacing)
+    allLines.push(svgLine(baseProjected[6].x, baseProjected[6].y, baseProjected[7].x, baseProjected[7].y, thinStroke, '4,2')); // Back (dashed)
+    allLines.push(svgLine(baseProjected[7].x, baseProjected[7].y, baseProjected[4].x, baseProjected[4].y, thickStroke)); // Left
+    
+    // Base verticals (4 edges) - THICK for external outline
+    allLines.push(svgLine(baseProjected[0].x, baseProjected[0].y, baseProjected[4].x, baseProjected[4].y, thickStroke)); // Front-left
+    allLines.push(svgLine(baseProjected[1].x, baseProjected[1].y, baseProjected[5].x, baseProjected[5].y, thickStroke)); // Front-right
+    // Back verticals: DASHED THIN (hidden edges, uniform spacing)
+    allLines.push(svgLine(baseProjected[2].x, baseProjected[2].y, baseProjected[6].x, baseProjected[6].y, thinStroke, '4,2')); // Back-right (dashed)
+    allLines.push(svgLine(baseProjected[3].x, baseProjected[3].y, baseProjected[7].x, baseProjected[7].y, thinStroke, '4,2')); // Back-left (dashed)
+    
+    // ============================================================
+    // STEP 2: HEADBOARD PANEL (vertical rear panel - like sideboard side panel)
+    // ============================================================
+    // Headboard sits at rear edge (y = D2), extends from baseTopZ to headboardTopZ
+    // Headboard width spans most of bed width (90% for visual balance)
+    const headboardW2 = W2 * 0.9;
+    
+    const headboardCorners = [
+      { x: -headboardW2, y: D2, z: headboardBottomZ }, // Bottom-left
+      { x: headboardW2, y: D2, z: headboardBottomZ },  // Bottom-right
+      { x: headboardW2, y: D2, z: headboardTopZ },      // Top-right
+      { x: -headboardW2, y: D2, z: headboardTopZ },      // Top-left
+    ];
+    
+    const headboardProjected = headboardCorners.map(c => {
+      const p = isometricProject(c.x, c.y, c.z);
+      return { x: centerX + p.x, y: centerY + p.y };
+    });
+    
+    // Headboard front face (visible, at y = D2) - THICK for external outline
+    // Bottom edge (connects to base top)
+    allLines.push(svgLine(headboardProjected[0].x, headboardProjected[0].y, headboardProjected[1].x, headboardProjected[1].y, thickStroke)); // Bottom
+    // Right vertical
+    allLines.push(svgLine(headboardProjected[1].x, headboardProjected[1].y, headboardProjected[2].x, headboardProjected[2].y, thickStroke)); // Right
+    // Top edge
+    allLines.push(svgLine(headboardProjected[2].x, headboardProjected[2].y, headboardProjected[3].x, headboardProjected[3].y, thickStroke)); // Top
+    // Left vertical
+    allLines.push(svgLine(headboardProjected[3].x, headboardProjected[3].y, headboardProjected[0].x, headboardProjected[0].y, thickStroke)); // Left
+    
+    // ============================================================
+    // STEP 3: DIMENSION ANNOTATIONS (optional overlay)
+    // ============================================================
+    const dimensionElements: string[] = [];
+    if (showDimensions) {
+      const widthPoints = [
+        { x: -W2, y: -D2, z: headboardTopZ },
+        { x: W2, y: -D2, z: headboardTopZ }
+      ];
+      const depthPoints = [
+        { x: W2, y: -D2, z: headboardTopZ },
+        { x: W2, y: D2, z: headboardTopZ }
+      ];
+      const heightPoints = [
+        { x: W2, y: -D2, z: baseBottomZ },
+        { x: W2, y: -D2, z: headboardTopZ }
+      ];
+      
+      dimensionElements.push(...addDimensionOverlay(
+        widthPoints,
+        depthPoints,
+        heightPoints,
+        centerX,
+        centerY,
+        15,
+        2.5
+      ));
+    }
+    
+    const allElements = [...allLines, ...dimensionElements];
+    return `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgWidth} ${svgHeight}">
+    <rect width="${svgWidth}" height="${svgHeight}" fill="white"/>
     ${allElements.join('\n    ')}
   </svg>`;
+  } catch (error: any) {
+    console.error(`[generateBedFrame] Exception:`, error);
+    throw error;
+  }
 }
 
 function generateBookshelfFrame(width: number, depth: number, height: number, showDimensions: boolean = false): string {
+  console.log(`[generateBookshelfFrame] Input - width: ${width}, depth: ${depth}, height: ${height}`);
+  
+  // Validate inputs
+  if (!isFinite(width) || !isFinite(depth) || !isFinite(height)) {
+    console.error(`[generateBookshelfFrame] Invalid input - width: ${width}, depth: ${depth}, height: ${height}`);
+    throw new Error(`Invalid dimensions: width=${width}, depth=${depth}, height=${height}`);
+  }
+  if (width <= 0 || depth <= 0 || height <= 0) {
+    console.error(`[generateBookshelfFrame] Non-positive dimensions - width: ${width}, depth: ${depth}, height: ${height}`);
+    throw new Error(`Non-positive dimensions: width=${width}, depth=${depth}, height=${height}`);
+  }
+  
   const svgWidth = 400;
   const svgHeight = 500;
   const centerX = svgWidth / 2;
   const centerY = svgHeight / 2 + 100;
-  const lines: string[] = [];
-  const w = width / 2;
-  const d = depth / 2;
   
-  // Outer frame
-  const frameLines = drawIsometricBox(width, depth, height, centerX, centerY, 0);
-  lines.push(...frameLines);
-  
-  // Horizontal shelves (evenly spaced)
-  const shelfCount = Math.floor(height / 30); // Approximate shelf spacing
-  for (let i = 1; i < shelfCount; i++) {
-    const shelfZ = (height / shelfCount) * i;
-    const shelfThickness = height * 0.02;
+  try {
+    // ============================================================
+    // 1) SINGLE AUTHORITATIVE COORDINATE SYSTEM
+    // ============================================================
+    const dims = {
+      W: width,
+      D: depth,
+      H: height,
+    };
     
-    // Shelf front edge
-    const sfbl = isometricProject(-w * 0.95, -d * 0.95, shelfZ);
-    const sfbr = isometricProject(w * 0.95, -d * 0.95, shelfZ);
-    lines.push(svgLine(centerX + sfbl.x, centerY + sfbl.y, centerX + sfbr.x, centerY + sfbr.y));
+    // Z coordinates (authoritative)
+    const bottomZ = 0;
+    const topZ = dims.H;
     
-    // Shelf depth edges
-    const sftl = isometricProject(-w * 0.95, -d * 0.95, shelfZ + shelfThickness);
-    const sftr = isometricProject(w * 0.95, -d * 0.95, shelfZ + shelfThickness);
-    lines.push(svgLine(centerX + sfbl.x, centerY + sfbl.y, centerX + sftl.x, centerY + sftl.y));
-    lines.push(svgLine(centerX + sfbr.x, centerY + sfbr.y, centerX + sftr.x, centerY + sftr.y));
-    lines.push(svgLine(centerX + sftl.x, centerY + sftl.y, centerX + sftr.x, centerY + sftr.y));
-  }
-  
-  // Dimension annotations
-  const dimensionElements: string[] = [];
-  if (showDimensions) {
-    const widthPoints = [
-      { x: -w * 0.95, y: -d * 0.95, z: height },
-      { x: w * 0.95, y: -d * 0.95, z: height }
-    ];
-    const depthPoints = [
-      { x: w * 0.95, y: -d * 0.95, z: height },
-      { x: w * 0.95, y: d * 0.95, z: height }
-    ];
-    const heightPoints = [
-      { x: w * 0.95, y: -d * 0.95, z: 0 },
-      { x: w * 0.95, y: -d * 0.95, z: height }
+    // Half-dimensions for coordinate calculations
+    const W2 = dims.W / 2;
+    const D2 = dims.D / 2;
+    
+    // Line Weight Hierarchy (MUST MATCH BASELINES):
+    // THICK (3.0px): Outer silhouette only (main box perimeter)
+    // MEDIUM (2.2px): Major divisions (if any internal structure)
+    // THIN (1.0px): Shelf lines, minor details
+    // DASHED THIN (1.0px): Hidden edges only
+    const thickStroke = 3.0;
+    const mediumStroke = 2.2;
+    const thinStroke = 1.0;
+    
+    // ============================================================
+    // 2) BUILD IN EXACT ORDER: Outer Frame → Verticals → Shelves → Hidden Edges
+    // ============================================================
+    const allLines: string[] = [];
+    
+    // ============================================================
+    // STEP 1: OUTER FRAME (all 12 edges explicitly drawn - like sideboard carcass)
+    // ============================================================
+    const frameCorners = [
+      { x: -W2, y: -D2, z: bottomZ }, // Front-left-bottom
+      { x: W2, y: -D2, z: bottomZ },  // Front-right-bottom
+      { x: W2, y: D2, z: bottomZ },   // Back-right-bottom
+      { x: -W2, y: D2, z: bottomZ },  // Back-left-bottom
+      { x: -W2, y: -D2, z: topZ },    // Front-left-top
+      { x: W2, y: -D2, z: topZ },      // Front-right-top
+      { x: W2, y: D2, z: topZ },       // Back-right-top
+      { x: -W2, y: D2, z: topZ },      // Back-left-top
     ];
     
-    dimensionElements.push(...addDimensionOverlay(
-      widthPoints,
-      depthPoints,
-      heightPoints,
-      centerX,
-      centerY,
-      15,
-      2.5
-    ));
-  }
-  
-  const allElements = [...lines, ...dimensionElements];
-  return `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="background: white;">
+    const frameProjected = frameCorners.map(c => {
+      const p = isometricProject(c.x, c.y, c.z);
+      return { x: centerX + p.x, y: centerY + p.y };
+    });
+    
+    // Outer frame - THICK for external outline (ONE line per edge, precise corners)
+    // Bottom rails (4 edges)
+    allLines.push(svgLine(frameProjected[0].x, frameProjected[0].y, frameProjected[1].x, frameProjected[1].y, thickStroke)); // Front (THICK)
+    allLines.push(svgLine(frameProjected[1].x, frameProjected[1].y, frameProjected[2].x, frameProjected[2].y, thickStroke)); // Right (THICK)
+    // Back bottom rail: DASHED THIN (hidden edge, uniform spacing)
+    allLines.push(svgLine(frameProjected[2].x, frameProjected[2].y, frameProjected[3].x, frameProjected[3].y, thinStroke, '4,2')); // Back (dashed)
+    allLines.push(svgLine(frameProjected[3].x, frameProjected[3].y, frameProjected[0].x, frameProjected[0].y, thickStroke)); // Left (THICK)
+    
+    // Top rails (4 edges) - THICK for external outline
+    allLines.push(svgLine(frameProjected[4].x, frameProjected[4].y, frameProjected[5].x, frameProjected[5].y, thickStroke)); // Front top edge
+    allLines.push(svgLine(frameProjected[5].x, frameProjected[5].y, frameProjected[6].x, frameProjected[6].y, thickStroke)); // Right top edge
+    // Back top rail: DASHED THIN (hidden edge, uniform spacing)
+    allLines.push(svgLine(frameProjected[6].x, frameProjected[6].y, frameProjected[7].x, frameProjected[7].y, thinStroke, '4,2')); // Back (dashed)
+    allLines.push(svgLine(frameProjected[7].x, frameProjected[7].y, frameProjected[4].x, frameProjected[4].y, thickStroke)); // Left (THICK)
+    
+    // Vertical corner posts (4 edges) - THICK for external outline
+    allLines.push(svgLine(frameProjected[0].x, frameProjected[0].y, frameProjected[4].x, frameProjected[4].y, thickStroke)); // Front-left (THICK)
+    allLines.push(svgLine(frameProjected[1].x, frameProjected[1].y, frameProjected[5].x, frameProjected[5].y, thickStroke)); // Front-right (THICK)
+    // Back verticals: DASHED THIN (hidden edges, uniform spacing)
+    allLines.push(svgLine(frameProjected[2].x, frameProjected[2].y, frameProjected[6].x, frameProjected[6].y, thinStroke, '4,2')); // Back-right (dashed)
+    allLines.push(svgLine(frameProjected[3].x, frameProjected[3].y, frameProjected[7].x, frameProjected[7].y, thinStroke, '4,2')); // Back-left (dashed)
+    
+    // ============================================================
+    // STEP 2: INTERNAL SHELVES (horizontal rails - like sideboard internal shelves)
+    // ============================================================
+    // Calculate shelf positions (evenly spaced, minimum 3 shelves)
+    const minShelfCount = 3;
+    const maxShelfCount = Math.max(minShelfCount, Math.floor(height / 30)); // Approximate shelf spacing
+    const shelfCount = Math.min(maxShelfCount, 6); // Cap at 6 shelves for clarity
+    
+    const shelfThickness = dims.H * 0.02; // ~2% of height (shelf thickness)
+    const shelfSpacing = dims.H / (shelfCount + 1);
+    
+    for (let i = 1; i <= shelfCount; i++) {
+      const shelfZ = shelfSpacing * i;
+      
+      // Shelf top surface corners (connecting to vertical posts)
+      const shelfTopCorners = [
+        { x: -W2, y: -D2, z: shelfZ + shelfThickness }, // Front-left-top
+        { x: W2, y: -D2, z: shelfZ + shelfThickness }, // Front-right-top
+        { x: W2, y: D2, z: shelfZ + shelfThickness }, // Back-right-top
+        { x: -W2, y: D2, z: shelfZ + shelfThickness },  // Back-left-top
+      ];
+      
+      const shelfTopProjected = shelfTopCorners.map(c => {
+        const p = isometricProject(c.x, c.y, c.z);
+        return { x: centerX + p.x, y: centerY + p.y };
+      });
+      
+      // Shelf top surface edges - THIN (shelf lines, like sideboard internal shelves)
+      allLines.push(svgLine(shelfTopProjected[0].x, shelfTopProjected[0].y, shelfTopProjected[1].x, shelfTopProjected[1].y, thinStroke)); // Front (solid, visible)
+      allLines.push(svgLine(shelfTopProjected[1].x, shelfTopProjected[1].y, shelfTopProjected[2].x, shelfTopProjected[2].y, thinStroke)); // Right (solid, visible)
+      // Back edge: DASHED THIN (hidden edge, uniform spacing)
+      allLines.push(svgLine(shelfTopProjected[2].x, shelfTopProjected[2].y, shelfTopProjected[3].x, shelfTopProjected[3].y, thinStroke, '4,2')); // Back (dashed)
+      allLines.push(svgLine(shelfTopProjected[3].x, shelfTopProjected[3].y, shelfTopProjected[0].x, shelfTopProjected[0].y, thinStroke)); // Left (solid, visible)
+      
+      // Shelf front vertical edges (showing thickness) - THIN
+      const shelfBottomCorners = [
+        { x: -W2, y: -D2, z: shelfZ },
+        { x: W2, y: -D2, z: shelfZ },
+      ];
+      const shelfBottomProjected = shelfBottomCorners.map(c => {
+        const p = isometricProject(c.x, c.y, c.z);
+        return { x: centerX + p.x, y: centerY + p.y };
+      });
+      
+      allLines.push(svgLine(shelfTopProjected[0].x, shelfTopProjected[0].y, shelfBottomProjected[0].x, shelfBottomProjected[0].y, thinStroke)); // Front-left vertical
+      allLines.push(svgLine(shelfTopProjected[1].x, shelfTopProjected[1].y, shelfBottomProjected[1].x, shelfBottomProjected[1].y, thinStroke)); // Front-right vertical
+    }
+    
+    // ============================================================
+    // STEP 3: DIMENSION ANNOTATIONS (optional overlay)
+    // ============================================================
+    const dimensionElements: string[] = [];
+    if (showDimensions) {
+      const widthPoints = [
+        { x: -W2, y: -D2, z: topZ },
+        { x: W2, y: -D2, z: topZ }
+      ];
+      const depthPoints = [
+        { x: W2, y: -D2, z: topZ },
+        { x: W2, y: D2, z: topZ }
+      ];
+      const heightPoints = [
+        { x: W2, y: -D2, z: bottomZ },
+        { x: W2, y: -D2, z: topZ }
+      ];
+      
+      dimensionElements.push(...addDimensionOverlay(
+        widthPoints,
+        depthPoints,
+        heightPoints,
+        centerX,
+        centerY,
+        15,
+        2.5
+      ));
+    }
+    
+    const allElements = [...allLines, ...dimensionElements];
+    return `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgWidth} ${svgHeight}">
+    <rect width="${svgWidth}" height="${svgHeight}" fill="white"/>
     ${allElements.join('\n    ')}
   </svg>`;
+  } catch (error: any) {
+    console.error(`[generateBookshelfFrame] Exception:`, error);
+    throw error;
+  }
 }
 
 /**
