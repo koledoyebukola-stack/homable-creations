@@ -48,7 +48,9 @@ enum BlueprintType {
   TABLE_RECT = 'TABLE_RECT',
   TABLE_ROUND = 'TABLE_ROUND',
   BENCH = 'BENCH',
-  STORAGE_BOX = 'STORAGE_BOX'
+  STORAGE_BOX = 'STORAGE_BOX',
+  BED = 'BED',
+  BOOKSHELF = 'BOOKSHELF'
 }
 
 /**
@@ -69,6 +71,16 @@ function resolveBlueprintType(
   const searchText = `${category || ''} ${itemName}`.toLowerCase();
   
   // Rule 1: SEMANTIC/CATEGORY CHECKS FIRST (before size-based heuristics)
+  // Bed → BED
+  if (searchText.includes('bed')) {
+    return BlueprintType.BED;
+  }
+  
+  // Bookshelf → BOOKSHELF
+  if (searchText.includes('bookshelf') || searchText.includes('shelf') || searchText.includes('bookcase')) {
+    return BlueprintType.BOOKSHELF;
+  }
+  
   // Storage furniture (sideboard, cabinet, console, storage) → STORAGE_BOX
   if (searchText.includes('sideboard') || 
       searchText.includes('cabinet') || 
@@ -1808,6 +1820,135 @@ function generateBenchFrame(width: number, depth: number, height: number, showDi
   </svg>`;
 }
 
+function generateBedFrame(width: number, depth: number, height: number, showDimensions: boolean = false): string {
+  const svgWidth = 600;
+  const svgHeight = 500;
+  const centerX = svgWidth / 2;
+  const centerY = svgHeight / 2 + 80;
+  const lines: string[] = [];
+  const w = width / 2;
+  const d = depth / 2;
+  
+  // Base platform (bed foundation)
+  const baseHeight = height * 0.1;
+  const baseLines = drawIsometricBox(width, depth, baseHeight, centerX, centerY, 0);
+  lines.push(...baseLines);
+  
+  // Headboard panel (vertical panel at head of bed)
+  const headboardHeight = height * 0.9;
+  const headboardThickness = depth * 0.15;
+  const headboardZ = baseHeight;
+  const headboardTopZ = headboardZ + headboardHeight;
+  
+  // Headboard front face (visible)
+  const hfbl = isometricProject(-w * 0.9, -d, headboardZ);
+  const hfbr = isometricProject(w * 0.9, -d, headboardZ);
+  const hftl = isometricProject(-w * 0.9, -d, headboardTopZ);
+  const hftr = isometricProject(w * 0.9, -d, headboardTopZ);
+  
+  lines.push(svgLine(centerX + hfbl.x, centerY + hfbl.y, centerX + hfbr.x, centerY + hfbr.y)); // Bottom
+  lines.push(svgLine(centerX + hfbr.x, centerY + hfbr.y, centerX + hftr.x, centerY + hftr.y)); // Right
+  lines.push(svgLine(centerX + hftr.x, centerY + hftr.y, centerX + hftl.x, centerY + hftl.y)); // Top
+  lines.push(svgLine(centerX + hftl.x, centerY + hftl.y, centerX + hfbl.x, centerY + hfbl.y)); // Left
+  
+  // Dimension annotations
+  const dimensionElements: string[] = [];
+  if (showDimensions) {
+    const widthPoints = [
+      { x: -w * 0.9, y: -d, z: headboardTopZ },
+      { x: w * 0.9, y: -d, z: headboardTopZ }
+    ];
+    const depthPoints = [
+      { x: w * 0.9, y: -d, z: headboardTopZ },
+      { x: w * 0.9, y: d, z: headboardTopZ }
+    ];
+    const heightPoints = [
+      { x: w * 0.9, y: -d, z: 0 },
+      { x: w * 0.9, y: -d, z: headboardTopZ }
+    ];
+    
+    dimensionElements.push(...addDimensionOverlay(
+      widthPoints,
+      depthPoints,
+      heightPoints,
+      centerX,
+      centerY,
+      15,
+      2.5
+    ));
+  }
+  
+  const allElements = [...lines, ...dimensionElements];
+  return `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="background: white;">
+    ${allElements.join('\n    ')}
+  </svg>`;
+}
+
+function generateBookshelfFrame(width: number, depth: number, height: number, showDimensions: boolean = false): string {
+  const svgWidth = 400;
+  const svgHeight = 500;
+  const centerX = svgWidth / 2;
+  const centerY = svgHeight / 2 + 100;
+  const lines: string[] = [];
+  const w = width / 2;
+  const d = depth / 2;
+  
+  // Outer frame
+  const frameLines = drawIsometricBox(width, depth, height, centerX, centerY, 0);
+  lines.push(...frameLines);
+  
+  // Horizontal shelves (evenly spaced)
+  const shelfCount = Math.floor(height / 30); // Approximate shelf spacing
+  for (let i = 1; i < shelfCount; i++) {
+    const shelfZ = (height / shelfCount) * i;
+    const shelfThickness = height * 0.02;
+    
+    // Shelf front edge
+    const sfbl = isometricProject(-w * 0.95, -d * 0.95, shelfZ);
+    const sfbr = isometricProject(w * 0.95, -d * 0.95, shelfZ);
+    lines.push(svgLine(centerX + sfbl.x, centerY + sfbl.y, centerX + sfbr.x, centerY + sfbr.y));
+    
+    // Shelf depth edges
+    const sftl = isometricProject(-w * 0.95, -d * 0.95, shelfZ + shelfThickness);
+    const sftr = isometricProject(w * 0.95, -d * 0.95, shelfZ + shelfThickness);
+    lines.push(svgLine(centerX + sfbl.x, centerY + sfbl.y, centerX + sftl.x, centerY + sftl.y));
+    lines.push(svgLine(centerX + sfbr.x, centerY + sfbr.y, centerX + sftr.x, centerY + sftr.y));
+    lines.push(svgLine(centerX + sftl.x, centerY + sftl.y, centerX + sftr.x, centerY + sftr.y));
+  }
+  
+  // Dimension annotations
+  const dimensionElements: string[] = [];
+  if (showDimensions) {
+    const widthPoints = [
+      { x: -w * 0.95, y: -d * 0.95, z: height },
+      { x: w * 0.95, y: -d * 0.95, z: height }
+    ];
+    const depthPoints = [
+      { x: w * 0.95, y: -d * 0.95, z: height },
+      { x: w * 0.95, y: d * 0.95, z: height }
+    ];
+    const heightPoints = [
+      { x: w * 0.95, y: -d * 0.95, z: 0 },
+      { x: w * 0.95, y: -d * 0.95, z: height }
+    ];
+    
+    dimensionElements.push(...addDimensionOverlay(
+      widthPoints,
+      depthPoints,
+      heightPoints,
+      centerX,
+      centerY,
+      15,
+      2.5
+    ));
+  }
+  
+  const allElements = [...lines, ...dimensionElements];
+  return `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="background: white;">
+    ${allElements.join('\n    ')}
+  </svg>`;
+}
+
 /**
  * Generate placeholder SVG with error message
  */
@@ -1863,6 +2004,14 @@ function generateBlueprintSVG(spec: CarpenterSpec, category?: string, itemName?:
       case BlueprintType.STORAGE_BOX:
         console.log(`[generateBlueprintSVG] Calling generateBoxFrame`);
         svgResult = generateBoxFrame(width, depth, height);
+        break;
+      case BlueprintType.BED:
+        console.log(`[generateBlueprintSVG] Calling generateBedFrame`);
+        svgResult = generateBedFrame(width, depth, height);
+        break;
+      case BlueprintType.BOOKSHELF:
+        console.log(`[generateBlueprintSVG] Calling generateBookshelfFrame`);
+        svgResult = generateBookshelfFrame(width, depth, height);
         break;
       default:
         console.log(`[generateBlueprintSVG] Default case, calling generateBoxFrame`);
