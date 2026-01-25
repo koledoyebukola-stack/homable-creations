@@ -1398,8 +1398,16 @@ function generateChairFrame(width: number, depth: number, height: number, catego
 }
 
 function generateTableFrameRectangular(width: number, depth: number, height: number, showDimensions: boolean = false): string {
-  const svgWidth = 400;
-  const svgHeight = 400;
+  // Calculate projected bounds for dynamic canvas sizing
+  const w = width / 2;
+  const d = depth / 2;
+  const maxProjectedWidth = (width + depth) * ISO_COS;
+  const maxProjectedHeight = (width + depth) * ISO_SIN + height;
+  
+  // Add 30% padding for dimensions and margins
+  const svgWidth = Math.max(400, maxProjectedWidth * 1.3);
+  const svgHeight = Math.max(400, maxProjectedHeight * 1.3);
+  
   const centerX = svgWidth / 2;
   const centerY = svgHeight / 2 + 50;
   
@@ -1409,8 +1417,6 @@ function generateTableFrameRectangular(width: number, depth: number, height: num
   const thinStroke = 1.0;     // Minor details
   
   const lines: string[] = [];
-  const w = width / 2;
-  const d = depth / 2;
   const tabletopThickness = height * 0.05;
   const tabletopBottomZ = height - tabletopThickness; // Tabletop sits on top of legs
   
