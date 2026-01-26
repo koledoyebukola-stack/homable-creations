@@ -103,16 +103,25 @@ export interface Checklist {
   user_id: string;
   name: string;
   board_id?: string;
+  gifting_enabled?: boolean;
+  gifting_token?: string;
   created_at: string;
   updated_at: string;
 }
+
+export type ChecklistItemStatus = 'pending' | 'claimed' | 'completed';
 
 export interface ChecklistItem {
   id: string;
   checklist_id: string;
   item_name: string;
-  is_completed: boolean;
+  is_completed: boolean; // Kept for backward compatibility
+  status: ChecklistItemStatus; // New: pending, claimed, completed
   completed_at?: string;
+  claimed_by_name?: string;
+  claimed_at?: string;
+  expected_date?: string; // ISO date string
+  gift_note?: string;
   sort_order: number;
   created_at: string;
 }

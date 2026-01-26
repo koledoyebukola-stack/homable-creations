@@ -553,7 +553,8 @@ export async function getUserChecklists(): Promise<ChecklistWithItems[]> {
 
   const checklistsWithItems: ChecklistWithItems[] = checklists.map(checklist => {
     const checklistItems = items?.filter(item => item.checklist_id === checklist.id) || [];
-    const completedCount = checklistItems.filter(item => item.is_completed).length;
+    // Calculate completed count (only items with status='completed' or is_completed=true)
+    const completedCount = checklistItems.filter(item => item.status === 'completed' || item.is_completed).length;
     
     return {
       ...checklist,
@@ -596,7 +597,8 @@ export async function getChecklistById(checklistId: string): Promise<ChecklistWi
     throw itemsError;
   }
 
-  const completedCount = items?.filter(item => item.is_completed).length || 0;
+  // Calculate completed count (only items with status='completed' or is_completed=true)
+  const completedCount = items?.filter(item => item.status === 'completed' || item.is_completed).length || 0;
 
   return {
     ...checklist,
@@ -616,14 +618,31 @@ export async function updateChecklistItem(
     throw new Error('User must be authenticated');
   }
 
+  // First, get the current item to check if it was claimed
+  const { data: currentItem } = await supabase
+    .from('app_8574c59127_checklist_items')
+    .select('status, claimed_by_name')
+    .eq('id', itemId)
+    .single();
+
   const updateData: Record<string, boolean | string | null> = {
     is_completed: isCompleted,
   };
 
   if (isCompleted) {
+    updateData.status = 'completed';
     updateData.completed_at = new Date().toISOString();
+    // Keep claim data when completing (for gift note display)
   } else {
     updateData.completed_at = null;
+    // When uncompleting, restore to previous status:
+    // If it was claimed, set status back to 'claimed'
+    // If it wasn't claimed, set status back to 'pending'
+    if (currentItem?.claimed_by_name) {
+      updateData.status = 'claimed';
+    } else {
+      updateData.status = 'pending';
+    }
   }
 
   const { error } = await supabase
@@ -745,4 +764,147 @@ export async function getCombinedHistory(): Promise<HistoryItem[]> {
   historyItems.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   return historyItems;
+}
+
+/**
+ * Enable gifting on a checklist and generate a shareable token
+ */
+export async function enableGifting(checklistId: string): Promise<{ gifting_token: string; gifting_url: string }> {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User must be authenticated');
+  }
+
+  // Generate a unique token
+  const giftingToken = crypto.randomUUID();
+
+  const { data, error } = await supabase
+    .from('app_8574c59127_checklists')
+    .update({
+      gifting_enabled: true,
+      gifting_token: giftingToken,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', checklistId)
+    .eq('user_id', user.id)
+    .select('gifting_token')
+    .single();
+
+  if (error) {
+    console.error('Failed to enable gifting:', error);
+    throw new Error(`Failed to enable gifting: ${error.message}`);
+  }
+
+  const giftingUrl = `${window.location.origin}/checklists/gift/${giftingToken}`;
+
+  return {
+    gifting_token: data.gifting_token,
+    gifting_url: giftingUrl,
+  };
+}
+
+/**
+ * Get checklist by gifting token (for shared gifting view)
+ * This allows unauthenticated users to view and claim items
+ */
+export async function getChecklistByGiftingToken(token: string): Promise<ChecklistWithItems | null> {
+  const { data: checklist, error: checklistError } = await supabase
+    .from('app_8574c59127_checklists')
+    .select('*')
+    .eq('gifting_token', token)
+    .eq('gifting_enabled', true)
+    .single();
+
+  if (checklistError || !checklist) {
+    console.error('Failed to fetch checklist by token:', checklistError);
+    return null;
+  }
+
+  const { data: items, error: itemsError } = await supabase
+    .from('app_8574c59127_checklist_items')
+    .select('*')
+    .eq('checklist_id', checklist.id)
+    .order('sort_order', { ascending: true });
+
+  if (itemsError) {
+    console.error('Failed to fetch checklist items:', itemsError);
+    throw itemsError;
+  }
+
+  // Calculate completed count (only items with status='completed')
+  const completedCount = items?.filter(item => item.status === 'completed' || item.is_completed).length || 0;
+
+  return {
+    ...checklist,
+    items: items || [],
+    completed_count: completedCount,
+    total_count: items?.length || 0,
+  };
+}
+
+/**
+ * Claim a checklist item (for gifters)
+ */
+export async function claimChecklistItem(
+  itemId: string,
+  claimedByName: string,
+  expectedDate?: string,
+  giftNote?: string
+): Promise<void> {
+  // No authentication required - this is for gifters
+
+  const updateData: Record<string, string | null> = {
+    status: 'claimed',
+    claimed_by_name: claimedByName,
+    claimed_at: new Date().toISOString(),
+  };
+
+  if (expectedDate) {
+    updateData.expected_date = expectedDate;
+  } else {
+    updateData.expected_date = null;
+  }
+
+  if (giftNote) {
+    updateData.gift_note = giftNote;
+  } else {
+    updateData.gift_note = null;
+  }
+
+  // First, verify the item exists and is claimable (pending status or no status + not completed)
+  const { data: currentItem, error: checkError } = await supabase
+    .from('app_8574c59127_checklist_items')
+    .select('status, is_completed, claimed_by_name')
+    .eq('id', itemId)
+    .single();
+
+  if (checkError || !currentItem) {
+    throw new Error('Item not found');
+  }
+
+  // Check if item is already claimed or completed
+  if (currentItem.claimed_by_name) {
+    throw new Error('This item has already been claimed');
+  }
+
+  if (currentItem.is_completed || currentItem.status === 'completed') {
+    throw new Error('This item has already been completed');
+  }
+
+  // Only allow claiming if status is 'pending' or not set (backward compatibility)
+  if (currentItem.status && currentItem.status !== 'pending') {
+    throw new Error('This item cannot be claimed');
+  }
+
+  const { error } = await supabase
+    .from('app_8574c59127_checklist_items')
+    .update(updateData)
+    .eq('id', itemId)
+    .or('status.is.null,status.eq.pending') // Allow claiming if status is null (old items) or 'pending'
+
+  if (error) {
+    console.error('Failed to claim checklist item:', error);
+    throw new Error(`Failed to claim item: ${error.message}`);
+  }
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getChecklistById, updateChecklistItem, updateChecklistName, deleteChecklist, getBoards } from '@/lib/api';
+import { getChecklistById, updateChecklistItem, updateChecklistName, deleteChecklist, getBoards, enableGifting } from '@/lib/api';
 import { ChecklistWithItems, Board } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { 
   Loader2, 
   ArrowLeft, 
@@ -25,7 +32,13 @@ import {
   Share2,
   MoreVertical,
   Search,
-  ExternalLink
+  ExternalLink,
+  Gift,
+  Users,
+  Calendar,
+  User,
+  Copy,
+  CheckCircle2
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -72,6 +85,10 @@ export default function ChecklistDetail() {
   const [newName, setNewName] = useState('');
   const [savingName, setSavingName] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showGiftingModal, setShowGiftingModal] = useState(false);
+  const [giftingUrl, setGiftingUrl] = useState<string | null>(null);
+  const [enablingGifting, setEnablingGifting] = useState(false);
+  const [giftingUrlCopied, setGiftingUrlCopied] = useState(false);
   const [retailers] = useState(getLocalizedRetailers());
 
   useEffect(() => {
@@ -183,6 +200,44 @@ export default function ChecklistDetail() {
     window.open(`https://www.google.com/search?q=${searchQuery}`, '_blank');
   };
 
+  const handleEnableGifting = async () => {
+    if (!checklist) return;
+
+    try {
+      setEnablingGifting(true);
+      const result = await enableGifting(checklist.id);
+      setGiftingUrl(result.gifting_url);
+      setShowGiftingModal(true);
+      
+      // Update local state
+      setChecklist({
+        ...checklist,
+        gifting_enabled: true,
+        gifting_token: result.gifting_token,
+      });
+      
+      toast.success('Gifting enabled! Share the link with friends.');
+    } catch (err: unknown) {
+      console.error('Failed to enable gifting:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to enable gifting');
+    } finally {
+      setEnablingGifting(false);
+    }
+  };
+
+  const handleCopyGiftingUrl = async () => {
+    if (!giftingUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(giftingUrl);
+      setGiftingUrlCopied(true);
+      toast.success('Gifting link copied to clipboard!');
+      setTimeout(() => setGiftingUrlCopied(false), 2000);
+    } catch (error) {
+      toast.error('Failed to copy link');
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { 
@@ -221,12 +276,33 @@ export default function ChecklistDetail() {
     );
   }
 
-  const pendingItems = checklist.items.filter(item => !item.is_completed);
-  const completedItems = checklist.items.filter(item => item.is_completed);
+  // Separate items: pending (unclaimed), claimed, and completed
+  // Handle both old items (is_completed only) and new items (status field)
+  const pendingItems = checklist.items.filter(item => {
+    const isPending = item.status === 'pending' || (!item.status && !item.is_completed);
+    const isUnclaimed = !item.claimed_by_name;
+    return isPending && isUnclaimed;
+  });
+  
+  const claimedItems = checklist.items.filter(item => {
+    const isClaimed = item.status === 'claimed' || (item.claimed_by_name && !item.is_completed);
+    const isNotCompleted = item.status !== 'completed' && !item.is_completed;
+    return isClaimed && isNotCompleted;
+  });
+  
+  const completedItems = checklist.items.filter(item => 
+    item.status === 'completed' || item.is_completed
+  );
+  
   const progressPercent = checklist.total_count > 0
     ? Math.round((checklist.completed_count / checklist.total_count) * 100)
     : 0;
   const isFullyCompleted = checklist.completed_count === checklist.total_count && checklist.total_count > 0;
+  
+  // Get gifting URL if gifting is enabled
+  const currentGiftingUrl = checklist.gifting_enabled && checklist.gifting_token
+    ? `${window.location.origin}/checklists/gift/${checklist.gifting_token}`
+    : null;
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] flex flex-col">
@@ -390,11 +466,62 @@ export default function ChecklistDetail() {
                   All items completed!
                 </div>
               )}
+              
+              {/* Let friends help button */}
+              {!checklist.gifting_enabled && (
+                <Button
+                  onClick={handleEnableGifting}
+                  disabled={enablingGifting}
+                  className="w-full bg-[#C89F7A] hover:bg-[#B88A6A] text-white mt-4"
+                  variant="outline"
+                >
+                  {enablingGifting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Enabling...
+                    </>
+                  ) : (
+                    <>
+                      <Users className="h-4 w-4 mr-2" />
+                      Let friends help
+                    </>
+                  )}
+                </Button>
+              )}
+              
+              {/* Gifting link display */}
+              {checklist.gifting_enabled && currentGiftingUrl && (
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Gift className="h-4 w-4 text-[#C89F7A]" />
+                    <span className="text-sm font-medium text-gray-700">Gifting enabled</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      value={currentGiftingUrl}
+                      readOnly
+                      className="flex-1 text-xs"
+                      onClick={(e) => e.currentTarget.select()}
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleCopyGiftingUrl}
+                    >
+                      {giftingUrlCopied ? (
+                        <Check className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Pending Items Section */}
+        {/* Pending Items Section (unclaimed) */}
         {pendingItems.length > 0 && (
           <Card className="mb-6">
             <CardHeader>
@@ -457,6 +584,86 @@ export default function ChecklistDetail() {
           </Card>
         )}
 
+        {/* Claimed Items Section */}
+        {claimedItems.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-[#111111]">
+                Claimed Items ({claimedItems.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {claimedItems.map((item, index) => (
+                  <div key={item.id}>
+                    {index > 0 && <Separator className="my-3" />}
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        id={`item-${item.id}`}
+                        checked={item.is_completed}
+                        onCheckedChange={() => handleToggleItem(item.id, item.is_completed)}
+                        className="mt-1"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <label
+                          htmlFor={`item-${item.id}`}
+                          className="text-base font-medium text-[#111111] cursor-pointer block mb-1"
+                        >
+                          {item.item_name}
+                        </label>
+                        <div className="space-y-1 text-sm text-gray-600">
+                          <div className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            <span>Claimed by {item.claimed_by_name}</span>
+                          </div>
+                          {item.expected_date && (
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              <span>Expected by {formatDate(item.expected_date)}</span>
+                            </div>
+                          )}
+                          {item.gift_note && (
+                            <p className="text-gray-500 italic mt-1">
+                              "{item.gift_note}"
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="shrink-0"
+                          >
+                            <Search className="h-4 w-4 mr-1" />
+                            Search
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onClick={() => handleGoogleSearch(item.item_name)}>
+                            <Search className="mr-2 h-4 w-4" />
+                            Google Search
+                          </DropdownMenuItem>
+                          {retailers.map((retailer) => (
+                            <DropdownMenuItem 
+                              key={retailer.name}
+                              onClick={() => window.open(`${retailer.url}${encodeURIComponent(item.item_name)}`, '_blank')}
+                            >
+                              <ExternalLink className={`mr-2 h-4 w-4 ${retailer.color}`} />
+                              {retailer.name}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Completed Items Section */}
         {completedItems.length > 0 && (
           <Card>
@@ -480,11 +687,16 @@ export default function ChecklistDetail() {
                       <div className="flex-1 min-w-0">
                         <label
                           htmlFor={`item-${item.id}`}
-                          className="text-base text-[#6A6A6A] cursor-pointer block"
+                          className="text-base text-[#6A6A6A] cursor-pointer block line-through"
                           style={{ opacity: 0.9 }}
                         >
                           {item.item_name}
                         </label>
+                        {item.gift_note && (
+                          <p className="text-sm text-gray-500 italic mt-1">
+                            "{item.gift_note}"
+                          </p>
+                        )}
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -528,6 +740,60 @@ export default function ChecklistDetail() {
         checklistId={checklist.id}
         boardName={checklist.name}
       />
+
+      {/* Gifting URL Modal */}
+      {showGiftingModal && giftingUrl && (
+        <Dialog open={showGiftingModal} onOpenChange={setShowGiftingModal}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-[#111111] flex items-center gap-2">
+                <Gift className="h-6 w-6 text-[#C89F7A]" />
+                Let friends help ✨
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <p className="text-gray-600">
+                Share this link with friends so they can claim items from your shopping list.
+              </p>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#555555]">
+                  Gifting Link
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    value={giftingUrl}
+                    readOnly
+                    className="flex-1"
+                    onClick={(e) => e.currentTarget.select()}
+                  />
+                  <Button
+                    onClick={handleCopyGiftingUrl}
+                    variant="outline"
+                    className="shrink-0"
+                  >
+                    {giftingUrlCopied ? (
+                      <Check className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                onClick={() => setShowGiftingModal(false)}
+                className="w-full bg-[#111111] hover:bg-[#333333] text-white"
+              >
+                Done
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <Footer />
     </div>

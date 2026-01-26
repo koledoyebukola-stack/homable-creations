@@ -15,6 +15,7 @@ import MyBoards from './pages/MyBoards';
 import History from './pages/History';
 import Checklists from './pages/Checklists';
 import ChecklistDetail from './pages/ChecklistDetail';
+import ChecklistGiftingView from './pages/ChecklistGiftingView';
 import Auth from './pages/Auth';
 import ResetPassword from './pages/ResetPassword';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -139,6 +140,11 @@ const App = () => (
                 <ChecklistDetail />
               </ProtectedRoute>
             }
+          />
+          {/* Shared gifting view - PUBLIC (no auth required) */}
+          <Route
+            path="/checklists/gift/:token"
+            element={<ChecklistGiftingView />}
           />
           <Route path="*" element={<NotFound />} />
         </Routes>
