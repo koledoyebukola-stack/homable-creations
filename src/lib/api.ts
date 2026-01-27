@@ -1154,6 +1154,61 @@ export async function linkClaimToUser(itemId: string, claimedByName: string): Pr
 }
 
 /**
+ * Link unlinked claims from localStorage to user account
+ */
+async function linkUnlinkedClaims(): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return;
+  }
+
+  try {
+    const unlinkedClaims = JSON.parse(localStorage.getItem('unlinked_claims') || '[]');
+    
+    if (unlinkedClaims.length === 0) {
+      return;
+    }
+
+    // Try to link each unlinked claim
+    const linkedItemIds: string[] = [];
+    
+    for (const claimInfo of unlinkedClaims) {
+      try {
+        // Verify the claim still exists and matches
+        const { data: item } = await supabase
+          .from('app_8574c59127_checklist_items')
+          .select('claimed_by_name, status, claimed_by_user_id')
+          .eq('id', claimInfo.itemId)
+          .single();
+
+        if (item && 
+            item.status === 'claimed' && 
+            item.claimed_by_name === claimInfo.claimedByName &&
+            !item.claimed_by_user_id) {
+          // Link the claim
+          await linkClaimToUser(claimInfo.itemId, claimInfo.claimedByName);
+          linkedItemIds.push(claimInfo.itemId);
+        }
+      } catch (error) {
+        console.warn('Failed to link claim:', error);
+        // Continue with other claims
+      }
+    }
+
+    // Remove linked claims from localStorage
+    if (linkedItemIds.length > 0) {
+      const remainingClaims = unlinkedClaims.filter(
+        (claim: any) => !linkedItemIds.includes(claim.itemId)
+      );
+      localStorage.setItem('unlinked_claims', JSON.stringify(remainingClaims));
+    }
+  } catch (error) {
+    console.error('Failed to link unlinked claims:', error);
+  }
+}
+
+/**
  * Get checklists where the current user has claimed items
  */
 export async function getChecklistsWithMyClaims(): Promise<ChecklistWithItems[]> {
@@ -1163,30 +1218,65 @@ export async function getChecklistsWithMyClaims(): Promise<ChecklistWithItems[]>
     return [];
   }
 
-  // Find all items claimed by this user
+  // First, try to link any unlinked claims from localStorage
+  await linkUnlinkedClaims();
+
+  // Find all items claimed by this user (by user_id)
   const { data: claimedItems, error: itemsError } = await supabase
     .from('app_8574c59127_checklist_items')
     .select('checklist_id')
     .eq('claimed_by_user_id', user.id)
     .eq('status', 'claimed');
 
-  if (itemsError || !claimedItems || claimedItems.length === 0) {
+  // Also check for unlinked claims in localStorage that might belong to this user
+  const unlinkedClaims = JSON.parse(localStorage.getItem('unlinked_claims') || '[]');
+  const unlinkedChecklistIds = [...new Set(unlinkedClaims.map((claim: any) => claim.checklistId))];
+
+  // Combine both sets of checklist IDs
+  const linkedChecklistIds = claimedItems ? [...new Set(claimedItems.map(item => item.checklist_id))] : [];
+  const allChecklistIds = [...new Set([...linkedChecklistIds, ...unlinkedChecklistIds])];
+
+  // Fetch checklists for linked claims (via normal query)
+  let checklists: any[] = [];
+  if (linkedChecklistIds.length > 0) {
+    const { data: linkedChecklists, error: checklistsError } = await supabase
+      .from('app_8574c59127_checklists')
+      .select('*')
+      .in('id', linkedChecklistIds)
+      .eq('gifting_enabled', true)
+      .order('created_at', { ascending: false });
+
+    if (checklistsError) {
+      console.error('Failed to fetch linked checklists:', checklistsError);
+    } else if (linkedChecklists) {
+      checklists = linkedChecklists;
+    }
+  }
+
+  // For unlinked claims, fetch via gifting token (public access)
+  const unlinkedChecklists: any[] = [];
+  if (unlinkedClaims.length > 0) {
+    const uniqueTokens = [...new Set(unlinkedClaims.map((claim: any) => claim.giftingToken).filter(Boolean))];
+    
+    for (const token of uniqueTokens) {
+      try {
+        const checklist = await getChecklistByGiftingToken(token);
+        if (checklist && !checklists.find(c => c.id === checklist.id)) {
+          unlinkedChecklists.push(checklist);
+        }
+      } catch (error) {
+        console.warn('Failed to fetch unlinked checklist via token:', error);
+      }
+    }
+  }
+
+  const allChecklists = [...checklists, ...unlinkedChecklists];
+
+  if (allChecklists.length === 0) {
     return [];
   }
 
-  const checklistIds = [...new Set(claimedItems.map(item => item.checklist_id))];
-
-  // Fetch the checklists
-  const { data: checklists, error: checklistsError } = await supabase
-    .from('app_8574c59127_checklists')
-    .select('*')
-    .in('id', checklistIds)
-    .eq('gifting_enabled', true)
-    .order('created_at', { ascending: false });
-
-  if (checklistsError || !checklists) {
-    return [];
-  }
+  const checklistIds = allChecklists.map(c => c.id);
 
   // Fetch all items for these checklists
   const { data: allItems, error: allItemsError } = await supabase
@@ -1200,7 +1290,7 @@ export async function getChecklistsWithMyClaims(): Promise<ChecklistWithItems[]>
     return [];
   }
 
-  const checklistsWithItems: ChecklistWithItems[] = checklists.map(checklist => {
+  const checklistsWithItems: ChecklistWithItems[] = allChecklists.map(checklist => {
     const checklistItems = allItems?.filter(item => item.checklist_id === checklist.id) || [];
     const completedCount = checklistItems.filter(item => item.status === 'completed' || item.is_completed).length;
     

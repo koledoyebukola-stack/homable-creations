@@ -120,8 +120,20 @@ export default function ChecklistGiftingView() {
       
       await claimChecklistItem(claimingItemId, name, expectedDate, giftNote);
       
-      // If user is signed in, link the claim to their account
-      if (user) {
+      // Store claim info in localStorage for later linking if user signs in
+      if (!user) {
+        const claimInfo = {
+          itemId: claimingItemId,
+          checklistId: checklist.id,
+          giftingToken: token, // Store token to fetch checklist later
+          claimedByName: name,
+          timestamp: Date.now(),
+        };
+        const existingClaims = JSON.parse(localStorage.getItem('unlinked_claims') || '[]');
+        existingClaims.push(claimInfo);
+        localStorage.setItem('unlinked_claims', JSON.stringify(existingClaims));
+      } else {
+        // If user is signed in, link the claim to their account
         try {
           await linkClaimToUser(claimingItemId, name);
         } catch (linkError) {

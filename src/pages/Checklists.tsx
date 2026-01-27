@@ -8,6 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { Loader2, ClipboardList, Plus, Gift } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { supabase } from '@/lib/supabase';
 
 export default function Checklists() {
   const navigate = useNavigate();
@@ -18,6 +19,16 @@ export default function Checklists() {
 
   useEffect(() => {
     loadChecklists();
+    
+    // Listen for auth state changes to refresh when user signs in
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        // User signed in, reload checklists to show "Gifts I'm helping with"
+        loadChecklists();
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const loadChecklists = async () => {
