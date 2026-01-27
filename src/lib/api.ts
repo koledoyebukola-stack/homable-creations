@@ -991,7 +991,8 @@ export async function claimChecklistItem(
 export async function updateClaim(
   itemId: string,
   expectedDate?: string,
-  giftNote?: string
+  giftNote?: string,
+  claimedByName?: string
 ): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   
@@ -1002,7 +1003,7 @@ export async function updateClaim(
   // Verify user owns this claim
   const { data: item, error: checkError } = await supabase
     .from('app_8574c59127_checklist_items')
-    .select('claimed_by_name, claimed_by_user_id')
+    .select('claimed_by_name, claimed_by_user_id, status')
     .eq('id', itemId)
     .single();
 
@@ -1010,12 +1011,27 @@ export async function updateClaim(
     throw new Error('Item not found');
   }
 
-  // Check if user owns the claim (by name or user_id if linked)
-  if (item.claimed_by_user_id && item.claimed_by_user_id !== user.id) {
+  if (item.status !== 'claimed') {
+    throw new Error('Item is not claimed');
+  }
+
+  // Check if user owns the claim
+  // If user_id is set, it must match
+  // If user_id is null, check by name (for claims made before sign-in)
+  if (item.claimed_by_user_id) {
+    if (item.claimed_by_user_id !== user.id) {
+      throw new Error('You can only edit your own claims');
+    }
+  } else if (claimedByName && item.claimed_by_name !== claimedByName) {
     throw new Error('You can only edit your own claims');
   }
 
   const updateData: Record<string, string | null> = {};
+  
+  // Link claim to user if not already linked
+  if (!item.claimed_by_user_id) {
+    updateData.claimed_by_user_id = user.id;
+  }
   
   if (expectedDate !== undefined) {
     updateData.expected_date = expectedDate || null;
@@ -1060,10 +1076,13 @@ export async function unclaimItem(itemId: string): Promise<void> {
   }
 
   // Check if user owns the claim
+  // If user_id is set, it must match
+  // If user_id is null, we allow unclaiming (user might have claimed before sign-in)
   if (item.claimed_by_user_id && item.claimed_by_user_id !== user.id) {
     throw new Error('You can only unclaim your own items');
   }
 
+  // Fully revert to pending state - clear all claim data
   const { error } = await supabase
     .from('app_8574c59127_checklist_items')
     .update({

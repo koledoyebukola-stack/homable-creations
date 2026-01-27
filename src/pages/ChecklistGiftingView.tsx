@@ -156,10 +156,10 @@ export default function ChecklistGiftingView() {
   };
 
   const handleUpdateClaim = async (expectedDate?: string, giftNote?: string) => {
-    if (!editingItemId || !checklist) return;
+    if (!editingItemId || !checklist || !currentEditingItem) return;
 
     try {
-      await updateClaim(editingItemId, expectedDate, giftNote);
+      await updateClaim(editingItemId, expectedDate, giftNote, currentEditingItem.claimedByName);
       toast.success('Claim updated successfully!');
       await loadChecklist();
     } catch (err: unknown) {
@@ -174,7 +174,7 @@ export default function ChecklistGiftingView() {
 
     try {
       await unclaimItem(editingItemId);
-      toast.success('Item unclaimed');
+      toast.success('Item unclaimed - it is now available for others to claim');
       await loadChecklist();
     } catch (err: unknown) {
       console.error('Failed to unclaim item:', err);

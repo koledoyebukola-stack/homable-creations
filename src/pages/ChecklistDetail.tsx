@@ -564,20 +564,9 @@ export default function ChecklistDetail() {
         {/* Pending Items Section (unclaimed) */}
         <Card className="mb-6">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold text-[#111111]">
-                Pending Items ({pendingItems.length})
-              </CardTitle>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setNewItemName('')}
-                className="gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add Item
-              </Button>
-            </div>
+            <CardTitle className="text-lg font-semibold text-[#111111]">
+              Pending Items ({pendingItems.length})
+            </CardTitle>
           </CardHeader>
           {pendingItems.length > 0 && (
             <CardContent>
@@ -632,7 +621,8 @@ export default function ChecklistDetail() {
                           variant="ghost"
                           onClick={() => handleDeleteItem(item.id)}
                           disabled={deletingItemId === item.id}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="h-8 w-8 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          title="Delete item"
                         >
                           {deletingItemId === item.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />

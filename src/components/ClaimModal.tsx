@@ -67,7 +67,7 @@ export default function ClaimModal({ isOpen, onClose, onConfirm, itemName }: Cla
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Aisha & Tunde"
+              placeholder="Aisha"
               disabled={submitting}
               className="w-full"
             />
@@ -96,7 +96,7 @@ export default function ClaimModal({ isOpen, onClose, onConfirm, itemName }: Cla
               id="giftNote"
               value={giftNote}
               onChange={(e) => setGiftNote(e.target.value)}
-              placeholder="e.g., From Aisha & Tunde"
+              placeholder="From Aisha"
               disabled={submitting}
               className="w-full min-h-[80px]"
               maxLength={200}

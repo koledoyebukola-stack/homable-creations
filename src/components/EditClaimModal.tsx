@@ -99,6 +99,8 @@ export default function EditClaimModal({
   const handleAuthSuccess = () => {
     setIsAuthenticated(true);
     setShowAuthModal(false);
+    // Reload page data after sign-in to show "Gifts I'm helping with" section
+    window.location.reload();
   };
 
   const handleClose = () => {
