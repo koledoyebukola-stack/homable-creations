@@ -767,6 +767,18 @@ export async function getCombinedHistory(): Promise<HistoryItem[]> {
 }
 
 /**
+ * Generate a short alphanumeric token (6-8 characters)
+ */
+function generateShortToken(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed confusing chars (0, O, I, 1)
+  let token = '';
+  for (let i = 0; i < 7; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return token;
+}
+
+/**
  * Enable gifting on a checklist and generate a shareable token
  */
 export async function enableGifting(checklistId: string): Promise<{ gifting_token: string; gifting_url: string }> {
@@ -776,8 +788,31 @@ export async function enableGifting(checklistId: string): Promise<{ gifting_toke
     throw new Error('User must be authenticated');
   }
 
-  // Generate a unique token
-  const giftingToken = crypto.randomUUID();
+  // Generate a short, human-friendly token (7 characters)
+  let giftingToken = generateShortToken();
+  let attempts = 0;
+  const maxAttempts = 10;
+
+  // Ensure uniqueness
+  while (attempts < maxAttempts) {
+    const { data: existing } = await supabase
+      .from('app_8574c59127_checklists')
+      .select('id')
+      .eq('gifting_token', giftingToken)
+      .maybeSingle();
+
+    if (!existing) {
+      break; // Token is unique
+    }
+
+    giftingToken = generateShortToken();
+    attempts++;
+  }
+
+  if (attempts >= maxAttempts) {
+    // Fallback to UUID if we can't generate a unique short token
+    giftingToken = crypto.randomUUID();
+  }
 
   const { data, error } = await supabase
     .from('app_8574c59127_checklists')
@@ -805,10 +840,30 @@ export async function enableGifting(checklistId: string): Promise<{ gifting_toke
 }
 
 /**
+ * Get board by ID (public access for gifting view)
+ */
+async function getBoardByIdPublic(boardId: string): Promise<{ source_image_url?: string; cover_image_url?: string; name?: string } | null> {
+  const { data, error } = await supabase
+    .from('boards')
+    .select('source_image_url, cover_image_url, name')
+    .eq('id', boardId)
+    .maybeSingle();
+
+  if (error) {
+    console.warn('Failed to fetch board:', error);
+    return null;
+  }
+
+  return data;
+}
+
+/**
  * Get checklist by gifting token (for shared gifting view)
  * This allows unauthenticated users to view and claim items
+ * Supports both short tokens and UUID tokens (fallback)
  */
-export async function getChecklistByGiftingToken(token: string): Promise<ChecklistWithItems | null> {
+export async function getChecklistByGiftingToken(token: string): Promise<ChecklistWithItems & { board_image_url?: string; board_name?: string } | null> {
+  // Try to find checklist by token (supports both short and UUID tokens)
   const { data: checklist, error: checklistError } = await supabase
     .from('app_8574c59127_checklists')
     .select('*')
@@ -832,6 +887,17 @@ export async function getChecklistByGiftingToken(token: string): Promise<Checkli
     throw itemsError;
   }
 
+  // Fetch board info if board_id exists (for inspiration image)
+  let boardImageUrl: string | undefined;
+  let boardName: string | undefined;
+  if (checklist.board_id) {
+    const board = await getBoardByIdPublic(checklist.board_id);
+    if (board) {
+      boardImageUrl = board.source_image_url || board.cover_image_url;
+      boardName = board.name;
+    }
+  }
+
   // Calculate completed count (only items with status='completed')
   const completedCount = items?.filter(item => item.status === 'completed' || item.is_completed).length || 0;
 
@@ -840,11 +906,14 @@ export async function getChecklistByGiftingToken(token: string): Promise<Checkli
     items: items || [],
     completed_count: completedCount,
     total_count: items?.length || 0,
+    board_image_url: boardImageUrl,
+    board_name: boardName,
   };
 }
 
 /**
  * Claim a checklist item (for gifters)
+ * If user is signed in, also link the claim to their account
  */
 export async function claimChecklistItem(
   itemId: string,
@@ -852,13 +921,19 @@ export async function claimChecklistItem(
   expectedDate?: string,
   giftNote?: string
 ): Promise<void> {
-  // No authentication required - this is for gifters
+  // Check if user is authenticated (optional - allows linking claims to accounts)
+  const { data: { user } } = await supabase.auth.getUser();
 
   const updateData: Record<string, string | null> = {
     status: 'claimed',
     claimed_by_name: claimedByName,
     claimed_at: new Date().toISOString(),
   };
+
+  // Link to user account if signed in
+  if (user) {
+    updateData.claimed_by_user_id = user.id;
+  }
 
   if (expectedDate) {
     updateData.expected_date = expectedDate;
@@ -906,5 +981,307 @@ export async function claimChecklistItem(
   if (error) {
     console.error('Failed to claim checklist item:', error);
     throw new Error(`Failed to claim item: ${error.message}`);
+  }
+}
+
+/**
+ * Update a claim (edit expected date or gift note)
+ * Requires authentication - user must be the claimer
+ */
+export async function updateClaim(
+  itemId: string,
+  expectedDate?: string,
+  giftNote?: string
+): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User must be authenticated to edit claims');
+  }
+
+  // Verify user owns this claim
+  const { data: item, error: checkError } = await supabase
+    .from('app_8574c59127_checklist_items')
+    .select('claimed_by_name, claimed_by_user_id')
+    .eq('id', itemId)
+    .single();
+
+  if (checkError || !item) {
+    throw new Error('Item not found');
+  }
+
+  // Check if user owns the claim (by name or user_id if linked)
+  if (item.claimed_by_user_id && item.claimed_by_user_id !== user.id) {
+    throw new Error('You can only edit your own claims');
+  }
+
+  const updateData: Record<string, string | null> = {};
+  
+  if (expectedDate !== undefined) {
+    updateData.expected_date = expectedDate || null;
+  }
+  
+  if (giftNote !== undefined) {
+    updateData.gift_note = giftNote || null;
+  }
+
+  const { error } = await supabase
+    .from('app_8574c59127_checklist_items')
+    .update(updateData)
+    .eq('id', itemId)
+    .eq('status', 'claimed');
+
+  if (error) {
+    console.error('Failed to update claim:', error);
+    throw new Error(`Failed to update claim: ${error.message}`);
+  }
+}
+
+/**
+ * Unclaim an item
+ * Requires authentication - user must be the claimer
+ */
+export async function unclaimItem(itemId: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User must be authenticated to unclaim items');
+  }
+
+  // Verify user owns this claim
+  const { data: item, error: checkError } = await supabase
+    .from('app_8574c59127_checklist_items')
+    .select('claimed_by_name, claimed_by_user_id')
+    .eq('id', itemId)
+    .single();
+
+  if (checkError || !item) {
+    throw new Error('Item not found');
+  }
+
+  // Check if user owns the claim
+  if (item.claimed_by_user_id && item.claimed_by_user_id !== user.id) {
+    throw new Error('You can only unclaim your own items');
+  }
+
+  const { error } = await supabase
+    .from('app_8574c59127_checklist_items')
+    .update({
+      status: 'pending',
+      claimed_by_name: null,
+      claimed_at: null,
+      claimed_by_user_id: null,
+      expected_date: null,
+      gift_note: null,
+    })
+    .eq('id', itemId)
+    .eq('status', 'claimed');
+
+  if (error) {
+    console.error('Failed to unclaim item:', error);
+    throw new Error(`Failed to unclaim item: ${error.message}`);
+  }
+}
+
+/**
+ * Link a claim to a user account (after sign-in)
+ */
+export async function linkClaimToUser(itemId: string, claimedByName: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User must be authenticated');
+  }
+
+  // Verify the claim exists and name matches
+  const { data: item, error: checkError } = await supabase
+    .from('app_8574c59127_checklist_items')
+    .select('claimed_by_name, status')
+    .eq('id', itemId)
+    .single();
+
+  if (checkError || !item) {
+    throw new Error('Item not found');
+  }
+
+  if (item.claimed_by_name !== claimedByName) {
+    throw new Error('Claim name does not match');
+  }
+
+  if (item.status !== 'claimed') {
+    throw new Error('Item is not claimed');
+  }
+
+  // Link the claim to the user
+  const { error } = await supabase
+    .from('app_8574c59127_checklist_items')
+    .update({
+      claimed_by_user_id: user.id,
+    })
+    .eq('id', itemId);
+
+  if (error) {
+    console.error('Failed to link claim to user:', error);
+    throw new Error(`Failed to link claim: ${error.message}`);
+  }
+}
+
+/**
+ * Get checklists where the current user has claimed items
+ */
+export async function getChecklistsWithMyClaims(): Promise<ChecklistWithItems[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return [];
+  }
+
+  // Find all items claimed by this user
+  const { data: claimedItems, error: itemsError } = await supabase
+    .from('app_8574c59127_checklist_items')
+    .select('checklist_id')
+    .eq('claimed_by_user_id', user.id)
+    .eq('status', 'claimed');
+
+  if (itemsError || !claimedItems || claimedItems.length === 0) {
+    return [];
+  }
+
+  const checklistIds = [...new Set(claimedItems.map(item => item.checklist_id))];
+
+  // Fetch the checklists
+  const { data: checklists, error: checklistsError } = await supabase
+    .from('app_8574c59127_checklists')
+    .select('*')
+    .in('id', checklistIds)
+    .eq('gifting_enabled', true)
+    .order('created_at', { ascending: false });
+
+  if (checklistsError || !checklists) {
+    return [];
+  }
+
+  // Fetch all items for these checklists
+  const { data: allItems, error: allItemsError } = await supabase
+    .from('app_8574c59127_checklist_items')
+    .select('*')
+    .in('checklist_id', checklistIds)
+    .order('sort_order', { ascending: true });
+
+  if (allItemsError) {
+    console.error('Failed to fetch items:', allItemsError);
+    return [];
+  }
+
+  const checklistsWithItems: ChecklistWithItems[] = checklists.map(checklist => {
+    const checklistItems = allItems?.filter(item => item.checklist_id === checklist.id) || [];
+    const completedCount = checklistItems.filter(item => item.status === 'completed' || item.is_completed).length;
+    
+    return {
+      ...checklist,
+      items: checklistItems,
+      completed_count: completedCount,
+      total_count: checklistItems.length,
+    };
+  });
+
+  return checklistsWithItems;
+}
+
+/**
+ * Add an item to a checklist (owner only)
+ */
+export async function addChecklistItem(checklistId: string, itemName: string): Promise<ChecklistItem> {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User must be authenticated');
+  }
+
+  // Verify user owns the checklist
+  const { data: checklist, error: checkError } = await supabase
+    .from('app_8574c59127_checklists')
+    .select('id')
+    .eq('id', checklistId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (checkError || !checklist) {
+    throw new Error('Checklist not found or access denied');
+  }
+
+  // Get max sort_order
+  const { data: existingItems } = await supabase
+    .from('app_8574c59127_checklist_items')
+    .select('sort_order')
+    .eq('checklist_id', checklistId)
+    .order('sort_order', { ascending: false })
+    .limit(1);
+
+  const nextSortOrder = existingItems && existingItems.length > 0
+    ? (existingItems[0].sort_order || 0) + 1
+    : 0;
+
+  const { data: newItem, error: insertError } = await supabase
+    .from('app_8574c59127_checklist_items')
+    .insert({
+      checklist_id: checklistId,
+      item_name: itemName,
+      is_completed: false,
+      status: 'pending',
+      sort_order: nextSortOrder,
+    })
+    .select()
+    .single();
+
+  if (insertError) {
+    console.error('Failed to add item:', insertError);
+    throw new Error(`Failed to add item: ${insertError.message}`);
+  }
+
+  return newItem;
+}
+
+/**
+ * Delete an item from a checklist (owner only)
+ */
+export async function deleteChecklistItem(itemId: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User must be authenticated');
+  }
+
+  // Verify user owns the checklist
+  const { data: item, error: itemError } = await supabase
+    .from('app_8574c59127_checklist_items')
+    .select('checklist_id, app_8574c59127_checklists!inner(user_id)')
+    .eq('id', itemId)
+    .single();
+
+  if (itemError || !item) {
+    throw new Error('Item not found');
+  }
+
+  // Note: The join above ensures we can only delete if user owns the checklist
+  // But we need to verify this explicitly
+  const { data: checklist } = await supabase
+    .from('app_8574c59127_checklists')
+    .select('user_id')
+    .eq('id', item.checklist_id)
+    .single();
+
+  if (!checklist || checklist.user_id !== user.id) {
+    throw new Error('Access denied');
+  }
+
+  const { error } = await supabase
+    .from('app_8574c59127_checklist_items')
+    .delete()
+    .eq('id', itemId);
+
+  if (error) {
+    console.error('Failed to delete item:', error);
+    throw new Error(`Failed to delete item: ${error.message}`);
   }
 }

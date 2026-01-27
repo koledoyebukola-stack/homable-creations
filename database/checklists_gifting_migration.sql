@@ -17,6 +17,7 @@ CREATE INDEX IF NOT EXISTS checklists_gifting_token_idx ON app_8574c59127_checkl
 ALTER TABLE app_8574c59127_checklist_items
   ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending' NOT NULL,
   ADD COLUMN IF NOT EXISTS claimed_by_name TEXT,
+  ADD COLUMN IF NOT EXISTS claimed_by_user_id UUID REFERENCES auth.users,
   ADD COLUMN IF NOT EXISTS claimed_at TIMESTAMP WITH TIME ZONE,
   ADD COLUMN IF NOT EXISTS expected_date DATE,
   ADD COLUMN IF NOT EXISTS gift_note TEXT;
@@ -33,6 +34,10 @@ END
 WHERE status = 'pending'; -- Only update if still default
 
 -- Add constraint to ensure status is one of: pending, claimed, completed
+-- Drop existing constraint if it exists, then recreate
+ALTER TABLE app_8574c59127_checklist_items
+  DROP CONSTRAINT IF EXISTS checklist_items_status_check;
+  
 ALTER TABLE app_8574c59127_checklist_items
   ADD CONSTRAINT checklist_items_status_check 
   CHECK (status IN ('pending', 'claimed', 'completed'));

@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getUserChecklists } from '@/lib/api';
+import { getUserChecklists, getChecklistsWithMyClaims } from '@/lib/api';
 import { ChecklistWithItems } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, ClipboardList, Plus } from 'lucide-react';
+import { Loader2, ClipboardList, Plus, Gift } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
 export default function Checklists() {
   const navigate = useNavigate();
   const [checklists, setChecklists] = useState<ChecklistWithItems[]>([]);
+  const [giftsHelping, setGiftsHelping] = useState<ChecklistWithItems[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,8 +24,12 @@ export default function Checklists() {
     try {
       setLoading(true);
       setError(null);
-      const data = await getUserChecklists();
-      setChecklists(data);
+      const [myChecklists, helpingChecklists] = await Promise.all([
+        getUserChecklists(),
+        getChecklistsWithMyClaims(),
+      ]);
+      setChecklists(myChecklists);
+      setGiftsHelping(helpingChecklists);
     } catch (err: unknown) {
       console.error('Failed to load shopping lists:', err);
       setError(err instanceof Error ? err.message : 'Failed to load shopping lists');
@@ -94,6 +99,68 @@ export default function Checklists() {
           <p className="text-gray-600">
             Track your shopping progress for detected items
           </p>
+        </div>
+
+        {/* Gifts I'm Helping With Section */}
+        {giftsHelping.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Gift className="h-5 w-5 text-[#C89F7A]" />
+              <h2 className="text-2xl font-bold text-[#111111]">Gifts I'm helping with</h2>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {giftsHelping.map((checklist) => {
+                const progressPercent = checklist.total_count > 0
+                  ? Math.round((checklist.completed_count / checklist.total_count) * 100)
+                  : 0;
+
+                return (
+                  <Card
+                    key={checklist.id}
+                    className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-[#C89F7A]"
+                    onClick={() => {
+                      // Navigate to gifting view if token exists
+                      if (checklist.gifting_token) {
+                        navigate(`/checklists/gift/${checklist.gifting_token}`);
+                      }
+                    }}
+                  >
+                    <CardHeader>
+                      <CardTitle className="text-lg font-semibold text-[#111111] line-clamp-2">
+                        {checklist.name}
+                      </CardTitle>
+                      <p className="text-sm text-gray-500">
+                        Created {formatDate(checklist.created_at)}
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-gray-700">
+                              {checklist.completed_count} of {checklist.total_count} items
+                            </span>
+                            <span className="text-sm font-bold text-[#2F9E44]">
+                              {progressPercent}%
+                            </span>
+                          </div>
+                          <Progress value={progressPercent} className="h-2 [&>div]:bg-[#2F9E44]" />
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          Read-only view • Click to manage your claims
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* My Shopping Lists Section */}
+        <div className={giftsHelping.length > 0 ? 'mb-8' : ''}>
+          <h2 className="text-2xl font-bold text-[#111111] mb-4">My Shopping Lists</h2>
         </div>
 
         {/* Checklists Grid */}

@@ -1,35 +1,83 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getChecklistByGiftingToken, claimChecklistItem } from '@/lib/api';
-import { ChecklistWithItems, Board } from '@/lib/types';
+import { getChecklistByGiftingToken, claimChecklistItem, updateClaim, unclaimItem, linkClaimToUser } from '@/lib/api';
+import { ChecklistWithItems } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { 
   Loader2, 
   ArrowLeft,
   Gift,
   CheckCircle2,
   Calendar,
-  User
+  User,
+  Search,
+  ExternalLink,
+  Instagram,
+  Pencil
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ClaimModal from '@/components/ClaimModal';
+import EditClaimModal from '@/components/EditClaimModal';
 import { toast } from 'sonner';
-import { getBoards } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
+
+// Helper function to get Instagram search URL
+const getInstagramSearchUrl = (itemName: string): string => {
+  const encodedQuery = encodeURIComponent(itemName);
+  return `https://www.instagram.com/explore/search/keyword/?q=${encodedQuery}`;
+};
 
 export default function ChecklistGiftingView() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  const [checklist, setChecklist] = useState<ChecklistWithItems | null>(null);
-  const [board, setBoard] = useState<Board | null>(null);
+  const [checklist, setChecklist] = useState<(ChecklistWithItems & { board_image_url?: string; board_name?: string }) | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [claimingItemId, setClaimingItemId] = useState<string | null>(null);
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [currentItemName, setCurrentItemName] = useState('');
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [currentEditingItem, setCurrentEditingItem] = useState<{ name: string; expectedDate?: string; giftNote?: string; claimedByName: string } | null>(null);
+
+  // Set Open Graph meta tags for social sharing
+  useEffect(() => {
+    if (checklist) {
+      const title = 'Help me complete my home';
+      const description = 'Pick an item from my list and help me set up my space';
+      const image = checklist.board_image_url || '';
+      const url = window.location.href;
+
+      // Update or create meta tags
+      const updateMetaTag = (property: string, content: string) => {
+        let meta = document.querySelector(`meta[property="${property}"]`);
+        if (!meta) {
+          meta = document.createElement('meta');
+          meta.setAttribute('property', property);
+          document.head.appendChild(meta);
+        }
+        meta.setAttribute('content', content);
+      };
+
+      updateMetaTag('og:title', title);
+      updateMetaTag('og:description', description);
+      updateMetaTag('og:url', url);
+      if (image) {
+        updateMetaTag('og:image', image);
+      }
+      updateMetaTag('og:type', 'website');
+    }
+  }, [checklist]);
 
   useEffect(() => {
     if (token) {
@@ -49,20 +97,6 @@ export default function ChecklistGiftingView() {
         return;
       }
       setChecklist(data);
-
-      // Load board info if board_id exists
-      if (data.board_id) {
-        try {
-          const boards = await getBoards();
-          const foundBoard = boards.find(b => b.id === data.board_id);
-          if (foundBoard) {
-            setBoard(foundBoard);
-          }
-        } catch (err) {
-          // Board loading is optional, don't fail if it errors
-          console.warn('Failed to load board info:', err);
-        }
-      }
     } catch (err: unknown) {
       console.error('Failed to load shopping list:', err);
       setError(err instanceof Error ? err.message : 'Failed to load shopping list');
@@ -81,7 +115,21 @@ export default function ChecklistGiftingView() {
     if (!claimingItemId || !checklist) return;
 
     try {
+      // Check if user is signed in and link the claim
+      const { data: { user } } = await supabase.auth.getUser();
+      
       await claimChecklistItem(claimingItemId, name, expectedDate, giftNote);
+      
+      // If user is signed in, link the claim to their account
+      if (user) {
+        try {
+          await linkClaimToUser(claimingItemId, name);
+        } catch (linkError) {
+          console.warn('Failed to link claim to user:', linkError);
+          // Non-critical error, continue
+        }
+      }
+      
       toast.success('Item claimed successfully! 🎉');
       
       // Reload checklist to show updated status
@@ -93,6 +141,45 @@ export default function ChecklistGiftingView() {
     } catch (err: unknown) {
       console.error('Failed to claim item:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to claim item. It may have already been claimed.');
+    }
+  };
+
+  const handleEditClick = (item: any) => {
+    setCurrentEditingItem({
+      name: item.item_name,
+      expectedDate: item.expected_date,
+      giftNote: item.gift_note,
+      claimedByName: item.claimed_by_name || '',
+    });
+    setEditingItemId(item.id);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateClaim = async (expectedDate?: string, giftNote?: string) => {
+    if (!editingItemId || !checklist) return;
+
+    try {
+      await updateClaim(editingItemId, expectedDate, giftNote);
+      toast.success('Claim updated successfully!');
+      await loadChecklist();
+    } catch (err: unknown) {
+      console.error('Failed to update claim:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to update claim');
+      throw err;
+    }
+  };
+
+  const handleUnclaim = async () => {
+    if (!editingItemId || !checklist) return;
+
+    try {
+      await unclaimItem(editingItemId);
+      toast.success('Item unclaimed');
+      await loadChecklist();
+    } catch (err: unknown) {
+      console.error('Failed to unclaim item:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to unclaim item');
+      throw err;
     }
   };
 
@@ -173,10 +260,10 @@ export default function ChecklistGiftingView() {
         </Button>
 
         {/* Inspiration Image (if available) */}
-        {board?.source_image_url && (
+        {checklist.board_image_url && (
           <div className="mb-6 flex justify-center">
             <img
-              src={board.source_image_url}
+              src={checklist.board_image_url}
               alt="Original Inspiration"
               className="w-32 h-32 md:w-40 md:h-40 object-cover rounded-2xl shadow-lg border-2 border-white"
             />
@@ -284,6 +371,37 @@ export default function ChecklistGiftingView() {
                           )}
                         </div>
                       </div>
+                      <div className="flex gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEditClick(item)}
+                        >
+                          <Pencil className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                            >
+                              <Search className="h-4 w-4 mr-1" />
+                              Search
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(item.item_name)}`, '_blank')}>
+                              <Search className="mr-2 h-4 w-4" />
+                              Google Search
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => window.open(getInstagramSearchUrl(item.item_name), '_blank')}>
+                              <Instagram className="mr-2 h-4 w-4" />
+                              Instagram Search
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -336,6 +454,23 @@ export default function ChecklistGiftingView() {
         onConfirm={handleClaimConfirm}
         itemName={currentItemName}
       />
+
+      {currentEditingItem && (
+        <EditClaimModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingItemId(null);
+            setCurrentEditingItem(null);
+          }}
+          onUpdate={handleUpdateClaim}
+          onUnclaim={handleUnclaim}
+          itemName={currentEditingItem.name}
+          currentExpectedDate={currentEditingItem.expectedDate}
+          currentGiftNote={currentEditingItem.giftNote}
+          claimedByName={currentEditingItem.claimedByName}
+        />
+      )}
 
       <Footer />
     </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getChecklistById, updateChecklistItem, updateChecklistName, deleteChecklist, getBoards, enableGifting } from '@/lib/api';
+import { getChecklistById, updateChecklistItem, updateChecklistName, deleteChecklist, getBoards, enableGifting, addChecklistItem, deleteChecklistItem } from '@/lib/api';
 import { ChecklistWithItems, Board } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -90,6 +90,9 @@ export default function ChecklistDetail() {
   const [enablingGifting, setEnablingGifting] = useState(false);
   const [giftingUrlCopied, setGiftingUrlCopied] = useState(false);
   const [retailers] = useState(getLocalizedRetailers());
+  const [addingItem, setAddingItem] = useState(false);
+  const [newItemName, setNewItemName] = useState('');
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -235,6 +238,43 @@ export default function ChecklistDetail() {
       setTimeout(() => setGiftingUrlCopied(false), 2000);
     } catch (error) {
       toast.error('Failed to copy link');
+    }
+  };
+
+  const handleAddItem = async () => {
+    if (!checklist || !newItemName.trim()) return;
+
+    try {
+      setAddingItem(true);
+      await addChecklistItem(checklist.id, newItemName.trim());
+      toast.success('Item added successfully');
+      setNewItemName('');
+      await loadChecklist();
+    } catch (err: unknown) {
+      console.error('Failed to add item:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to add item');
+    } finally {
+      setAddingItem(false);
+    }
+  };
+
+  const handleDeleteItem = async (itemId: string) => {
+    if (!checklist) return;
+
+    if (!confirm('Are you sure you want to delete this item?')) {
+      return;
+    }
+
+    try {
+      setDeletingItemId(itemId);
+      await deleteChecklistItem(itemId);
+      toast.success('Item deleted');
+      await loadChecklist();
+    } catch (err: unknown) {
+      console.error('Failed to delete item:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to delete item');
+    } finally {
+      setDeletingItemId(null);
     }
   };
 
@@ -472,8 +512,7 @@ export default function ChecklistDetail() {
                 <Button
                   onClick={handleEnableGifting}
                   disabled={enablingGifting}
-                  className="w-full bg-[#C89F7A] hover:bg-[#B88A6A] text-white mt-4"
-                  variant="outline"
+                  className="w-full bg-[#111111] hover:bg-[#333333] text-white mt-4"
                 >
                   {enablingGifting ? (
                     <>
@@ -522,15 +561,52 @@ export default function ChecklistDetail() {
         </Card>
 
         {/* Pending Items Section (unclaimed) */}
-        {pendingItems.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-semibold text-[#111111]">
                 Pending Items ({pendingItems.length})
               </CardTitle>
-            </CardHeader>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setNewItemName('')}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Item
+              </Button>
+            </div>
+          </CardHeader>
+          {pendingItems.length > 0 && (
             <CardContent>
               <div className="space-y-3">
+                {/* Add Item Input */}
+                <div className="flex gap-2 pb-3 border-b">
+                  <Input
+                    value={newItemName}
+                    onChange={(e) => setNewItemName(e.target.value)}
+                    placeholder="Add new item..."
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newItemName.trim()) {
+                        handleAddItem();
+                      }
+                    }}
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={handleAddItem}
+                    disabled={addingItem || !newItemName.trim()}
+                    size="sm"
+                  >
+                    {addingItem ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+
                 {pendingItems.map((item, index) => (
                   <div key={item.id}>
                     {index > 0 && <Separator className="my-3" />}
@@ -549,40 +625,54 @@ export default function ChecklistDetail() {
                           {item.item_name}
                         </label>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="shrink-0"
-                          >
-                            <Search className="h-4 w-4 mr-1" />
-                            Search
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem onClick={() => handleGoogleSearch(item.item_name)}>
-                            <Search className="mr-2 h-4 w-4" />
-                            Google Search
-                          </DropdownMenuItem>
-                          {retailers.map((retailer) => (
-                            <DropdownMenuItem 
-                              key={retailer.name}
-                              onClick={() => window.open(`${retailer.url}${encodeURIComponent(item.item_name)}`, '_blank')}
+                      <div className="flex gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDeleteItem(item.id)}
+                          disabled={deletingItemId === item.id}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          {deletingItemId === item.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <X className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
                             >
-                              <ExternalLink className={`mr-2 h-4 w-4 ${retailer.color}`} />
-                              {retailer.name}
+                              <Search className="h-4 w-4 mr-1" />
+                              Search
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={() => handleGoogleSearch(item.item_name)}>
+                              <Search className="mr-2 h-4 w-4" />
+                              Google Search
                             </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            {retailers.map((retailer) => (
+                              <DropdownMenuItem 
+                                key={retailer.name}
+                                onClick={() => window.open(`${retailer.url}${encodeURIComponent(item.item_name)}`, '_blank')}
+                              >
+                                <ExternalLink className={`mr-2 h-4 w-4 ${retailer.color}`} />
+                                {retailer.name}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             </CardContent>
-          </Card>
-        )}
+          )}
+        </Card>
 
         {/* Claimed Items Section */}
         {claimedItems.length > 0 && (

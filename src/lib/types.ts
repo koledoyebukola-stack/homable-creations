@@ -119,6 +119,7 @@ export interface ChecklistItem {
   status: ChecklistItemStatus; // New: pending, claimed, completed
   completed_at?: string;
   claimed_by_name?: string;
+  claimed_by_user_id?: string; // Links claim to user account after sign-in
   claimed_at?: string;
   expected_date?: string; // ISO date string
   gift_note?: string;
