@@ -38,7 +38,8 @@ import {
   Calendar,
   User,
   Copy,
-  CheckCircle2
+  CheckCircle2,
+  Plus
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
