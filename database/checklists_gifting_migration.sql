@@ -92,4 +92,65 @@ CREATE POLICY "Public can claim items in gifting-enabled checklists" ON app_8574
     AND claimed_at IS NOT NULL -- Require timestamp
   );
 
+-- Policy for authenticated users to edit their own claims
+DROP POLICY IF EXISTS "Authenticated users can edit own claims" ON app_8574c59127_checklist_items;
+CREATE POLICY "Authenticated users can edit own claims" ON app_8574c59127_checklist_items
+  FOR UPDATE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM app_8574c59127_checklists
+      WHERE id = checklist_id 
+      AND gifting_enabled = true 
+      AND gifting_token IS NOT NULL
+    )
+    AND status = 'claimed' -- Only allow editing claimed items
+    AND (
+      claimed_by_user_id = auth.uid() -- User owns the claim by user_id
+      OR claimed_by_user_id IS NULL -- Or claim not yet linked (will be linked on edit)
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM app_8574c59127_checklists
+      WHERE id = checklist_id 
+      AND gifting_enabled = true 
+      AND gifting_token IS NOT NULL
+    )
+    AND status = 'claimed' -- Must remain claimed (not unclaiming here)
+  );
+
+-- Policy for authenticated users to unclaim their own items
+DROP POLICY IF EXISTS "Authenticated users can unclaim own items" ON app_8574c59127_checklist_items;
+CREATE POLICY "Authenticated users can unclaim own items" ON app_8574c59127_checklist_items
+  FOR UPDATE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM app_8574c59127_checklists
+      WHERE id = checklist_id 
+      AND gifting_enabled = true 
+      AND gifting_token IS NOT NULL
+    )
+    AND status = 'claimed' -- Only allow unclaiming claimed items
+    AND (
+      claimed_by_user_id = auth.uid() -- User owns the claim by user_id
+      OR claimed_by_user_id IS NULL -- Or claim not yet linked (user claimed before sign-in)
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM app_8574c59127_checklists
+      WHERE id = checklist_id 
+      AND gifting_enabled = true 
+      AND gifting_token IS NOT NULL
+    )
+    AND status = 'pending' -- Must revert to pending
+    AND claimed_by_name IS NULL -- All claim fields must be cleared
+    AND claimed_at IS NULL
+    AND claimed_by_user_id IS NULL
+    AND expected_date IS NULL
+    AND gift_note IS NULL
+  );
+
 COMMIT;

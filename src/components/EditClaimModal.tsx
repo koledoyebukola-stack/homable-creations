@@ -65,10 +65,11 @@ export default function EditClaimModal({
     try {
       setSubmitting(true);
       await onUpdate(expectedDate || undefined, giftNote.trim() || undefined);
-      onClose();
+      // Don't call onClose here - parent handles closing after state update
     } catch (error) {
       console.error('Failed to update claim:', error);
       // Error handling is done in parent component
+      // Don't close modal on error so user can try again
     } finally {
       setSubmitting(false);
     }
@@ -87,10 +88,11 @@ export default function EditClaimModal({
     try {
       setUnclaiming(true);
       await onUnclaim();
-      onClose();
+      // Don't call onClose here - parent handles closing after state update
     } catch (error) {
       console.error('Failed to unclaim item:', error);
       // Error handling is done in parent component
+      // Don't close modal on error so user can try again
     } finally {
       setUnclaiming(false);
     }

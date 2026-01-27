@@ -161,6 +161,11 @@ export default function ChecklistGiftingView() {
     try {
       await updateClaim(editingItemId, expectedDate, giftNote, currentEditingItem.claimedByName);
       toast.success('Claim updated successfully!');
+      // Clear editing state
+      setEditingItemId(null);
+      setCurrentEditingItem(null);
+      setShowEditModal(false);
+      // Reload checklist to show updated state
       await loadChecklist();
     } catch (err: unknown) {
       console.error('Failed to update claim:', err);
@@ -170,11 +175,16 @@ export default function ChecklistGiftingView() {
   };
 
   const handleUnclaim = async () => {
-    if (!editingItemId || !checklist) return;
+    if (!editingItemId || !checklist || !currentEditingItem) return;
 
     try {
-      await unclaimItem(editingItemId);
+      await unclaimItem(editingItemId, currentEditingItem.claimedByName);
       toast.success('Item unclaimed - it is now available for others to claim');
+      // Clear editing state
+      setEditingItemId(null);
+      setCurrentEditingItem(null);
+      setShowEditModal(false);
+      // Reload checklist to show updated state
       await loadChecklist();
     } catch (err: unknown) {
       console.error('Failed to unclaim item:', err);

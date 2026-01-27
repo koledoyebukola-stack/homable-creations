@@ -1057,7 +1057,7 @@ export async function updateClaim(
  * Unclaim an item
  * Requires authentication - user must be the claimer
  */
-export async function unclaimItem(itemId: string): Promise<void> {
+export async function unclaimItem(itemId: string, claimedByName?: string): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   
   if (!user) {
@@ -1067,7 +1067,7 @@ export async function unclaimItem(itemId: string): Promise<void> {
   // Verify user owns this claim
   const { data: item, error: checkError } = await supabase
     .from('app_8574c59127_checklist_items')
-    .select('claimed_by_name, claimed_by_user_id')
+    .select('claimed_by_name, claimed_by_user_id, status')
     .eq('id', itemId)
     .single();
 
@@ -1075,10 +1075,18 @@ export async function unclaimItem(itemId: string): Promise<void> {
     throw new Error('Item not found');
   }
 
+  if (item.status !== 'claimed') {
+    throw new Error('Item is not claimed');
+  }
+
   // Check if user owns the claim
   // If user_id is set, it must match
-  // If user_id is null, we allow unclaiming (user might have claimed before sign-in)
-  if (item.claimed_by_user_id && item.claimed_by_user_id !== user.id) {
+  // If user_id is null, verify by name (for claims made before sign-in)
+  if (item.claimed_by_user_id) {
+    if (item.claimed_by_user_id !== user.id) {
+      throw new Error('You can only unclaim your own items');
+    }
+  } else if (claimedByName && item.claimed_by_name !== claimedByName) {
     throw new Error('You can only unclaim your own items');
   }
 
