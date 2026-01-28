@@ -5,7 +5,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { getProductsForItem, searchProducts, getDetectedItems, createChecklist, getBoardById, generateCarpenterSpec } from '@/lib/api';
+import { getDetectedItems, createChecklist, getBoardById, generateCarpenterSpec } from '@/lib/api';
 import { Product, DetectedItem, CarpenterSpec } from '@/lib/types';
 import { toast } from 'sonner';
 import { ExternalLink, Star, Upload, ListChecks, Search, Ruler, Hammer, Package } from 'lucide-react';
@@ -201,20 +201,10 @@ export default function ProductMatches() {
           return;
         }
 
-        // For non-Nigeria users OR other items, continue with product search
-        const existingProducts = await getProductsForItem(itemId);
-        
-        if (existingProducts.length > 0) {
-          setProducts(existingProducts);
-          setLoading(false);
-        } else {
-          // If no products exist, trigger search
-          setSearching(true);
-          const searchResult = await searchProducts(itemId);
-          setProducts(searchResult.products || []);
-          setSearching(false);
-          setLoading(false);
-        }
+        // For non-Nigeria users OR other items, skip internal product matching
+        // and rely solely on retailer / search / carpenter flows
+        setProducts([]);
+        setLoading(false);
       } catch (error: unknown) {
         console.error('Error loading products:', error);
         toast.error('Failed to load products');
