@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 
 // Carousel examples showing inspiration photo → checklist
 const CAROUSEL_EXAMPLES = [
@@ -68,13 +68,8 @@ const MOBILE_HERO_IMAGES = [
 
 export default function Home() {
   const navigate = useNavigate();
-  const exploreSectionRef = useRef<HTMLElement>(null);
   const [carouselSlide, setCarouselSlide] = useState(0);
   const [exploreSlide, setExploreSlide] = useState(0);
-
-  const scrollToExplore = () => {
-    exploreSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
 
   const nextCarousel = () => {
     setCarouselSlide((prev) => (prev + 1) % CAROUSEL_EXAMPLES.length);
@@ -94,18 +89,13 @@ export default function Home() {
       <Header />
 
       {/* Hero Section - 3-tier action hierarchy */}
-      <section className="bg-[#f9f9f9] pt-10 pb-10 px-5 md:pt-[80px] md:pb-[80px] md:px-5">
+      <section className="bg-[#f9f9f9] pt-10 pb-0 px-5 md:pt-[80px] md:pb-[80px] md:px-5">
         <div className="max-w-[560px] mx-auto">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#111111] leading-tight text-center mb-3">
             From inspiration to execution
           </h1>
-          {/* Mobile: long subtitle */}
-          <p className="md:hidden text-lg text-[#555555] text-center mb-10">
-            Homable is a collaborative home setup tool that helps you turn decor inspiration into a clear plan. Upload a room photo to get an instant shopping list, explore curated styles, visualize your space in 3D, and invite friends and family to help you bring it all together.
-          </p>
-          {/* Desktop: short subtitle */}
-          <p className="hidden md:block text-lg md:text-xl text-[#555555] text-center mb-10">
-            Homable helps you plan, shop, and track everything needed to get a room done without juggling multiple tools.
+          <p className="text-lg md:text-xl text-[#555555] text-center mb-10">
+            Turn decor inspiration into a clear plan. Upload a room photo to get an instant shopping list, explore curated styles, visualize your space in 3D, and invite friends and family to help finish the room.
           </p>
 
           {/* Primary: Upload Your Inspiration - no icon on mobile, 56px mobile / 60px desktop */}
@@ -121,7 +111,7 @@ export default function Home() {
           {/* Secondary: Explore Styles & Ideas - no icon on mobile, 48px mobile / 48px desktop */}
           <button
             type="button"
-            onClick={scrollToExplore}
+            onClick={() => navigate('/upload?mode=explore')}
             className="w-full h-12 md:h-12 flex items-center justify-center gap-2.5 rounded-xl mb-4 md:mb-4 bg-white text-black text-[15px] md:text-base font-medium border-[1.5px] border-[#e0e0e0] hover:border-black hover:bg-[#fafafa] transition-colors"
           >
             <span className="hidden md:inline text-xl" aria-hidden>🎨</span>
@@ -140,7 +130,7 @@ export default function Home() {
           </div>
 
           {/* Mobile-only: inspirational image carousel (below CTAs) */}
-          <div className="md:hidden mt-12 mb-16 overflow-hidden">
+          <div className="md:hidden mt-12 mb-10 overflow-hidden">
             <style>{`
               @keyframes mobile-hero-scroll {
                 0% { transform: translateX(0); }
@@ -162,8 +152,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* How It Works Section */}
-      <section className="bg-gradient-to-br from-gray-50 to-stone-50 py-16 md:py-24">
+      {/* How It Works Section - 40px gap from hero on mobile */}
+      <section className="bg-gradient-to-br from-gray-50 to-stone-50 pt-0 pb-16 md:py-24">
         <div className="container mx-auto px-4 md:px-6">
           <div className="max-w-5xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-12 md:mb-16">
@@ -225,7 +215,7 @@ export default function Home() {
       </section>
 
       {/* Explore Styles & Ideas Section */}
-      <section ref={exploreSectionRef} className="bg-white py-16 md:py-24">
+      <section className="bg-white py-16 md:py-24">
         <div className="container mx-auto px-4 md:px-6">
           <div className="max-w-6xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-12 md:mb-16">
