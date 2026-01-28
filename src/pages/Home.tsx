@@ -100,27 +100,27 @@ export default function Home() {
               Turn decor inspiration into a clear plan. Upload a room photo to get an instant shopping list, explore curated styles, visualize your space in 3D, and invite friends and family to help finish the room.
             </p>
 
-            {/* Primary: Upload Your Inspiration — text only, no icons */}
-            <button
-              type="button"
-              onClick={() => navigate('/upload?mode=inspiration')}
-              className="w-full h-[56px] md:h-[60px] flex items-center justify-center rounded-xl mb-4 bg-[#000000] text-white text-base md:text-[18px] font-semibold hover:bg-[#1a1a1a] hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-all duration-200"
-            >
-              Upload Your Inspiration
-            </button>
-
-            {/* Secondary: Explore Styles & Ideas — text only, no icons */}
-            <button
-              type="button"
-              onClick={() => navigate('/upload?mode=explore')}
-              className="w-full h-12 flex items-center justify-center rounded-xl mb-4 bg-white text-black text-[15px] md:text-base font-medium border-[1.5px] border-[#e0e0e0] hover:border-black hover:bg-[#fafafa] transition-colors"
-            >
-              Explore Styles & Ideas
-            </button>
+            {/* CTAs: stacked on mobile, side by side on desktop */}
+            <div className="flex flex-col md:flex-row md:gap-3 gap-4">
+              <button
+                type="button"
+                onClick={() => navigate('/upload?mode=inspiration')}
+                className="w-full md:flex-1 h-[56px] md:h-[60px] flex items-center justify-center rounded-xl bg-[#000000] text-white text-base md:text-[18px] font-semibold hover:bg-[#1a1a1a] hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-all duration-200"
+              >
+                Upload Your Inspiration
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/upload?mode=explore')}
+                className="w-full md:flex-1 h-12 md:h-[60px] flex items-center justify-center rounded-xl bg-white text-black text-[15px] md:text-base font-medium border-[1.5px] border-[#e0e0e0] hover:border-black hover:bg-[#fafafa] transition-colors"
+              >
+                Explore Styles & Ideas
+              </button>
+            </div>
           </div>
 
-          {/* Right: auto-scrolling image carousel (same images + styling as mobile, scaled for desktop) */}
-          <div className="mt-12 mb-10 md:mt-0 md:mb-0 overflow-hidden">
+          {/* Right: auto-scrolling image carousel — scaled up on desktop to balance text block */}
+          <div className="mt-12 mb-10 md:mt-0 md:mb-0 overflow-hidden md:min-h-0 flex flex-col justify-center">
             <style>{`
               @keyframes hero-carousel-scroll {
                 0% { transform: translateX(0); }
@@ -128,7 +128,7 @@ export default function Home() {
               }
             `}</style>
             <div
-              className="flex gap-3 w-max md:gap-4"
+              className="flex gap-3 w-max md:gap-5"
               style={{ animation: 'hero-carousel-scroll 24s linear infinite' }}
             >
               {[...HERO_CAROUSEL_IMAGES, ...HERO_CAROUSEL_IMAGES].map((img, i) => (
@@ -136,7 +136,7 @@ export default function Home() {
                   key={i}
                   src={img.url}
                   alt={img.alt}
-                  className="w-[140px] md:w-[200px] flex-shrink-0 aspect-[4/3] rounded-xl object-cover"
+                  className="w-[140px] md:w-[280px] flex-shrink-0 aspect-[4/3] rounded-xl object-cover"
                 />
               ))}
             </div>
