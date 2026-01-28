@@ -160,6 +160,11 @@ export default function ProductMatches() {
   const [isNigeria, setIsNigeria] = useState(false);
   const [carpenterSpec, setCarpenterSpec] = useState<CarpenterSpec | null>(null);
   const [generatingSpec, setGeneratingSpec] = useState(false);
+  const [amazonUrl, setAmazonUrl] = useState<string | null>(null);
+  const [wayfairUrl, setWayfairUrl] = useState<string | null>(null);
+  const [walmartUrl, setWalmartUrl] = useState<string | null>(null);
+  const [temuUrl, setTemuUrl] = useState<string | null>(null);
+  const [sheinUrl, setSheinUrl] = useState<string | null>(null);
 
   useEffect(() => {
     // Check authentication status
@@ -168,18 +173,63 @@ export default function ProductMatches() {
     });
   }, []);
 
+  // Precompute retailer URLs as soon as item metadata is available
+  useEffect(() => {
+    if (!item) {
+      setAmazonUrl(null);
+      setWayfairUrl(null);
+      setWalmartUrl(null);
+      setTemuUrl(null);
+      setSheinUrl(null);
+      return;
+    }
+
+    (async () => {
+      try {
+        const [
+          amazon,
+          wayfair,
+          walmart,
+          temu,
+          shein,
+        ] = await Promise.all([
+          getAmazonSearchUrl(item.item_name),
+          getWayfairSearchUrl(item.item_name),
+          getWalmartSearchUrl(item.item_name),
+          getTemuSearchUrl(item.item_name),
+          getSheinSearchUrl(item.item_name),
+        ]);
+
+        setAmazonUrl(amazon);
+        setWayfairUrl(wayfair);
+        setWalmartUrl(walmart);
+        setTemuUrl(temu);
+        setSheinUrl(shein);
+      } catch (error) {
+        console.error('Failed to precompute retailer URLs:', error);
+        setAmazonUrl(null);
+        setWayfairUrl(null);
+        setWalmartUrl(null);
+        setTemuUrl(null);
+        setSheinUrl(null);
+      }
+    })();
+  }, [item]);
+
   useEffect(() => {
     if (!boardId || !itemId) return;
 
     const loadData = async () => {
       try {
-        // Check if user is from Nigeria and load board
-        const boardData = await getBoardById(boardId);
+        // Check if user is from Nigeria and load board / detected items in parallel
+        const [boardData, items] = await Promise.all([
+          getBoardById(boardId),
+          getDetectedItems(boardId),
+        ]);
         const userIsNigeria = boardData?.country === 'NG';
         setIsNigeria(userIsNigeria);
         setBoard(boardData);
 
-        const items = await getDetectedItems(boardId);
         const currentItem = items.find((i) => i.id === itemId);
         if (currentItem) {
           setItem(currentItem);
