@@ -60,6 +60,12 @@ const EXPLORE_IMAGES = [
   { url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/5e43a37b-7c8b-406a-9456-3f811e52767c.png', alt: 'Industrial dining space' }
 ];
 
+// Mobile hero carousel: 6 room inspo images (reused from carousel + explore)
+const MOBILE_HERO_IMAGES = [
+  ...CAROUSEL_EXAMPLES.map(({ image, imageAlt }) => ({ url: image, alt: imageAlt })),
+  ...EXPLORE_IMAGES
+];
+
 export default function Home() {
   const navigate = useNavigate();
   const exploreSectionRef = useRef<HTMLElement>(null);
@@ -93,39 +99,65 @@ export default function Home() {
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#111111] leading-tight text-center mb-3">
             From inspiration to execution
           </h1>
-          <p className="text-lg md:text-xl text-[#555555] text-center mb-10">
+          {/* Mobile: long subtitle */}
+          <p className="md:hidden text-lg text-[#555555] text-center mb-10">
+            Homable is a collaborative home setup tool that helps you turn decor inspiration into a clear plan. Upload a room photo to get an instant shopping list, explore curated styles, visualize your space in 3D, and invite friends and family to help you bring it all together.
+          </p>
+          {/* Desktop: short subtitle */}
+          <p className="hidden md:block text-lg md:text-xl text-[#555555] text-center mb-10">
             Homable helps you plan, shop, and track everything needed to get a room done without juggling multiple tools.
           </p>
 
-          {/* Primary: Upload Your Inspiration - 60px desktop, 56px mobile */}
+          {/* Primary: Upload Your Inspiration - no icon on mobile, 56px mobile / 60px desktop */}
           <button
             type="button"
             onClick={() => navigate('/upload?mode=inspiration')}
-            className="w-full h-14 md:h-[60px] flex items-center justify-center gap-3 rounded-xl mb-4 bg-[#000000] text-white text-base md:text-[18px] font-semibold hover:bg-[#1a1a1a] hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-all duration-200"
+            className="w-full h-[56px] md:h-[60px] flex items-center justify-center gap-3 rounded-xl mb-4 md:mb-4 bg-[#000000] text-white text-base md:text-[18px] font-semibold hover:bg-[#1a1a1a] hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-all duration-200"
           >
-            <span className="text-2xl" aria-hidden>📸</span>
+            <span className="hidden md:inline text-2xl" aria-hidden>📸</span>
             <span>Upload Your Inspiration</span>
           </button>
 
-          {/* Secondary: Explore Styles & Ideas - 48px desktop, 44px mobile */}
+          {/* Secondary: Explore Styles & Ideas - no icon on mobile, 48px mobile / 48px desktop */}
           <button
             type="button"
             onClick={scrollToExplore}
-            className="w-full h-11 md:h-12 flex items-center justify-center gap-2.5 rounded-xl mb-4 bg-white text-black text-[15px] md:text-base font-medium border-[1.5px] border-[#e0e0e0] hover:border-black hover:bg-[#fafafa] transition-colors"
+            className="w-full h-12 md:h-12 flex items-center justify-center gap-2.5 rounded-xl mb-4 md:mb-4 bg-white text-black text-[15px] md:text-base font-medium border-[1.5px] border-[#e0e0e0] hover:border-black hover:bg-[#fafafa] transition-colors"
           >
-            <span className="text-xl" aria-hidden>🎨</span>
+            <span className="hidden md:inline text-xl" aria-hidden>🎨</span>
             <span>Explore Styles & Ideas</span>
           </button>
 
-          {/* Tertiary: Find one specific item - 14px desktop, 13px mobile */}
-          <div className="text-center py-2">
+          {/* Tertiary: desktop only; on mobile this lives in Explore section */}
+          <div className="hidden md:block text-center py-2">
             <button
               type="button"
               onClick={() => navigate('/upload?mode=find')}
-              className="text-[13px] md:text-sm font-normal text-[#666666] hover:text-black hover:underline cursor-pointer inline-block"
+              className="text-sm font-normal text-[#666666] hover:text-black hover:underline cursor-pointer inline-block"
             >
               or find one specific item →
             </button>
+          </div>
+
+          {/* Mobile-only: inspirational image carousel (below CTAs) */}
+          <div className="md:hidden mt-12 mb-16 overflow-hidden">
+            <style>{`
+              @keyframes mobile-hero-scroll {
+                0% { transform: translateX(0); }
+                100% { transform: translateX(-50%); }
+              }
+            `}</style>
+            <div className="flex gap-3 w-max" style={{ animation: 'mobile-hero-scroll 24s linear infinite' }}>
+              {[...MOBILE_HERO_IMAGES, ...MOBILE_HERO_IMAGES].map((img, i) => (
+                <img
+                  key={i}
+                  src={img.url}
+                  alt={img.alt}
+                  className="w-[140px] flex-shrink-0 aspect-[4/3] rounded-xl object-cover"
+                />
+              ))}
+            </div>
+            <p className="text-center text-sm text-[#666666] mt-3">Thousands of rooms designed</p>
           </div>
         </div>
       </section>
@@ -218,6 +250,15 @@ export default function Home() {
                 >
                   Explore styles
                 </Button>
+                <div className="text-center mt-3">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/upload?mode=find')}
+                    className="text-sm font-normal text-[#666666] hover:text-black hover:underline cursor-pointer"
+                  >
+                    Or find one specific item →
+                  </button>
+                </div>
               </div>
               <div className="relative">
                 <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-xl">
