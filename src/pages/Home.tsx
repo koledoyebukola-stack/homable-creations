@@ -60,8 +60,8 @@ const EXPLORE_IMAGES = [
   { url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/5e43a37b-7c8b-406a-9456-3f811e52767c.png', alt: 'Industrial dining space' }
 ];
 
-// Mobile hero carousel: 6 room inspo images (reused from carousel + explore)
-const MOBILE_HERO_IMAGES = [
+// Hero carousel: 6 room inspo images (mobile + desktop)
+const HERO_CAROUSEL_IMAGES = [
   ...CAROUSEL_EXAMPLES.map(({ image, imageAlt }) => ({ url: image, alt: imageAlt })),
   ...EXPLORE_IMAGES
 ];
@@ -88,72 +88,65 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
       <Header />
 
-      {/* Hero Section - 3-tier action hierarchy */}
-      <section className="bg-[#f9f9f9] pt-10 pb-0 px-5 md:pt-[80px] md:pb-[80px] md:px-5">
-        <div className="max-w-[560px] mx-auto">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#111111] leading-tight text-center mb-3">
-            From inspiration to execution
-          </h1>
-          <p className="text-lg md:text-xl text-[#555555] text-center mb-10">
-            Turn decor inspiration into a clear plan. Upload a room photo to get an instant shopping list, explore curated styles, visualize your space in 3D, and invite friends and family to help finish the room.
-          </p>
+      {/* Hero Section - 3-tier action hierarchy; two-column on desktop with carousel */}
+      <section className="bg-[#f9f9f9] pt-10 pb-0 px-5 md:pt-14 md:pb-12 md:px-6">
+        <div className="max-w-[560px] md:max-w-6xl mx-auto md:grid md:grid-cols-2 md:gap-12 lg:gap-16 md:items-center">
+          {/* Left: heading, subtitle, CTAs */}
+          <div className="md:max-w-[480px]">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#111111] leading-tight text-center md:text-left mb-3">
+              From inspiration to execution
+            </h1>
+            <p className="text-lg md:text-xl text-[#555555] text-center md:text-left mb-10">
+              Turn decor inspiration into a clear plan. Upload a room photo to get an instant shopping list, explore curated styles, visualize your space in 3D, and invite friends and family to help finish the room.
+            </p>
 
-          {/* Primary: Upload Your Inspiration - no icon on mobile, 56px mobile / 60px desktop */}
-          <button
-            type="button"
-            onClick={() => navigate('/upload?mode=inspiration')}
-            className="w-full h-[56px] md:h-[60px] flex items-center justify-center gap-3 rounded-xl mb-4 md:mb-4 bg-[#000000] text-white text-base md:text-[18px] font-semibold hover:bg-[#1a1a1a] hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-all duration-200"
-          >
-            <span className="hidden md:inline text-2xl" aria-hidden>📸</span>
-            <span>Upload Your Inspiration</span>
-          </button>
-
-          {/* Secondary: Explore Styles & Ideas - no icon on mobile, 48px mobile / 48px desktop */}
-          <button
-            type="button"
-            onClick={() => navigate('/upload?mode=explore')}
-            className="w-full h-12 md:h-12 flex items-center justify-center gap-2.5 rounded-xl mb-4 md:mb-4 bg-white text-black text-[15px] md:text-base font-medium border-[1.5px] border-[#e0e0e0] hover:border-black hover:bg-[#fafafa] transition-colors"
-          >
-            <span className="hidden md:inline text-xl" aria-hidden>🎨</span>
-            <span>Explore Styles & Ideas</span>
-          </button>
-
-          {/* Tertiary: desktop only; on mobile this lives in Explore section */}
-          <div className="hidden md:block text-center py-2">
+            {/* Primary: Upload Your Inspiration — text only, no icons */}
             <button
               type="button"
-              onClick={() => navigate('/upload?mode=find')}
-              className="text-sm font-normal text-[#666666] hover:text-black hover:underline cursor-pointer inline-block"
+              onClick={() => navigate('/upload?mode=inspiration')}
+              className="w-full h-[56px] md:h-[60px] flex items-center justify-center rounded-xl mb-4 bg-[#000000] text-white text-base md:text-[18px] font-semibold hover:bg-[#1a1a1a] hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-all duration-200"
             >
-              or find one specific item →
+              Upload Your Inspiration
+            </button>
+
+            {/* Secondary: Explore Styles & Ideas — text only, no icons */}
+            <button
+              type="button"
+              onClick={() => navigate('/upload?mode=explore')}
+              className="w-full h-12 flex items-center justify-center rounded-xl mb-4 bg-white text-black text-[15px] md:text-base font-medium border-[1.5px] border-[#e0e0e0] hover:border-black hover:bg-[#fafafa] transition-colors"
+            >
+              Explore Styles & Ideas
             </button>
           </div>
 
-          {/* Mobile-only: inspirational image carousel (below CTAs) */}
-          <div className="md:hidden mt-12 mb-10 overflow-hidden">
+          {/* Right: auto-scrolling image carousel (same images + styling as mobile, scaled for desktop) */}
+          <div className="mt-12 mb-10 md:mt-0 md:mb-0 overflow-hidden">
             <style>{`
-              @keyframes mobile-hero-scroll {
+              @keyframes hero-carousel-scroll {
                 0% { transform: translateX(0); }
                 100% { transform: translateX(-50%); }
               }
             `}</style>
-            <div className="flex gap-3 w-max" style={{ animation: 'mobile-hero-scroll 24s linear infinite' }}>
-              {[...MOBILE_HERO_IMAGES, ...MOBILE_HERO_IMAGES].map((img, i) => (
+            <div
+              className="flex gap-3 w-max md:gap-4"
+              style={{ animation: 'hero-carousel-scroll 24s linear infinite' }}
+            >
+              {[...HERO_CAROUSEL_IMAGES, ...HERO_CAROUSEL_IMAGES].map((img, i) => (
                 <img
                   key={i}
                   src={img.url}
                   alt={img.alt}
-                  className="w-[140px] flex-shrink-0 aspect-[4/3] rounded-xl object-cover"
+                  className="w-[140px] md:w-[200px] flex-shrink-0 aspect-[4/3] rounded-xl object-cover"
                 />
               ))}
             </div>
-            <p className="text-center text-sm text-[#666666] mt-3">Thousands of rooms designed</p>
+            <p className="text-center md:text-left text-sm text-[#666666] mt-3">Thousands of rooms designed</p>
           </div>
         </div>
       </section>
 
-      {/* How It Works Section - 40px gap from hero on mobile */}
-      <section className="bg-gradient-to-br from-gray-50 to-stone-50 pt-0 pb-16 md:py-24">
+      {/* How It Works Section - 40px gap from hero on mobile; 48px on desktop */}
+      <section className="bg-gradient-to-br from-gray-50 to-stone-50 pt-0 pb-16 md:pt-0 md:pb-12">
         <div className="container mx-auto px-4 md:px-6">
           <div className="max-w-5xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-12 md:mb-16">
@@ -214,8 +207,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Explore Styles & Ideas Section */}
-      <section className="bg-white py-16 md:py-24">
+      {/* Explore Styles & Ideas Section - tighter desktop spacing */}
+      <section className="bg-white py-16 md:py-12">
         <div className="container mx-auto px-4 md:px-6">
           <div className="max-w-6xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-12 md:mb-16">
@@ -290,8 +283,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* From Inspiration to Shopping List Section */}
-      <section className="bg-white py-16 md:py-20">
+      {/* From Inspiration to Shopping List Section - tighter desktop spacing */}
+      <section className="bg-white py-16 md:py-12">
         <div className="container mx-auto px-4 md:px-6">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-8 md:mb-12">
@@ -392,8 +385,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="container mx-auto px-4 md:px-6 py-16 md:py-24">
+      {/* CTA Section - tighter desktop spacing */}
+      <section className="container mx-auto px-4 md:px-6 py-16 md:py-12">
         <div className="max-w-4xl mx-auto bg-black rounded-3xl p-8 md:p-12 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
             Ready to Create Your Dream Space?
