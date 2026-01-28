@@ -78,7 +78,7 @@ function getLocalizedRetailers() {
 export default function ChecklistDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [checklist, setChecklist] = useState<ChecklistWithItems | null>(null);
+  const [checklist, setChecklist] = useState<(ChecklistWithItems & { board_image_url?: string; board_name?: string }) | null>(null);
   const [board, setBoard] = useState<Board | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -361,8 +361,8 @@ export default function ChecklistDetail() {
           Back to Shopping Lists
         </Button>
 
-        {/* Inspiration Image (if available) — click to view full size */}
-        {board?.source_image_url && (
+        {/* Inspiration Image (if available) — from checklist.board_image_url or board; click to view full size */}
+        {(checklist?.board_image_url ?? board?.source_image_url) && (
           <div className="mb-6 flex justify-center">
             <button
               type="button"
@@ -371,7 +371,7 @@ export default function ChecklistDetail() {
               aria-label="View full inspiration photo"
             >
               <img
-                src={board.source_image_url}
+                src={checklist?.board_image_url ?? board?.source_image_url}
                 alt="Original Inspiration — click to view full size"
                 className="w-32 h-32 md:w-40 md:h-40 object-cover rounded-2xl shadow-lg border-2 border-white"
               />
@@ -379,7 +379,7 @@ export default function ChecklistDetail() {
             <Dialog open={inspirationLightboxOpen} onOpenChange={setInspirationLightboxOpen}>
               <DialogContent className="max-w-[95vw] max-h-[90vh] w-auto p-0 border-0 bg-black/95 gap-0 overflow-hidden [&>button]:right-2 [&>button]:top-2 [&>button]:bg-white/10 [&>button]:text-white [&>button]:hover:bg-white/20 [&>button]:h-9 [&>button]:w-9">
                 <img
-                  src={board.source_image_url}
+                  src={checklist?.board_image_url ?? board?.source_image_url}
                   alt="Original Inspiration"
                   className="max-w-full max-h-[85vh] w-auto h-auto object-contain mx-auto block"
                 />

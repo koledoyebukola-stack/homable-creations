@@ -567,7 +567,7 @@ export async function getUserChecklists(): Promise<ChecklistWithItems[]> {
   return checklistsWithItems;
 }
 
-export async function getChecklistById(checklistId: string): Promise<ChecklistWithItems | null> {
+export async function getChecklistById(checklistId: string): Promise<(ChecklistWithItems & { board_image_url?: string; board_name?: string }) | null> {
   const { data: { user } } = await supabase.auth.getUser();
   
   if (!user) {
@@ -597,6 +597,17 @@ export async function getChecklistById(checklistId: string): Promise<ChecklistWi
     throw itemsError;
   }
 
+  // Fetch board inspiration image when board_id exists (same approach as getChecklistByGiftingToken)
+  let boardImageUrl: string | undefined;
+  let boardName: string | undefined;
+  if (checklist.board_id) {
+    const board = await getBoardByIdPublic(checklist.board_id);
+    if (board) {
+      boardImageUrl = board.source_image_url || board.cover_image_url;
+      boardName = board.name;
+    }
+  }
+
   // Calculate completed count (only items with status='completed' or is_completed=true)
   const completedCount = items?.filter(item => item.status === 'completed' || item.is_completed).length || 0;
 
@@ -605,6 +616,8 @@ export async function getChecklistById(checklistId: string): Promise<ChecklistWi
     items: items || [],
     completed_count: completedCount,
     total_count: items?.length || 0,
+    board_image_url: boardImageUrl,
+    board_name: boardName,
   };
 }
 
