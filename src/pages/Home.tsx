@@ -1,10 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import { Upload, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import HeroCarousel from '@/components/HeroCarousel';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 // Carousel examples showing inspiration photo → checklist
 const CAROUSEL_EXAMPLES = [
@@ -49,239 +48,84 @@ const CAROUSEL_EXAMPLES = [
   }
 ];
 
-type Mode = 'explore' | 'replicate' | 'find';
-
-const MODE_CONTENT = {
-  explore: {
-    title: 'Explore styles & ideas',
-    steps: [
-      'Browse curated room inspirations',
-      'Explore styles, moods, and room types',
-      'Choose a look to execute'
-    ],
-    cta: 'Explore styles',
-    uploadMode: 'explore',
-    images: [
-      {
-        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/4a353320-f266-498a-b105-8ffe1b423b27.png',
-        alt: 'Modern minimalist living room'
-      },
-      {
-        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/d105eabc-9e94-443c-b1d2-1da1d1ff381e.png',
-        alt: 'Scandinavian bedroom'
-      },
-      {
-        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/5e43a37b-7c8b-406a-9456-3f811e52767c.png',
-        alt: 'Industrial dining space'
-      }
-    ]
-  },
-  replicate: {
-    title: 'Replicate an inspiration',
-    steps: [
-      'Upload an inspiration image',
-      'AI identifies decor and style elements',
-      'Get a clear shopping list and execution plan'
-    ],
-    cta: 'Upload inspiration',
-    uploadMode: 'inspiration',
-    images: [
-      {
-        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-27/f5c2c97d-14f6-4c30-8611-9c97d727c2c6.png',
-        alt: 'Styled modern living room'
-      },
-      {
-        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-27/d8585f08-b5c0-406b-adf3-12ca5b4e4e4f.png',
-        alt: 'Styled contemporary bedroom'
-      },
-      {
-        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-27/083c7d04-5b8c-4617-80f4-13ba1ddbe422.png',
-        alt: 'Styled elegant dining room'
-      }
-    ]
-  },
-  find: {
-    title: 'Find one item that fits',
-    steps: [
-      'Choose the item',
-      'Enter size and preferences',
-      'Find options that fit your space'
-    ],
-    cta: 'Find what fits',
-    uploadMode: 'find',
-    images: [
-      {
-        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/6855ff28-4d3c-4e99-b4f5-1646eae59997.png',
-        alt: 'Modern sofa'
-      },
-      {
-        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/172faa3b-7a0f-4fe7-8ba0-9305f538d68c.png',
-        alt: 'Dining table'
-      },
-      {
-        url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/7880913b-ec35-46c8-b358-0c40f0410b2d.png',
-        alt: 'Bed frame'
-      }
-    ]
-  }
-};
+// Explore section content (reused from former tab)
+const EXPLORE_STEPS = [
+  'Browse curated room inspirations',
+  'Explore styles, moods, and room types',
+  'Choose a look to execute'
+];
+const EXPLORE_IMAGES = [
+  { url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/4a353320-f266-498a-b105-8ffe1b423b27.png', alt: 'Modern minimalist living room' },
+  { url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/d105eabc-9e94-443c-b1d2-1da1d1ff381e.png', alt: 'Scandinavian bedroom' },
+  { url: 'https://mgx-backend-cdn.metadl.com/generate/images/812954/2025-12-31/5e43a37b-7c8b-406a-9456-3f811e52767c.png', alt: 'Industrial dining space' }
+];
 
 export default function Home() {
   const navigate = useNavigate();
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [selectedMode, setSelectedMode] = useState<Mode>('explore');
+  const exploreSectionRef = useRef<HTMLElement>(null);
+  const [carouselSlide, setCarouselSlide] = useState(0);
+  const [exploreSlide, setExploreSlide] = useState(0);
 
-  const currentContent = MODE_CONTENT[selectedMode];
-  const currentImages = currentContent.images;
-
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % currentImages.length);
+  const scrollToExplore = () => {
+    exploreSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + currentImages.length) % currentImages.length);
+  const nextCarousel = () => {
+    setCarouselSlide((prev) => (prev + 1) % CAROUSEL_EXAMPLES.length);
   };
-
-  // Reset slide to 0 when mode changes
-  const handleModeChange = (mode: Mode) => {
-    setSelectedMode(mode);
-    setCurrentSlide(0);
+  const prevCarousel = () => {
+    setCarouselSlide((prev) => (prev - 1 + CAROUSEL_EXAMPLES.length) % CAROUSEL_EXAMPLES.length);
   };
-
-  const handleCTAClick = () => {
-    navigate(`/upload?mode=${currentContent.uploadMode}`);
+  const nextExplore = () => {
+    setExploreSlide((prev) => (prev + 1) % EXPLORE_IMAGES.length);
+  };
+  const prevExplore = () => {
+    setExploreSlide((prev) => (prev - 1 + EXPLORE_IMAGES.length) % EXPLORE_IMAGES.length);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
       <Header />
 
-      {/* Hero Section */}
-      <section className="container mx-auto px-4 md:px-6 pt-12 md:pt-20 pb-16 md:pb-24">
-        <div className="max-w-7xl mx-auto">
-          {/* Section 1: Hero Header */}
-          <div className="text-center mb-8 space-y-3">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#111111] leading-tight">
-              From inspiration to execution
-            </h1>
-            
-            <p className="text-lg md:text-xl text-[#555555] max-w-3xl mx-auto">
-              Homable helps you plan, shop, and track everything needed to get a room done without juggling multiple tools.
-            </p>
-          </div>
+      {/* Hero Section - 3-tier action hierarchy */}
+      <section className="bg-[#f9f9f9] pt-10 pb-10 px-5 md:pt-[80px] md:pb-[80px] md:px-5">
+        <div className="max-w-[560px] mx-auto">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#111111] leading-tight text-center mb-3">
+            From inspiration to execution
+          </h1>
+          <p className="text-lg md:text-xl text-[#555555] text-center mb-10">
+            Homable helps you plan, shop, and track everything needed to get a room done without juggling multiple tools.
+          </p>
 
-          {/* Section 2: Mode Selector */}
-          <div className="flex justify-center mb-12">
-            <div className="inline-flex bg-white rounded-full p-1 shadow-md border border-gray-200">
-              <button
-                onClick={() => handleModeChange('explore')}
-                className={`px-6 py-2 md:py-3 rounded-full text-sm font-medium transition-all ${
-                  selectedMode === 'explore'
-                    ? 'bg-[#111111] text-white'
-                    : 'text-[#555555] hover:text-[#111111]'
-                }`}
-              >
-                Explore styles
-              </button>
-              <button
-                onClick={() => handleModeChange('replicate')}
-                className={`px-6 py-2 md:py-3 rounded-full text-sm font-medium transition-all ${
-                  selectedMode === 'replicate'
-                    ? 'bg-[#111111] text-white'
-                    : 'text-[#555555] hover:text-[#111111]'
-                }`}
-              >
-                Replicate an inspiration
-              </button>
-              <button
-                onClick={() => handleModeChange('find')}
-                className={`px-6 py-2 md:py-3 rounded-full text-sm font-medium transition-all ${
-                  selectedMode === 'find'
-                    ? 'bg-[#111111] text-white'
-                    : 'text-[#555555] hover:text-[#111111]'
-                }`}
-              >
-                Find one item that fits
-              </button>
-            </div>
-          </div>
+          {/* Primary: Upload Your Inspiration - 60px desktop, 56px mobile */}
+          <button
+            type="button"
+            onClick={() => navigate('/upload?mode=inspiration')}
+            className="w-full h-14 md:h-[60px] flex items-center justify-center gap-3 rounded-xl mb-4 bg-[#000000] text-white text-base md:text-[18px] font-semibold hover:bg-[#1a1a1a] hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-all duration-200"
+          >
+            <span className="text-2xl" aria-hidden>📸</span>
+            <span>Upload Your Inspiration</span>
+          </button>
 
-          {/* Two-Column Layout: Left (Content) + Right (Image Carousel) */}
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-            {/* Left Column: Step Preview Panel */}
-            <div className="bg-white rounded-2xl p-8 md:p-10 shadow-lg">
-              <h2 className="text-2xl md:text-3xl font-bold text-[#111111] mb-8">
-                {currentContent.title}
-              </h2>
+          {/* Secondary: Explore Styles & Ideas - 48px desktop, 44px mobile */}
+          <button
+            type="button"
+            onClick={scrollToExplore}
+            className="w-full h-11 md:h-12 flex items-center justify-center gap-2.5 rounded-xl mb-4 bg-white text-black text-[15px] md:text-base font-medium border-[1.5px] border-[#e0e0e0] hover:border-black hover:bg-[#fafafa] transition-colors"
+          >
+            <span className="text-xl" aria-hidden>🎨</span>
+            <span>Explore Styles & Ideas</span>
+          </button>
 
-              <div className="space-y-6 mb-8">
-                {currentContent.steps.map((step, index) => (
-                  <div key={index} className="flex items-start gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 bg-[#111111] text-white rounded-full flex items-center justify-center font-bold">
-                      {index + 1}
-                    </div>
-                    <p className="text-lg text-[#333333] pt-1">{step}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Section 4: Primary CTA */}
-              <div>
-                <Button
-                  onClick={handleCTAClick}
-                  size="lg"
-                  className="w-full bg-[#111111] hover:bg-[#333333] text-white px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
-                >
-                  {currentContent.cta}
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Right Column: Large Image Carousel */}
-            <div className="relative">
-              <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl">
-                <img
-                  key={`${selectedMode}-${currentSlide}`}
-                  src={currentImages[currentSlide].url}
-                  alt={currentImages[currentSlide].alt}
-                  className="w-full h-full object-cover"
-                />
-                
-                {/* Carousel Controls Overlay */}
-                <button
-                  onClick={prevSlide}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/90 hover:bg-white transition-colors shadow-lg"
-                  aria-label="Previous slide"
-                >
-                  <ChevronLeft className="w-6 h-6 text-[#111111]" />
-                </button>
-
-                <button
-                  onClick={nextSlide}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/90 hover:bg-white transition-colors shadow-lg"
-                  aria-label="Next slide"
-                >
-                  <ChevronRight className="w-6 h-6 text-[#111111]" />
-                </button>
-
-                {/* Carousel Indicators */}
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                  {currentImages.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentSlide(index)}
-                      className={`h-2 rounded-full transition-all ${
-                        index === currentSlide
-                          ? 'bg-white w-8'
-                          : 'bg-white/50 w-2'
-                      }`}
-                      aria-label={`Go to slide ${index + 1}`}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
+          {/* Tertiary: Find one specific item - 14px desktop, 13px mobile */}
+          <div className="text-center py-2">
+            <button
+              type="button"
+              onClick={() => navigate('/upload?mode=find')}
+              className="text-[13px] md:text-sm font-normal text-[#666666] hover:text-black hover:underline cursor-pointer inline-block"
+            >
+              or find one specific item →
+            </button>
           </div>
         </div>
       </section>
@@ -339,10 +183,77 @@ export default function Home() {
               <Button
                 onClick={() => navigate('/upload?mode=inspiration')}
                 size="lg"
-                className="bg-black hover:bg-black/90 text-white px-8 rounded-full"
+                className="bg-white hover:bg-[#fafafa] text-black border-[1.5px] border-[#e0e0e0] hover:border-black px-8 rounded-xl font-medium"
               >
                 Try It Now - It's Free
               </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Explore Styles & Ideas Section */}
+      <section ref={exploreSectionRef} className="bg-white py-16 md:py-24">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-12 md:mb-16">
+              Explore Styles & Ideas
+            </h2>
+            <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+              <div className="bg-[#f9f9f9] rounded-2xl p-8 md:p-10">
+                <div className="space-y-6 mb-8">
+                  {EXPLORE_STEPS.map((step, index) => (
+                    <div key={index} className="flex items-start gap-4">
+                      <div className="flex-shrink-0 w-8 h-8 bg-[#111111] text-white rounded-full flex items-center justify-center font-bold">
+                        {index + 1}
+                      </div>
+                      <p className="text-lg text-[#333333] pt-1">{step}</p>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  onClick={() => navigate('/upload?mode=explore')}
+                  variant="outline"
+                  className="w-full border-[1.5px] border-[#e0e0e0] hover:border-black rounded-xl font-medium"
+                >
+                  Explore styles
+                </Button>
+              </div>
+              <div className="relative">
+                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-xl">
+                  <img
+                    src={EXPLORE_IMAGES[exploreSlide].url}
+                    alt={EXPLORE_IMAGES[exploreSlide].alt}
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    onClick={prevExplore}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/90 hover:bg-white transition-colors shadow-lg"
+                    aria-label="Previous"
+                  >
+                    <ChevronLeft className="w-6 h-6 text-[#111111]" />
+                  </button>
+                  <button
+                    onClick={nextExplore}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/90 hover:bg-white transition-colors shadow-lg"
+                    aria-label="Next"
+                  >
+                    <ChevronRight className="w-6 h-6 text-[#111111]" />
+                  </button>
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                    {EXPLORE_IMAGES.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setExploreSlide(i)}
+                        className={`h-2 rounded-full transition-all ${
+                          i === exploreSlide ? 'bg-white w-8' : 'bg-white/50 w-2'
+                        }`}
+                        aria-label={`Slide ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -367,8 +278,8 @@ export default function Home() {
                 {/* Left: Inspiration Photo */}
                 <div className="relative aspect-[4/3] rounded-2xl overflow-hidden">
                   <img
-                    src={CAROUSEL_EXAMPLES[currentSlide].image}
-                    alt={CAROUSEL_EXAMPLES[currentSlide].imageAlt}
+                    src={CAROUSEL_EXAMPLES[carouselSlide].image}
+                    alt={CAROUSEL_EXAMPLES[carouselSlide].imageAlt}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -376,7 +287,7 @@ export default function Home() {
                 {/* Right: Checklist */}
                 <div className="space-y-4">
                   <div className="space-y-3">
-                    {CAROUSEL_EXAMPLES[currentSlide].checklist.map((item, index) => (
+                    {CAROUSEL_EXAMPLES[carouselSlide].checklist.map((item, index) => (
                       <div
                         key={index}
                         className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200"
@@ -401,7 +312,7 @@ export default function Home() {
               {/* Carousel Controls */}
               <div className="flex items-center justify-center gap-4 mt-6">
                 <button
-                  onClick={prevSlide}
+                  onClick={prevCarousel}
                   className="p-2 rounded-full bg-white hover:bg-gray-100 transition-colors shadow-sm border border-gray-200"
                   aria-label="Previous slide"
                 >
@@ -412,9 +323,9 @@ export default function Home() {
                   {CAROUSEL_EXAMPLES.map((_, index) => (
                     <button
                       key={index}
-                      onClick={() => setCurrentSlide(index)}
+                      onClick={() => setCarouselSlide(index)}
                       className={`w-2 h-2 rounded-full transition-all ${
-                        index === currentSlide
+                        index === carouselSlide
                           ? 'bg-[#111111] w-6'
                           : 'bg-gray-300'
                       }`}
@@ -424,7 +335,7 @@ export default function Home() {
                 </div>
 
                 <button
-                  onClick={nextSlide}
+                  onClick={nextCarousel}
                   className="p-2 rounded-full bg-white hover:bg-gray-100 transition-colors shadow-sm border border-gray-200"
                   aria-label="Next slide"
                 >
