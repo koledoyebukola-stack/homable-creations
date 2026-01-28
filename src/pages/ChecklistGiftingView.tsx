@@ -12,6 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { 
   Loader2, 
   ArrowLeft,
@@ -49,6 +50,7 @@ export default function ChecklistGiftingView() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentEditingItem, setCurrentEditingItem] = useState<{ name: string; expectedDate?: string; giftNote?: string; claimedByName: string } | null>(null);
+  const [inspirationLightboxOpen, setInspirationLightboxOpen] = useState(false);
 
   // Set Open Graph meta tags for social sharing
   useEffect(() => {
@@ -281,14 +283,30 @@ export default function ChecklistGiftingView() {
           Back to Home
         </Button>
 
-        {/* Inspiration Image (if available) */}
+        {/* Inspiration Image (if available) — click to view full size */}
         {checklist.board_image_url && (
           <div className="mb-6 flex justify-center">
-            <img
-              src={checklist.board_image_url}
-              alt="Original Inspiration"
-              className="w-32 h-32 md:w-40 md:h-40 object-cover rounded-2xl shadow-lg border-2 border-white"
-            />
+            <button
+              type="button"
+              onClick={() => setInspirationLightboxOpen(true)}
+              className="focus:outline-none focus:ring-2 focus:ring-[#111111] focus:ring-offset-2 rounded-2xl overflow-hidden transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              aria-label="View full inspiration photo"
+            >
+              <img
+                src={checklist.board_image_url}
+                alt="Original Inspiration — click to view full size"
+                className="w-32 h-32 md:w-40 md:h-40 object-cover rounded-2xl shadow-lg border-2 border-white"
+              />
+            </button>
+            <Dialog open={inspirationLightboxOpen} onOpenChange={setInspirationLightboxOpen}>
+              <DialogContent className="max-w-[95vw] max-h-[90vh] w-auto p-0 border-0 bg-black/95 gap-0 overflow-hidden [&>button]:right-2 [&>button]:top-2 [&>button]:bg-white/10 [&>button]:text-white [&>button]:hover:bg-white/20 [&>button]:h-9 [&>button]:w-9">
+                <img
+                  src={checklist.board_image_url}
+                  alt="Original Inspiration"
+                  className="max-w-full max-h-[85vh] w-auto h-auto object-contain mx-auto block"
+                />
+              </DialogContent>
+            </Dialog>
           </div>
         )}
 

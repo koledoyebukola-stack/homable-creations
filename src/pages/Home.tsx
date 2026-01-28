@@ -90,9 +90,9 @@ export default function Home() {
 
       {/* Hero Section - 3-tier action hierarchy; two-column on desktop with carousel */}
       <section className="bg-[#f9f9f9] pt-10 pb-0 px-5 md:pt-14 md:pb-12 md:px-6">
-        <div className="max-w-[560px] md:max-w-6xl mx-auto md:grid md:grid-cols-2 md:gap-12 lg:gap-16 md:items-center">
-          {/* Left: heading, subtitle, CTAs */}
-          <div className="md:max-w-[480px]">
+        <div className="max-w-[560px] md:max-w-6xl mx-auto md:grid md:grid-cols-2 md:gap-12 lg:gap-16 md:items-center min-h-0">
+          {/* Left: heading, subtitle, CTAs — vertically centered with carousel on desktop, text left-aligned */}
+          <div className="md:max-w-[480px] md:flex md:flex-col md:justify-center">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#111111] leading-tight text-center md:text-left mb-3">
               From inspiration to execution
             </h1>
@@ -119,7 +119,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Right: auto-scrolling image carousel — scaled up on desktop to balance text block */}
+          {/* Right: auto-scrolling carousel — greater prominence on desktop; caption anchored to carousel */}
           <div className="mt-12 mb-10 md:mt-0 md:mb-0 overflow-hidden md:min-h-0 flex flex-col justify-center">
             <style>{`
               @keyframes hero-carousel-scroll {
@@ -127,20 +127,22 @@ export default function Home() {
                 100% { transform: translateX(-50%); }
               }
             `}</style>
-            <div
-              className="flex gap-3 w-max md:gap-5"
-              style={{ animation: 'hero-carousel-scroll 24s linear infinite' }}
-            >
-              {[...HERO_CAROUSEL_IMAGES, ...HERO_CAROUSEL_IMAGES].map((img, i) => (
-                <img
-                  key={i}
-                  src={img.url}
-                  alt={img.alt}
-                  className="w-[140px] md:w-[280px] flex-shrink-0 aspect-[4/3] rounded-xl object-cover"
-                />
-              ))}
+            <div className="md:rounded-2xl md:bg-white/60 md:shadow-xl md:p-4 md:ring-1 md:ring-black/5">
+              <div
+                className="flex gap-3 w-max md:gap-6"
+                style={{ animation: 'hero-carousel-scroll 24s linear infinite' }}
+              >
+                {[...HERO_CAROUSEL_IMAGES, ...HERO_CAROUSEL_IMAGES].map((img, i) => (
+                  <img
+                    key={i}
+                    src={img.url}
+                    alt={img.alt}
+                    className="w-[140px] md:w-[300px] flex-shrink-0 aspect-[4/3] rounded-xl object-cover"
+                  />
+                ))}
+              </div>
+              <p className="text-center md:text-left text-sm text-[#666666] mt-2 md:mt-2.5 md:pl-0.5">Thousands of rooms designed</p>
             </div>
-            <p className="text-center md:text-left text-sm text-[#666666] mt-3">Thousands of rooms designed</p>
           </div>
         </div>
       </section>
