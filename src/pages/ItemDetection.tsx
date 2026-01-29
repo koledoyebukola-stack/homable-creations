@@ -1344,31 +1344,6 @@ export default function ItemDetection() {
                         {(!isNigeria || !isBuildableFurniture(item)) && (customMessage || itemProducts.length === 0) && (
                           <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200 shadow-sm">
                             <CardContent className="p-6 md:p-8 space-y-4">
-                              {/* "See international stores" toggle for Nigeria users */}
-                              {isNigeria && (
-                                <Button
-                                  onClick={() => setShowInternationalStores(prev => ({
-                                    ...prev,
-                                    [item.id]: !prev[item.id]
-                                  }))}
-                                  variant="ghost"
-                                  size="sm"
-                                  className="w-full text-[#555555] hover:text-[#111111] text-sm mb-2"
-                                >
-                                  {showInternationalStores[item.id] ? (
-                                    <>
-                                      <ChevronUp className="mr-2 h-4 w-4" />
-                                      Hide international stores
-                                    </>
-                                  ) : (
-                                    <>
-                                      <ChevronDown className="mr-2 h-4 w-4" />
-                                      See international stores
-                                    </>
-                                  )}
-                                </Button>
-                              )}
-
                               {/* Show Western retailers only if allowed */}
                               {shouldShowRetailersNow && (
                                 <>
@@ -1470,6 +1445,31 @@ export default function ItemDetection() {
                                   Find exact match (photo)
                                 </Button>
                               </div>
+
+                              {/* "See international stores" toggle for Nigeria users - moved below "Find exact match" */}
+                              {isNigeria && (
+                                <Button
+                                  onClick={() => setShowInternationalStores(prev => ({
+                                    ...prev,
+                                    [item.id]: !prev[item.id]
+                                  }))}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="w-full text-[#555555] hover:text-[#111111] text-sm mt-2"
+                                >
+                                  {showInternationalStores[item.id] ? (
+                                    <>
+                                      <ChevronUp className="mr-2 h-4 w-4" />
+                                      Hide international stores
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ChevronDown className="mr-2 h-4 w-4" />
+                                      See international stores
+                                    </>
+                                  )}
+                                </Button>
+                              )}
                             </CardContent>
                           </Card>
                         )}
