@@ -8,7 +8,7 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { getDetectedItems, createChecklist, getBoardById, generateCarpenterSpec } from '@/lib/api';
 import { Product, DetectedItem, CarpenterSpec } from '@/lib/types';
 import { toast } from 'sonner';
-import { ExternalLink, Star, Upload, ListChecks, Search, Ruler, Hammer, Package } from 'lucide-react';
+import { ExternalLink, Star, Upload, ListChecks, Search, Ruler, Hammer, Package, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { 
   getAmazonSearchUrl, 
@@ -160,6 +160,7 @@ export default function ProductMatches() {
   const [isNigeria, setIsNigeria] = useState(false);
   const [carpenterSpec, setCarpenterSpec] = useState<CarpenterSpec | null>(null);
   const [generatingSpec, setGeneratingSpec] = useState(false);
+  const [showInternationalStores, setShowInternationalStores] = useState(false);
   const [amazonUrl, setAmazonUrl] = useState<string | null>(null);
   const [wayfairUrl, setWayfairUrl] = useState<string | null>(null);
   const [walmartUrl, setWalmartUrl] = useState<string | null>(null);
@@ -328,6 +329,12 @@ export default function ProductMatches() {
 
   // Determine if Western retailers should be shown
   const showWesternRetailers = item ? shouldShowWesternRetailers(isNigeria, item) : true;
+  
+  // For Nigeria users (both furniture and non-furniture): show retailers only when "See international stores" is expanded
+  // For all other cases: use showWesternRetailers directly
+  const shouldShowRetailersNow = isNigeria && item
+    ? showInternationalStores
+    : showWesternRetailers;
 
   // Nigeria-specific view for buildable furniture
   if (isNigeria && item && isBuildableFurniture(item)) {
@@ -417,6 +424,90 @@ export default function ProductMatches() {
                       Search the web (Google)
                     </Button>
                   </div>
+
+                  {/* "See international stores" toggle for Nigeria furniture */}
+                  <Button
+                    onClick={() => setShowInternationalStores(!showInternationalStores)}
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-[#555555] hover:text-[#111111] text-sm mt-2"
+                  >
+                    {showInternationalStores ? (
+                      <>
+                        <ChevronUp className="mr-2 h-4 w-4" />
+                        Hide international stores
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="mr-2 h-4 w-4" />
+                        See international stores
+                      </>
+                    )}
+                  </Button>
+
+                  {/* International Retailer Buttons - Show when expanded */}
+                  {showInternationalStores && item && (
+                    <div className="space-y-3 pt-2 border-t border-gray-200">
+                      <p className="text-xs font-medium text-[#555555] uppercase tracking-wide text-center">
+                        Search on:
+                      </p>
+                      
+                      <div className="grid grid-cols-3 gap-2">
+                        <Button
+                          onClick={() => handleRetailerClick(getAmazonSearchUrl, item.item_name)}
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full bg-white border border-[#FF9900] text-[#111111] hover:bg-[#FF9900]/10 font-medium"
+                        >
+                          Amazon
+                          <ExternalLink className="ml-1.5 h-3 w-3" />
+                        </Button>
+
+                        <Button
+                          onClick={() => handleRetailerClick(getWayfairSearchUrl, item.item_name)}
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
+                        >
+                          Wayfair
+                          <ExternalLink className="ml-1.5 h-3 w-3" />
+                        </Button>
+
+                        <Button
+                          onClick={() => handleRetailerClick(getWalmartSearchUrl, item.item_name)}
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
+                        >
+                          Walmart
+                          <ExternalLink className="ml-1.5 h-3 w-3" />
+                        </Button>
+                      </div>
+
+                      {/* Secondary Buttons */}
+                      <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
+                        <Button
+                          onClick={() => handleRetailerClick(getTemuSearchUrl, item.item_name)}
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full bg-white border border-[#FF7A00] text-[#555555] hover:bg-[#FF7A00]/10"
+                        >
+                          Temu
+                          <ExternalLink className="ml-1.5 h-3 w-3" />
+                        </Button>
+
+                        <Button
+                          onClick={() => handleRetailerClick(getSheinSearchUrl, item.item_name)}
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full bg-white border border-[#000000] text-[#555555] hover:bg-[#000000]/10"
+                        >
+                          Shein
+                          <ExternalLink className="ml-1.5 h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -515,6 +606,90 @@ export default function ProductMatches() {
                       <Search className="mr-2 h-4 w-4" />
                       Search the web (Google)
                     </Button>
+
+                    {/* "See international stores" toggle for Nigeria furniture */}
+                    <Button
+                      onClick={() => setShowInternationalStores(!showInternationalStores)}
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-[#555555] hover:text-[#111111] text-sm mt-2"
+                    >
+                      {showInternationalStores ? (
+                        <>
+                          <ChevronUp className="mr-2 h-4 w-4" />
+                          Hide international stores
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="mr-2 h-4 w-4" />
+                          See international stores
+                        </>
+                      )}
+                    </Button>
+
+                    {/* International Retailer Buttons - Show when expanded */}
+                    {showInternationalStores && item && (
+                      <div className="space-y-3 pt-2 border-t border-gray-200">
+                        <p className="text-xs font-medium text-[#555555] uppercase tracking-wide text-center">
+                          Search on:
+                        </p>
+                        
+                        <div className="grid grid-cols-3 gap-2">
+                          <Button
+                            onClick={() => handleRetailerClick(getAmazonSearchUrl, item.item_name)}
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full bg-white border border-[#FF9900] text-[#111111] hover:bg-[#FF9900]/10 font-medium"
+                          >
+                            Amazon
+                            <ExternalLink className="ml-1.5 h-3 w-3" />
+                          </Button>
+
+                          <Button
+                            onClick={() => handleRetailerClick(getWayfairSearchUrl, item.item_name)}
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full bg-white border border-[#7B2CBF] text-[#111111] hover:bg-[#7B2CBF]/10 font-medium"
+                          >
+                            Wayfair
+                            <ExternalLink className="ml-1.5 h-3 w-3" />
+                          </Button>
+
+                          <Button
+                            onClick={() => handleRetailerClick(getWalmartSearchUrl, item.item_name)}
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full bg-white border border-[#0071CE] text-[#111111] hover:bg-[#0071CE]/10 font-medium"
+                          >
+                            Walmart
+                            <ExternalLink className="ml-1.5 h-3 w-3" />
+                          </Button>
+                        </div>
+
+                        {/* Secondary Buttons */}
+                        <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
+                          <Button
+                            onClick={() => handleRetailerClick(getTemuSearchUrl, item.item_name)}
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full bg-white border border-[#FF7A00] text-[#555555] hover:bg-[#FF7A00]/10"
+                          >
+                            Temu
+                            <ExternalLink className="ml-1.5 h-3 w-3" />
+                          </Button>
+
+                          <Button
+                            onClick={() => handleRetailerClick(getSheinSearchUrl, item.item_name)}
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full bg-white border border-[#000000] text-[#555555] hover:bg-[#000000]/10"
+                          >
+                            Shein
+                            <ExternalLink className="ml-1.5 h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </>
@@ -591,7 +766,29 @@ export default function ProductMatches() {
                   {/* Primary Retailer Buttons - Only show if allowed */}
                   {item && (
                     <div className="space-y-3">
-                      {showWesternRetailers && (
+                      {/* "See international stores" toggle for Nigeria non-furniture */}
+                      {isNigeria && !shouldShowWesternRetailers(isNigeria, item) && (
+                        <Button
+                          onClick={() => setShowInternationalStores(!showInternationalStores)}
+                          variant="ghost"
+                          size="sm"
+                          className="w-full text-[#555555] hover:text-[#111111] text-sm"
+                        >
+                          {showInternationalStores ? (
+                            <>
+                              <ChevronUp className="mr-2 h-4 w-4" />
+                              Hide international stores
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown className="mr-2 h-4 w-4" />
+                              See international stores
+                            </>
+                          )}
+                        </Button>
+                      )}
+
+                      {shouldShowRetailersNow && (
                         <>
                           <p className="text-xs font-medium text-[#555555] uppercase tracking-wide">
                             Search on:
@@ -746,7 +943,29 @@ export default function ProductMatches() {
                         Need more options? Find similar items below
                       </p>
                       
-                      {showWesternRetailers && (
+                      {/* "See international stores" toggle for Nigeria non-furniture */}
+                      {isNigeria && !shouldShowWesternRetailers(isNigeria, item) && (
+                        <Button
+                          onClick={() => setShowInternationalStores(!showInternationalStores)}
+                          variant="ghost"
+                          size="sm"
+                          className="w-full text-[#555555] hover:text-[#111111] text-sm"
+                        >
+                          {showInternationalStores ? (
+                            <>
+                              <ChevronUp className="mr-2 h-4 w-4" />
+                              Hide international stores
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown className="mr-2 h-4 w-4" />
+                              See international stores
+                            </>
+                          )}
+                        </Button>
+                      )}
+                      
+                      {shouldShowRetailersNow && (
                         <>
                           <p className="text-xs font-medium text-[#555555] uppercase tracking-wide">
                             Search on:
