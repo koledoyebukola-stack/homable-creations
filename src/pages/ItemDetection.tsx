@@ -1323,8 +1323,8 @@ export default function ItemDetection() {
                                 <h3 className="text-sm font-bold text-[#111111] mb-2 uppercase tracking-wide">
                                   FIND ON INSTAGRAM
                                 </h3>
-                                <p className="text-xs text-[#666666] mb-4">
-                                  Search for this item on Instagram
+                                <p className="md:hidden text-xs text-[#666666] mb-4">
+                                  Copy the item name and paste it in Instagram search.
                                 </p>
                               </div>
 
