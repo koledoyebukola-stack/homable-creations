@@ -176,6 +176,9 @@ export default function Analyzing() {
           <p className="text-lg text-gray-600">
             {progressMessage}
           </p>
+          <p className="text-sm text-gray-500">
+            This usually takes about 20–25 seconds.
+          </p>
           {elapsedTime >= 10 && (
             <p className="text-sm text-gray-500 mt-2">
               This is taking a bit longer than usual, but we're still working on it...

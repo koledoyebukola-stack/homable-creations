@@ -231,10 +231,15 @@ export default function ChecklistDetail() {
   };
 
   const handleCopyGiftingUrl = async () => {
-    if (!giftingUrl) return;
+    // Use URL from checklist when gifting is already enabled (e.g. page load); otherwise use state from modal
+    const urlToCopy =
+      checklist?.gifting_enabled && checklist?.gifting_token
+        ? `${window.location.origin}/checklists/gift/${checklist.gifting_token}`
+        : giftingUrl;
+    if (!urlToCopy) return;
 
     try {
-      await navigator.clipboard.writeText(giftingUrl);
+      await navigator.clipboard.writeText(urlToCopy);
       setGiftingUrlCopied(true);
       toast.success('Gifting link copied to clipboard!');
       setTimeout(() => setGiftingUrlCopied(false), 2000);
