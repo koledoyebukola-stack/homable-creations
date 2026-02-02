@@ -236,6 +236,8 @@ export default function ItemDetection() {
   
   // Refs for scrolling to item sections
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  // Ref for current board ID so post-auth attachment can run reliably in onAuthStateChange
+  const boardIdRef = useRef<string | null>(null);
 
   const scrollToItem = (itemId: string) => {
     const element = itemRefs.current[itemId];
@@ -243,6 +245,12 @@ export default function ItemDetection() {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
+
+  // Keep ref in sync with current board ID (from route or loaded board)
+  useEffect(() => {
+    const id = boardId ?? board?.id;
+    if (id) boardIdRef.current = id;
+  }, [boardId, board?.id]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -257,6 +265,11 @@ export default function ItemDetection() {
       setIsAuthenticated(authenticated);
       if (authenticated) {
         setShowAuthModal(false);
+        // Post-auth backfill: attach current board to user if it was created pre-auth (Option D)
+        const currentBoardId = boardIdRef.current;
+        if (currentBoardId) {
+          attachBoardToUser(currentBoardId);
+        }
       }
     });
 
@@ -457,11 +470,6 @@ export default function ItemDetection() {
   const handleAuthSuccess = async () => {
     setShowAuthModal(false);
     setIsAuthenticated(true);
-    
-    // Attach current board to user if it was created pre-auth (post-auth backfill)
-    if (boardId) {
-      await attachBoardToUser(boardId);
-    }
     
     // Track inspiration auth completed
     trackAction(EVENTS.INSPIRATION_AUTH_COMPLETED);
