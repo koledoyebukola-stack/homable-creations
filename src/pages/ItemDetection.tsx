@@ -13,7 +13,7 @@ import CarpenterSpecModal from '@/components/CarpenterSpecModal';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getDetectedItems, getBoardById, getBoards, searchProducts, getProductsForItem, getRandomSeedProducts, logAnalysis, createChecklist, getChecklistByBoardId, seeMoreItems, generateCarpenterSpec } from '@/lib/api';
+import { getDetectedItems, getBoardById, getBoards, searchProducts, getProductsForItem, getRandomSeedProducts, logAnalysis, createChecklist, getChecklistByBoardId, seeMoreItems, generateCarpenterSpec, attachBoardToUser } from '@/lib/api';
 import { DetectedItem, Product, Board, Checklist, CarpenterSpec } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -457,6 +457,11 @@ export default function ItemDetection() {
   const handleAuthSuccess = async () => {
     setShowAuthModal(false);
     setIsAuthenticated(true);
+    
+    // Attach current board to user if it was created pre-auth (post-auth backfill)
+    if (boardId) {
+      await attachBoardToUser(boardId);
+    }
     
     // Track inspiration auth completed
     trackAction(EVENTS.INSPIRATION_AUTH_COMPLETED);

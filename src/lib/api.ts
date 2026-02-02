@@ -305,6 +305,25 @@ export async function deleteBoard(boardId: string): Promise<void> {
   }
 }
 
+/**
+ * Attach the current board to the authenticated user (post-auth backfill).
+ * Only updates if board exists and user_id is null. Idempotent: no-op if board already has a user.
+ */
+export async function attachBoardToUser(boardId: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { error } = await supabase
+    .from('boards')
+    .update({ user_id: user.id })
+    .eq('id', boardId)
+    .is('user_id', null);
+
+  if (error) {
+    console.warn('[attachBoardToUser] Failed to attach board:', boardId, error);
+  }
+}
+
 export async function getDetectedItems(boardId: string): Promise<DetectedItem[]> {
   const { data, error } = await supabase
     .from('detected_items')
