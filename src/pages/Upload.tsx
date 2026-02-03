@@ -293,9 +293,11 @@ export default function Upload() {
       
       // Create board with appropriate name and selected country (or test_country if present)
       const boardName = isSampleImage ? sampleImageAlt : 'Untitled inspiration';
+      const referrerCode = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('homable_ref') : null;
       console.log('Creating board...');
-      const board = await createBoard(boardName, imageUrl, testCountry || selectedCountry);
+      const board = await createBoard(boardName, imageUrl, testCountry || selectedCountry, referrerCode ?? undefined);
       console.log('Board created successfully:', board.id);
+      if (referrerCode) sessionStorage.removeItem('homable_ref');
       
       // Clean up preview URL
       if (previewUrl) {
@@ -429,9 +431,11 @@ export default function Upload() {
       console.log('[Upload] Using selected country:', selectedCountry);
       
       // Create board with style name and selected country (or test_country if present)
+      const referrerCode = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('homable_ref') : null;
       console.log('Creating board...');
-      const board = await createBoard(selectedStyleName, selectedStyleImage, testCountry || selectedCountry);
+      const board = await createBoard(selectedStyleName, selectedStyleImage, testCountry || selectedCountry, referrerCode ?? undefined);
       console.log('Board created successfully:', board.id);
+      if (referrerCode) sessionStorage.removeItem('homable_ref');
       
       // Navigate to analyzing page
       console.log('Navigating to analyzing page...');

@@ -7,6 +7,7 @@ export interface Board {
   status: string;
   detected_items_count: number;
   country?: string; // ISO 3166-1 alpha-2 country code (e.g., 'NG' for Nigeria)
+  referrer_code?: string | null; // Agent/referrer code from URL at first touch (e.g. agent_ade)
   room_materials?: {
     walls?: string;
     floors?: string;

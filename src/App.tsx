@@ -1,7 +1,7 @@
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
@@ -60,12 +60,20 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <BrowserRouter>
-        <Routes>
+const REF_STORAGE_KEY = 'homable_ref';
+
+function CaptureReferrerAndRoutes() {
+  const location = useLocation();
+  useEffect(() => {
+    const ref = new URLSearchParams(location.search).get('ref');
+    if (ref) {
+      const normalized = ref.trim().toLowerCase();
+      if (normalized) sessionStorage.setItem(REF_STORAGE_KEY, normalized);
+    }
+  }, [location.search]);
+
+  return (
+    <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/reset-password" element={<ResetPassword />} />
@@ -147,7 +155,16 @@ const App = () => (
             element={<ChecklistGiftingView />}
           />
           <Route path="*" element={<NotFound />} />
-        </Routes>
+    </Routes>
+  );
+}
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <BrowserRouter>
+        <CaptureReferrerAndRoutes />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
