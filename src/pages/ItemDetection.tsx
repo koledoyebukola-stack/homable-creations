@@ -6,6 +6,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import Auth from '@/components/AuthModal';
 import ShareModal from '@/components/ShareModal';
 import VisualSearchModal from '@/components/VisualSearchModal';
+import ComingSoonBanner from '@/components/ComingSoonBanner';
 import CountryChangeConfirmationModal from '@/components/CountryChangeConfirmationModal';
 import { getSelectedCountry } from '@/components/LocationSelector';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,7 @@ import { getDetectedItems, getBoardById, getBoards, searchProducts, getProductsF
 import { DetectedItem, Product, Board, Checklist, CarpenterSpec } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { ExternalLink, Star, Share2, Upload, Search, ListChecks, Eye, Camera, Hammer, Ruler, Package, Copy, Instagram, ChevronDown, ChevronUp } from 'lucide-react';
+import { ExternalLink, Star, Share2, Upload, Search, ListChecks, Eye, Camera, Hammer, Ruler, Package, Copy, Instagram, ChevronDown, ChevronUp, Store } from 'lucide-react';
 import { 
   getAmazonSearchUrl, 
   getWalmartSearchUrl, 
@@ -29,6 +30,7 @@ import {
 } from '@/lib/retailer-utils';
 
 import { trackPageView, trackAction, EVENTS } from '@/lib/analytics';
+import { slugify } from '@/lib/slugify';
 
 // Resilient clipboard copy function
 const copyToClipboard = async (text: string): Promise<boolean> => {
@@ -1448,15 +1450,32 @@ export default function ItemDetection() {
                                 <h3 className="text-sm font-bold text-[#111111]">
                                   More search options
                                 </h3>
-                                <Button
-                                  onClick={() => setVisualSearchModal({ isOpen: true, item })}
-                                  variant="outline"
-                                  size="sm"
-                                  className="w-full rounded-full bg-white border border-[#C89F7A] text-[#111111] hover:bg-[#C89F7A]/10 font-medium"
-                                >
-                                  <Camera className="mr-2 h-4 w-4" />
-                                  Find exact match (photo)
-                                </Button>
+                                {isNigeria ? (
+                                  <div className="space-y-1.5">
+                                    <Button
+                                      onClick={() => navigate(`/shops/${slugify(item.item_name)}`)}
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-full rounded-full bg-white border border-[#C89F7A] text-[#111111] hover:bg-[#C89F7A]/10 font-medium"
+                                    >
+                                      <Store className="mr-2 h-4 w-4" />
+                                      See Local Stores
+                                    </Button>
+                                    <div className="flex justify-center">
+                                      <ComingSoonBanner className="text-xs px-2 py-0.5" />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    onClick={() => setVisualSearchModal({ isOpen: true, item })}
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full rounded-full bg-white border border-[#C89F7A] text-[#111111] hover:bg-[#C89F7A]/10 font-medium"
+                                  >
+                                    <Camera className="mr-2 h-4 w-4" />
+                                    Find exact match (photo)
+                                  </Button>
+                                )}
                               </div>
 
                               {/* "See international stores" toggle for Nigeria users - moved below "Find exact match" */}
@@ -1674,15 +1693,32 @@ export default function ItemDetection() {
                                 <p className="text-xs font-medium text-[#777777] uppercase tracking-wide text-center mb-3">
                                   More search options
                                 </p>
-                                <Button
-                                  onClick={() => setVisualSearchModal({ isOpen: true, item })}
-                                  variant="outline"
-                                  size="sm"
-                                  className="w-full rounded-full bg-white border border-[#C89F7A] text-[#111111] hover:bg-[#C89F7A]/10 font-medium"
-                                >
-                                  <Camera className="mr-2 h-4 w-4" />
-                                  Find exact match (photo)
-                                </Button>
+                                {isNigeria ? (
+                                  <div className="space-y-1.5">
+                                    <Button
+                                      onClick={() => navigate(`/shops/${slugify(item.item_name)}`)}
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-full rounded-full bg-white border border-[#C89F7A] text-[#111111] hover:bg-[#C89F7A]/10 font-medium"
+                                    >
+                                      <Store className="mr-2 h-4 w-4" />
+                                      See Local Stores
+                                    </Button>
+                                    <div className="flex justify-center">
+                                      <ComingSoonBanner className="text-xs px-2 py-0.5" />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    onClick={() => setVisualSearchModal({ isOpen: true, item })}
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full rounded-full bg-white border border-[#C89F7A] text-[#111111] hover:bg-[#C89F7A]/10 font-medium"
+                                  >
+                                    <Camera className="mr-2 h-4 w-4" />
+                                    Find exact match (photo)
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           </>

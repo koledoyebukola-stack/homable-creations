@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
-import { Upload, History, LogOut, LogIn, UserPlus, ShoppingCart } from 'lucide-react';
+import { Upload, History, LogOut, LogIn, UserPlus, ShoppingCart, Store } from 'lucide-react';
 import LocationSelector from './LocationSelector';
 
 export default function Header() {
@@ -42,13 +42,21 @@ export default function Header() {
         {/* Desktop Layout */}
         <div className="hidden md:block">
           <div className="flex items-center justify-between max-w-7xl mx-auto">
-            {/* Left: Logo */}
-            <button
-              onClick={() => navigate('/')}
-              className="text-2xl lg:text-3xl font-bold text-white hover:text-white/80 transition-colors whitespace-nowrap"
-            >
-              Homable Creations
-            </button>
+            {/* Left: Logo + Shops */}
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate('/')}
+                className="text-2xl lg:text-3xl font-bold text-white hover:text-white/80 transition-colors whitespace-nowrap"
+              >
+                Homable Creations
+              </button>
+              <button
+                onClick={() => navigate('/shops')}
+                className="text-white/90 hover:text-white text-sm font-medium transition-colors"
+              >
+                Shops
+              </button>
+            </div>
 
             {/* Right: Location Selector + Auth Buttons */}
             <nav className="flex items-center gap-3">
@@ -138,6 +146,10 @@ export default function Header() {
                     <Upload className="mr-2 h-4 w-4" />
                     Upload Inspiration
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/shops')}>
+                    <Store className="mr-2 h-4 w-4" />
+                    Local Shops
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate('/checklists')}>
                     <ShoppingCart className="mr-2 h-4 w-4" />
                     <span className="flex items-center gap-2">
@@ -178,6 +190,10 @@ export default function Header() {
                   <DropdownMenuItem onClick={() => navigate('/upload')}>
                     <Upload className="mr-2 h-4 w-4" />
                     Upload Inspiration
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/shops')}>
+                    <Store className="mr-2 h-4 w-4" />
+                    Local Shops
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate('/auth?mode=signin')}>
                     <LogIn className="mr-2 h-4 w-4" />

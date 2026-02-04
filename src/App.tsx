@@ -25,6 +25,9 @@ import TemplateResults from './pages/TemplateResults';
 import DesignSpaceAnalyze from './pages/DesignSpaceAnalyze';
 import DesignSpaceOptions from './pages/DesignSpaceOptions';
 import DesignSpaceItems from './pages/DesignSpaceItems';
+import ShopsHome from './pages/ShopsHome';
+import ShopsSearch from './pages/ShopsSearch';
+import ShopsProductDetail from './pages/ShopsProductDetail';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -90,6 +93,10 @@ function CaptureReferrerAndRoutes() {
           <Route path="/specs/:categoryId" element={<SpecsForm />} />
           <Route path="/specs-results" element={<SpecsResults />} />
           <Route path="/template-results/:templateId" element={<TemplateResults />} />
+          {/* Homable Shops - public placeholders */}
+          <Route path="/shops" element={<ShopsHome />} />
+          <Route path="/shops/products/:slug" element={<ShopsProductDetail />} />
+          <Route path="/shops/:query" element={<ShopsSearch />} />
           {/* Other results pages require authentication */}
           <Route
             path="/products/:boardId/:itemId"
