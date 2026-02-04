@@ -18,62 +18,62 @@ const VENDOR = {
 const PRODUCTS = [
   {
     id: 1,
-    name: 'Modern Wooden Dining Chair',
-    image: '/assets/oval-dining-table.jpg',
+    name: 'Upholstered Accent Chair',
+    image: '/images/photo1767207963.jpg',
     isCustom: true,
   },
   {
     id: 2,
-    name: 'Minimalist Coffee Table',
-    image: '/assets/carousel-coffee-table-6.jpg',
+    name: 'Modern Lounge Chair',
+    image: '/images/photo1767207550.jpg',
     isCustom: true,
   },
   {
     id: 3,
-    name: 'Upholstered Accent Chair',
-    image: '/assets/boucle-sofa.jpg',
+    name: 'Curved Accent Chair',
+    image: '/images/photo1767208350.jpg',
     isCustom: true,
   },
   {
     id: 4,
-    name: 'Solid Wood TV Console',
-    image: '/assets/compact-desk.jpg',
+    name: 'Wood Frame Accent Chair',
+    image: '/images/photo1767208351.jpg',
     isCustom: true,
   },
   {
     id: 5,
-    name: 'Platform Bed Frame',
-    image: '/assets/canopy-bed.jpg',
+    name: 'Solid Wood Dining Chair',
+    image: '/images/photo1767212743.jpg',
     isCustom: true,
   },
   {
     id: 6,
-    name: 'Wooden Bookshelf Unit',
-    image: '/assets/wood-minimalist-desk.jpg',
+    name: 'Minimalist Dining Chair',
+    image: '/images/photo1767213004.jpg',
     isCustom: true,
   },
   {
     id: 7,
-    name: 'Dining Table Set',
-    image: '/assets/carousel-dining-room-5.jpg',
+    name: 'Modern Dining Table Set',
+    image: '/images/WalnutDiningTable.jpg',
     isCustom: true,
   },
   {
     id: 8,
-    name: 'Sectional Sofa',
-    image: '/assets/modular-sectional.jpg',
+    name: 'Low Profile Sofa',
+    image: '/images/ModularSectionalSofa.jpg',
     isCustom: true,
   },
   {
     id: 9,
-    name: 'Storage Cabinet',
-    image: '/assets/standing-desk.jpg',
+    name: 'Open Shelf Storage Cabinet',
+    image: '/images/WoodenDesk.jpg',
     isCustom: true,
   },
   {
     id: 10,
-    name: 'Side Table',
-    image: '/assets/pedestal-table.jpg',
+    name: 'Minimalist Side Table',
+    image: '/images/TealightHolder.jpg',
     isCustom: true,
   },
 ] as const;
@@ -93,38 +93,30 @@ export default function DemoStorefront() {
       <main className="flex-1">
         {/* 1. Storefront Hero Banner */}
         <section className="relative w-full min-h-[260px] md:min-h-[340px] lg:min-h-[380px] overflow-hidden bg-[#f5f3f0]">
-          {/* Faded collage background */}
+          {/* Neutral interior background provided by Homable */}
           <div className="absolute inset-0">
-            <div className="grid grid-cols-2 h-full opacity-40">
-              <img
-                src="/assets/sample-afro-modern-living-1.jpg"
-                alt=""
-                className="w-full h-full object-cover"
-                loading="eager"
-              />
-              <img
-                src="/assets/sample-afro-modern-dining-3.jpg"
-                alt=""
-                className="w-full h-full object-cover"
-                loading="eager"
-              />
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/80 to-transparent" />
+            <img
+              src="/images/ModernLivingRoom.jpg"
+              alt=""
+              className="w-full h-full object-cover scale-105"
+              loading="eager"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/45 to-black/10" />
           </div>
           {/* Banner content */}
           <div className="relative h-full">
-            <div className="container mx-auto h-full max-w-6xl px-4 md:px-6 lg:px-8 flex items-end pb-6 md:pb-10">
-              <div className="max-w-xl">
-                <p className="inline-flex items-center text-xs font-semibold uppercase tracking-[0.18em] text-[#aa7b3c] mb-3">
+            <div className="container mx-auto h-full max-w-6xl px-4 md:px-6 lg:px-8 flex items-center md:items-end pb-6 md:pb-10">
+              <div className="max-w-xl text-white">
+                <p className="inline-flex items-center text-xs font-semibold uppercase tracking-[0.18em] text-white/80 mb-3">
                   Homable storefront demo
                 </p>
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-[#111]">
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight">
                   {VENDOR.name}
                 </h1>
-                <p className="mt-2 text-sm md:text-base text-[#555]">
+                <p className="mt-2 text-sm md:text-base text-white/90">
                   {VENDOR.descriptor} · {VENDOR.location}
                 </p>
-                <p className="mt-3 text-xs md:text-sm text-[#777] max-w-md">
+                <p className="mt-3 text-xs md:text-sm text-white/80 max-w-md">
                   A dedicated Homable storefront for showcasing made-to-order pieces, with all
                   enquiries handled directly over WhatsApp.
                 </p>
@@ -133,11 +125,20 @@ export default function DemoStorefront() {
           </div>
         </section>
 
-        {/* 2. Vendor Summary Section + Primary CTA */}
+        {/* 2. Vendor Profile + Primary CTA */}
         <section className="border-b border-gray-200 bg-white">
           <div className="container mx-auto px-4 py-6 md:py-8 max-w-6xl">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div className="flex-1">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+              <div className="flex items-start gap-4 md:gap-5 flex-1">
+                <div className="h-16 w-16 md:h-20 md:w-20 rounded-full bg-[#f1e5d6] border border-[#e0d2bf] flex items-center justify-center overflow-hidden">
+                  <img
+                    src="/images/Vendor.jpg"
+                    alt="Ayo Custom Furniture logo"
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+                <div>
                 <h2 className="text-xl md:text-2xl font-semibold text-[#111] mb-2">
                   {VENDOR.name}
                 </h2>
@@ -152,7 +153,8 @@ export default function DemoStorefront() {
                   <span>@ayo_custom_furniture</span>
                 </a>
               </div>
-              <div ref={whatsappRef} className="flex flex-col gap-3 md:items-end">
+              </div>
+              <div ref={whatsappRef} className="flex flex-col gap-3 md:items-end w-full md:w-auto">
                 <Button
                   onClick={() => window.open(VENDOR.whatsapp, '_blank')}
                   className="bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-full px-6 py-6 text-base font-semibold w-full md:w-auto shadow-md"
@@ -209,7 +211,7 @@ export default function DemoStorefront() {
 
               {/* Items + sort row */}
               <div className="flex-1">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5 md:mb-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4 md:mb-5">
                   <div>
                     <div className="flex items-baseline gap-2">
                       <h2 className="text-xl md:text-2xl font-semibold text-[#111]">
@@ -232,6 +234,26 @@ export default function DemoStorefront() {
                       <span className="text-[#777]">Sort by:</span>
                       <span className="font-medium text-[#111]">Relevance</span>
                     </div>
+                  </div>
+                </div>
+
+                {/* Visual filters row (non-functional) */}
+                <div className="flex flex-wrap items-center gap-2.5 mb-5 md:mb-6">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 border border-gray-200 text-xs md:text-sm text-[#555] cursor-default select-none">
+                    <span className="font-medium text-[#111]">Category</span>
+                    <span className="text-[#777]">Chairs, Tables, Beds…</span>
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 border border-gray-200 text-xs md:text-sm text-[#555] cursor-default select-none">
+                    <span className="font-medium text-[#111]">Room</span>
+                    <span className="text-[#777]">Living, Dining, Bedroom</span>
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 border border-gray-200 text-xs md:text-sm text-[#555] cursor-default select-none">
+                    <span className="font-medium text-[#111]">Material</span>
+                    <span className="text-[#777]">Wood, Upholstered, Mixed</span>
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-full bg-[#111] px-3 py-1.5 text-xs md:text-sm text-white cursor-default select-none">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#25D366]" />
+                    <span className="font-medium">Custom order · On</span>
                   </div>
                 </div>
 
