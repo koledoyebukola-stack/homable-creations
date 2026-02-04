@@ -14,7 +14,7 @@ const VENDOR = {
   whatsapp: 'https://wa.me/2341234567890', // Placeholder number
 } as const;
 
-// Hardcoded product items (8-12 items, Wayfair-style names)
+// Hardcoded product items (Wayfair-style names), focused on modern accent seating
 const PRODUCTS = [
   {
     id: 1,
@@ -30,13 +30,13 @@ const PRODUCTS = [
   },
   {
     id: 3,
-    name: 'Curved Accent Chair',
+    name: 'Curved Walnut Accent Chair',
     image: '/images/photo1767208350.jpg',
     isCustom: true,
   },
   {
     id: 4,
-    name: 'Wood Frame Accent Chair',
+    name: 'Wood Frame Club Chair',
     image: '/images/photo1767208351.jpg',
     isCustom: true,
   },
@@ -54,26 +54,14 @@ const PRODUCTS = [
   },
   {
     id: 7,
-    name: 'Modern Dining Table Set',
-    image: '/images/WalnutDiningTable.jpg',
+    name: 'Rounded Bouclé Accent Chair',
+    image: '/images/photo1764821192.jpg',
     isCustom: true,
   },
   {
     id: 8,
-    name: 'Low Profile Sofa',
-    image: '/images/ModularSectionalSofa.jpg',
-    isCustom: true,
-  },
-  {
-    id: 9,
-    name: 'Open Shelf Storage Cabinet',
-    image: '/images/WoodenDesk.jpg',
-    isCustom: true,
-  },
-  {
-    id: 10,
-    name: 'Minimalist Side Table',
-    image: '/images/TealightHolder.jpg',
+    name: 'Low Lounge Chair with Bolster',
+    image: '/images/photo1764821193.jpg',
     isCustom: true,
   },
 ] as const;
@@ -91,140 +79,87 @@ export default function DemoStorefront() {
       <Header />
 
       <main className="flex-1">
-        {/* 1. Storefront Hero Banner */}
-        <section className="relative w-full min-h-[260px] md:min-h-[340px] lg:min-h-[380px] overflow-hidden bg-[#f5f3f0]">
-          {/* Neutral interior background provided by Homable */}
-          <div className="absolute inset-0">
-            <img
-              src="/images/ModernLivingRoom.jpg"
-              alt=""
-              className="w-full h-full object-cover scale-105"
-              loading="eager"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/45 to-black/10" />
-          </div>
-          {/* Banner content */}
-          <div className="relative h-full">
-            <div className="container mx-auto h-full max-w-6xl px-4 md:px-6 lg:px-8 flex items-center md:items-end pb-6 md:pb-10">
-              <div className="max-w-xl text-white">
-                <p className="inline-flex items-center text-xs font-semibold uppercase tracking-[0.18em] text-white/80 mb-3">
-                  Homable storefront demo
-                </p>
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight">
-                  {VENDOR.name}
-                </h1>
-                <p className="mt-2 text-sm md:text-base text-white/90">
-                  {VENDOR.descriptor} · {VENDOR.location}
-                </p>
-                <p className="mt-3 text-xs md:text-sm text-white/80 max-w-md">
-                  A dedicated Homable storefront for showcasing made-to-order pieces, with all
-                  enquiries handled directly over WhatsApp.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 2. Vendor Profile + Primary CTA */}
+        {/* 1. Storefront Hero Banner – Behance-style typography */}
         <section className="border-b border-gray-200 bg-white">
-          <div className="container mx-auto px-4 py-6 md:py-8 max-w-6xl">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-              <div className="flex items-start gap-4 md:gap-5 flex-1">
-                <div className="h-16 w-16 md:h-20 md:w-20 rounded-full bg-[#f1e5d6] border border-[#e0d2bf] flex items-center justify-center overflow-hidden">
-                  <img
-                    src="/images/Vendor.jpg"
-                    alt="Ayo Custom Furniture logo"
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                  />
-                </div>
-                <div>
-                <h2 className="text-xl md:text-2xl font-semibold text-[#111] mb-2">
-                  {VENDOR.name}
-                </h2>
-                <p className="text-[#555] mb-3">{VENDOR.location}</p>
-                <a
-                  href={VENDOR.instagram}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-[#555] hover:text-[#111] transition-colors text-sm"
-                >
-                  <Instagram className="h-4 w-4" />
-                  <span>@ayo_custom_furniture</span>
-                </a>
-              </div>
-              </div>
-              <div ref={whatsappRef} className="flex flex-col gap-3 md:items-end w-full md:w-auto">
-                <Button
-                  onClick={() => window.open(VENDOR.whatsapp, '_blank')}
-                  className="bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-full px-6 py-6 text-base font-semibold w-full md:w-auto shadow-md"
-                >
-                  <MessageCircle className="mr-2 h-5 w-5" />
-                  Discuss price, size & finish on WhatsApp
-                </Button>
-                <p className="text-xs text-[#777] text-center md:text-right max-w-xs">
-                  Custom-made furniture. Finishes, dimensions, and pricing are agreed directly with the carpenter over WhatsApp.
-                </p>
-              </div>
-            </div>
+          <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8 py-6 md:py-8 lg:py-10">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#999]">
+              Homable storefront demo
+            </p>
+            <h1 className="mt-2 text-4xl md:text-6xl lg:text-7xl font-black tracking-tight leading-none uppercase">
+              {VENDOR.name}
+            </h1>
+            <p className="mt-3 text-sm md:text-base text-[#555]">
+              {VENDOR.location} · {VENDOR.descriptor}
+            </p>
           </div>
         </section>
 
-        {/* 3. Store layout: sidebar + items grid (visual only) */}
-        <section className="py-8 md:py-12 bg-[#fafafa]">
-          <div className="container mx-auto px-4 max-w-6xl">
-            <div className="flex flex-col md:flex-row gap-8 md:gap-10">
-              {/* Static sidebar categories */}
-              <aside className="md:w-56 lg:w-64 shrink-0 bg-white border border-gray-200 rounded-lg p-4 h-max">
-                <h3 className="text-sm font-semibold text-[#111] mb-3 tracking-wide uppercase">
-                  Categories
-                </h3>
-                <div className="space-y-1.5 text-sm">
-                  <div className="flex items-center justify-between text-[#111] font-medium cursor-default select-none">
-                    <span>All items</span>
-                    <span className="text-xs text-[#777]">{PRODUCTS.length}</span>
+        {/* 2. Profile / identity + exploratory grid, Behance-style */}
+        <section className="bg-[#fafafa] py-8 md:py-10">
+          <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8">
+            <div className="flex flex-col md:flex-row gap-8 lg:gap-10">
+              {/* Left column: identity & CTA */}
+              <aside className="w-full md:w-64 lg:w-72 space-y-6">
+                <div className="flex items-center gap-4">
+                  <div className="h-16 w-16 md:h-20 md:w-20 rounded-full bg-[#f1e5d6] border border-[#e0d2bf] flex items-center justify-center overflow-hidden">
+                    <img
+                      src="/images/Vendor.jpg"
+                      alt="Ayo Custom Furniture logo"
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
                   </div>
-                  <div className="flex items-center justify-between text-[#555] cursor-default select-none">
-                    <span>Chairs</span>
-                    <span className="text-xs text-[#999]">3</span>
-                  </div>
-                  <div className="flex items-center justify-between text-[#555] cursor-default select-none">
-                    <span>Tables</span>
-                    <span className="text-xs text-[#999]">3</span>
-                  </div>
-                  <div className="flex items-center justify-between text-[#555] cursor-default select-none">
-                    <span>Beds</span>
-                    <span className="text-xs text-[#999]">2</span>
-                  </div>
-                  <div className="flex items-center justify-between text-[#555] cursor-default select-none">
-                    <span>Storage</span>
-                    <span className="text-xs text-[#999]">2</span>
+                  <div>
+                    <h2 className="text-lg md:text-xl font-semibold text-[#111]">
+                      {VENDOR.name}
+                    </h2>
+                    <p className="text-sm text-[#555]">{VENDOR.location}</p>
+                    <a
+                      href={VENDOR.instagram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 inline-flex items-center gap-2 text-xs text-[#555] hover:text-[#111] transition-colors"
+                    >
+                      <Instagram className="h-4 w-4" />
+                      <span>@ayo_custom_furniture</span>
+                    </a>
                   </div>
                 </div>
-                <div className="mt-4 pt-3 border-t border-dashed border-gray-200">
+
+                <div className="rounded-2xl bg-white border border-gray-200 p-4 space-y-3">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-[#111] text-white text-xs px-3 py-1 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#25D366]" />
+                    Custom orders available
+                  </div>
+                  <p className="text-xs text-[#555]">
+                    Made-to-order furniture for homes and apartments. Share a reference photo or room
+                    measurements to start your project.
+                  </p>
+                </div>
+
+                <div ref={whatsappRef} className="space-y-3">
+                  <Button
+                    onClick={() => window.open(VENDOR.whatsapp, '_blank')}
+                    className="w-full bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-full px-6 py-6 text-sm md:text-base font-semibold shadow-md"
+                  >
+                    <MessageCircle className="mr-2 h-5 w-5" />
+                    Discuss price, size & finish on WhatsApp
+                  </Button>
                   <p className="text-xs text-[#777]">
-                    Custom orders available for most pieces. Share a reference photo or room
-                    measurements over WhatsApp.
+                    Custom-made furniture. Finishes, dimensions, and pricing are agreed directly with
+                    the carpenter over WhatsApp.
                   </p>
                 </div>
               </aside>
 
-              {/* Items + sort row */}
+              {/* Right column: filters + visual grid */}
               <div className="flex-1">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4 md:mb-5">
                   <div>
-                    <div className="flex items-baseline gap-2">
-                      <h2 className="text-xl md:text-2xl font-semibold text-[#111]">
-                        All items
-                      </h2>
-                      <span className="text-sm text-[#777]">
-                        {PRODUCTS.length} items
-                      </span>
-                    </div>
-                    <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs text-[#555] border border-gray-200">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#25D366]" />
-                      <span className="font-medium">Custom orders available</span>
-                    </div>
+                    <h2 className="text-xl md:text-2xl font-semibold text-[#111]">Products</h2>
+                    <p className="text-xs text-[#777] mt-1">
+                      {PRODUCTS.length} custom pieces · Explore shapes and forms
+                    </p>
                   </div>
                   <div className="flex items-center justify-between md:justify-end gap-3">
                     <span className="text-xs text-[#777] hidden md:inline">
@@ -241,15 +176,15 @@ export default function DemoStorefront() {
                 <div className="flex flex-wrap items-center gap-2.5 mb-5 md:mb-6">
                   <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 border border-gray-200 text-xs md:text-sm text-[#555] cursor-default select-none">
                     <span className="font-medium text-[#111]">Category</span>
-                    <span className="text-[#777]">Chairs, Tables, Beds…</span>
+                    <span className="text-[#777]">Accent chairs, dining chairs</span>
                   </div>
                   <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 border border-gray-200 text-xs md:text-sm text-[#555] cursor-default select-none">
                     <span className="font-medium text-[#111]">Room</span>
-                    <span className="text-[#777]">Living, Dining, Bedroom</span>
+                    <span className="text-[#777]">Living, bedroom, studio</span>
                   </div>
                   <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 border border-gray-200 text-xs md:text-sm text-[#555] cursor-default select-none">
                     <span className="font-medium text-[#111]">Material</span>
-                    <span className="text-[#777]">Wood, Upholstered, Mixed</span>
+                    <span className="text-[#777]">Wood, bouclé, mixed</span>
                   </div>
                   <div className="inline-flex items-center gap-2 rounded-full bg-[#111] px-3 py-1.5 text-xs md:text-sm text-white cursor-default select-none">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#25D366]" />
@@ -257,15 +192,15 @@ export default function DemoStorefront() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
                   {PRODUCTS.map((product) => (
                     <button
                       key={product.id}
                       onClick={handleItemClick}
-                      className="group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow text-left cursor-pointer"
+                      className="group bg-white rounded-2xl overflow-hidden border border-gray-200 text-left cursor-pointer"
                       aria-label={`View ${product.name}`}
                     >
-                      <div className="aspect-square w-full bg-gray-100 relative overflow-hidden">
+                      <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden">
                         <img
                           src={product.image}
                           alt={product.name}
@@ -274,14 +209,14 @@ export default function DemoStorefront() {
                         />
                         {product.isCustom && (
                           <div className="absolute top-2 right-2">
-                            <Badge className="bg-white/95 text-[#111] text-xs font-medium border-0 shadow-sm">
+                            <Badge className="bg-white/95 text-[#111] text-[10px] font-medium border-0 shadow-sm px-2 py-1 rounded-full">
                               Custom order
                             </Badge>
                           </div>
                         )}
                       </div>
-                      <div className="p-3 md:p-4">
-                        <h3 className="text-sm md:text-base font-medium text-[#111] line-clamp-2 group-hover:text-[#555] transition-colors">
+                      <div className="p-3 md:p-3.5">
+                        <h3 className="text-xs md:text-sm font-medium text-[#111] line-clamp-2 group-hover:text-[#555] transition-colors">
                           {product.name}
                         </h3>
                       </div>
