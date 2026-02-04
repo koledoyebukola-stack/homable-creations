@@ -42,27 +42,25 @@ export default function Header() {
         {/* Desktop Layout */}
         <div className="hidden md:block">
           <div className="flex items-center justify-between max-w-7xl mx-auto">
-            {/* Left: Logo + Shops */}
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate('/')}
-                className="text-2xl lg:text-3xl font-bold text-white hover:text-white/80 transition-colors whitespace-nowrap"
-              >
-                Homable Creations
-              </button>
-              <button
-                onClick={() => navigate('/shops')}
-                className="text-white/90 hover:text-white text-sm font-medium transition-colors"
-              >
-                Shops
-              </button>
-            </div>
+            {/* Left: Logo */}
+            <button
+              onClick={() => navigate('/')}
+              className="text-2xl lg:text-3xl font-bold text-white hover:text-white/80 transition-colors whitespace-nowrap"
+            >
+              Homable Creations
+            </button>
 
-            {/* Right: Location Selector + Auth Buttons */}
+            {/* Right: Location Selector + Shops + Auth Buttons */}
             <nav className="flex items-center gap-3">
               {/* Location Selector */}
               <LocationSelector />
-              
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/shops')}
+                className="text-white hover:text-white/80 hover:bg-white/10"
+              >
+                Shops
+              </Button>
               {user ? (
                 <>
                   <Button
