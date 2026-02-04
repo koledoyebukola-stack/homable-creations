@@ -28,6 +28,7 @@ import DesignSpaceItems from './pages/DesignSpaceItems';
 import ShopsHome from './pages/ShopsHome';
 import ShopsSearch from './pages/ShopsSearch';
 import ShopsProductDetail from './pages/ShopsProductDetail';
+import DemoStorefront from './pages/DemoStorefront';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -97,6 +98,8 @@ function CaptureReferrerAndRoutes() {
           <Route path="/shops" element={<ShopsHome />} />
           <Route path="/shops/products/:slug" element={<ShopsProductDetail />} />
           <Route path="/shops/:query" element={<ShopsSearch />} />
+          {/* Demo storefront - hidden route, direct access only */}
+          <Route path="/stores/ayo-custom-furniture" element={<DemoStorefront />} />
           {/* Other results pages require authentication */}
           <Route
             path="/products/:boardId/:itemId"
