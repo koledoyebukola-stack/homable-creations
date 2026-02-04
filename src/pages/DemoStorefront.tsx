@@ -14,54 +14,54 @@ const VENDOR = {
   whatsapp: 'https://wa.me/2341234567890', // Placeholder number
 } as const;
 
-// Hardcoded product items (Wayfair-style names), focused on modern accent seating
+// Hardcoded product items (Wayfair-style names), using curated modern chairs/sofas
 const PRODUCTS = [
   {
     id: 1,
-    name: 'Upholstered Accent Chair',
-    image: '/images/photo1767207963.jpg',
+    name: 'Bouclé Lounge Chair',
+    image: '/assets/boucle-sofa.jpg',
     isCustom: true,
   },
   {
     id: 2,
-    name: 'Modern Lounge Chair',
-    image: '/images/photo1767207550.jpg',
+    name: 'Curved Accent Chair',
+    image: '/assets/curved-sofa.jpg',
     isCustom: true,
   },
   {
     id: 3,
-    name: 'Curved Walnut Accent Chair',
-    image: '/images/photo1767208350.jpg',
+    name: 'Low Leather Lounge Chair',
+    image: '/assets/low-leather-sofa.jpg',
     isCustom: true,
   },
   {
     id: 4,
-    name: 'Wood Frame Club Chair',
-    image: '/images/photo1767208351.jpg',
+    name: 'Modular Sectional Sofa',
+    image: '/assets/modular-sectional.jpg',
     isCustom: true,
   },
   {
     id: 5,
-    name: 'Solid Wood Dining Chair',
-    image: '/images/photo1767212743.jpg',
+    name: 'Compact Loveseat Sofa',
+    image: '/assets/small-loveseat.jpg',
     isCustom: true,
   },
   {
     id: 6,
-    name: 'Minimalist Dining Chair',
-    image: '/images/photo1767213004.jpg',
+    name: 'Chaise Sectional Sofa',
+    image: '/assets/chaise-sectional.jpg',
     isCustom: true,
   },
   {
     id: 7,
-    name: 'Rounded Bouclé Accent Chair',
-    image: '/images/photo1764821192.jpg',
+    name: 'Scandinavian Living Sofa',
+    image: '/assets/carousel-living-room-1.jpg',
     isCustom: true,
   },
   {
     id: 8,
-    name: 'Low Lounge Chair with Bolster',
-    image: '/images/photo1764821193.jpg',
+    name: 'Modern Sofa with Ottoman',
+    image: '/images/Sofa.jpg',
     isCustom: true,
   },
 ] as const;
@@ -117,24 +117,14 @@ export default function DemoStorefront() {
                 </a>
               </div>
 
-              {/* Right: custom orders badge + WhatsApp CTA (desktop only here) */}
-              <div
-                ref={whatsappRef}
-                className="hidden md:flex flex-col items-end gap-3 text-xs text-white/80"
-              >
+              {/* Right: custom orders badge (desktop) */}
+              <div className="hidden md:flex flex-col items-end gap-3 text-xs text-white/80">
                 <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#25D366]" />
                   <span className="font-medium text-white text-xs">
                     Custom orders available
                   </span>
                 </div>
-                <Button
-                  onClick={() => window.open(VENDOR.whatsapp, '_blank')}
-                  className="bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-full px-6 py-5 text-sm font-semibold shadow-[0_10px_30px_rgba(0,0,0,0.5)]"
-                >
-                  <MessageCircle className="mr-2 h-5 w-5" />
-                  Discuss on WhatsApp
-                </Button>
               </div>
             </div>
           </div>
@@ -206,6 +196,9 @@ export default function DemoStorefront() {
           </div>
         </section>
       </main>
+
+      {/* Anchor for scroll-to-WhatsApp from product cards */}
+      <div ref={whatsappRef} className="h-0" />
 
       {/* Floating WhatsApp CTA on desktop */}
       <div className="hidden md:flex fixed bottom-6 right-6 z-40">
