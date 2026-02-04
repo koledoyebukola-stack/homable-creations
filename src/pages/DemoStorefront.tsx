@@ -219,7 +219,7 @@ export default function DemoStorefront() {
             className="w-full bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-full font-semibold py-5 shadow-md"
           >
             <MessageCircle className="mr-2 h-5 w-5" />
-            Discuss price, size & finish on WhatsApp
+            Discuss on WhatsApp
           </Button>
         </div>
       </div>
