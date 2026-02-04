@@ -23,7 +23,7 @@ const FEATURE_CARDS = [
   },
   {
     title: 'Local shopping',
-    description: 'Browse Nigerian furniture and decor from your inspiration.',
+    description: 'Browse furniture and decor from your inspiration.',
     image: '/assets/furniture-collection.jpg',
   },
   {
@@ -99,7 +99,7 @@ export default function ShopsHome() {
                 Homable Shops
               </h1>
               <p className="mt-4 text-lg md:text-xl text-white/95 leading-relaxed max-w-md drop-shadow-sm">
-                Discover local Nigerian furniture vendors from your inspiration. Connect directly with sellers near you to get exactly what you want.
+                Discover local furniture vendors from your inspiration. Connect directly with sellers near you to get exactly what you want.
               </p>
               <p className="mt-3 text-sm md:text-base text-white/85 max-w-md">
                 Launching soon. Upload an inspiration to get notified.
