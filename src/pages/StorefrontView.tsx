@@ -116,11 +116,14 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
   }, [products]);
 
   useEffect(() => {
+    // reset initializer when switching storefronts
     priceRangeInitialized.current = false;
   }, [storefront.id]);
 
   useEffect(() => {
-    if (!priceRangeInitialized.current && priceBounds[0] < priceBounds[1]) {
+    const [min, max] = priceBounds;
+    // Initialize once when we have any non-zero bounds
+    if (!priceRangeInitialized.current && (min !== 0 || max !== 0)) {
       priceRangeInitialized.current = true;
       setPriceRange(priceBounds);
     }
