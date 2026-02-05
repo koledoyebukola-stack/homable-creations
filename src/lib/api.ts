@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Board, DetectedItem, Product, Checklist, ChecklistItem, ChecklistWithItems, HistoryItem, SpecsHistory, CarpenterSpec } from './types';
+import type { Board, DetectedItem, Product, Checklist, ChecklistItem, ChecklistWithItems, HistoryItem, SpecsHistory, CarpenterSpec, Storefront, VendorProduct } from './types';
 
 interface RoomMaterials {
   walls?: string;
@@ -1441,4 +1441,36 @@ export async function deleteChecklistItem(itemId: string): Promise<void> {
     console.error('Failed to delete item:', error);
     throw new Error(`Failed to delete item: ${error.message}`);
   }
+}
+
+/**
+ * Fetch storefront by slug with its vendor products (for /stores/:slug).
+ * Returns null if not found.
+ */
+export async function getStorefrontBySlug(slug: string): Promise<{ storefront: Storefront; products: VendorProduct[] } | null> {
+  const { data: storefront, error: storeError } = await supabase
+    .from('storefronts')
+    .select('*')
+    .eq('slug', slug)
+    .maybeSingle();
+
+  if (storeError || !storefront) {
+    return null;
+  }
+
+  const { data: products, error: productsError } = await supabase
+    .from('vendor_products')
+    .select('*')
+    .eq('storefront_id', storefront.id)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true });
+
+  if (productsError) {
+    return { storefront: storefront as Storefront, products: [] };
+  }
+
+  return {
+    storefront: storefront as Storefront,
+    products: (products || []) as VendorProduct[],
+  };
 }

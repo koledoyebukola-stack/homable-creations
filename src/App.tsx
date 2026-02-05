@@ -29,6 +29,7 @@ import ShopsHome from './pages/ShopsHome';
 import ShopsSearch from './pages/ShopsSearch';
 import ShopsProductDetail from './pages/ShopsProductDetail';
 import DemoStorefront from './pages/DemoStorefront';
+import StorefrontView from './pages/StorefrontView';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -100,6 +101,8 @@ function CaptureReferrerAndRoutes() {
           <Route path="/shops/:query" element={<ShopsSearch />} />
           {/* Demo storefront - hidden route, direct access only */}
           <Route path="/stores/ayo-custom-furniture" element={<DemoStorefront />} />
+          {/* Dynamic storefront - real data from Supabase */}
+          <Route path="/stores/:slug" element={<StorefrontView />} />
           {/* Other results pages require authentication */}
           <Route
             path="/products/:boardId/:itemId"

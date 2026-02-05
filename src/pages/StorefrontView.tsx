@@ -1,0 +1,340 @@
+import { useEffect, useState, useMemo, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Instagram, MessageCircle, Store } from 'lucide-react';
+import { getStorefrontBySlug } from '@/lib/api';
+import type { Storefront, VendorProduct } from '@/lib/types';
+
+/** Price display: range, "From ₦X", or "Price on request". */
+function formatPrice(min: number | null, max: number | null): string {
+  if (min != null && max != null && min !== max) return `₦${min.toLocaleString()} – ₦${max.toLocaleString()}`;
+  if (min != null) return `From ₦${min.toLocaleString()}`;
+  if (max != null) return `From ₦${max.toLocaleString()}`;
+  return 'Price on request';
+}
+
+/** WhatsApp link: DB stores digits only; link is https://wa.me/{digits_only}. */
+function whatsappUrl(number: string): string {
+  const digits = number.replace(/\D/g, '');
+  return `https://wa.me/${digits}`;
+}
+
+export default function StorefrontView() {
+  const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
+  const [data, setData] = useState<{ storefront: Storefront; products: VendorProduct[] } | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (!slug) return;
+    getStorefrontBySlug(slug).then(setData);
+  }, [slug]);
+
+  if (data === undefined) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#faf8f5]">
+        <Header />
+        <main className="flex-1 flex items-center justify-center py-24">
+          <p className="text-[#666]">Loading…</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (data === null) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#faf8f5]">
+        <Header />
+        <main className="flex-1 flex flex-col items-center justify-center py-24 px-4 text-center">
+          <h1 className="text-2xl font-bold text-[#111]">Storefront not found</h1>
+          <p className="mt-2 text-[#666]">This page doesn’t exist or may have been removed.</p>
+          <div className="mt-6 flex flex-wrap gap-3 justify-center">
+            <Button onClick={() => navigate('/')} className="rounded-full">Return Home</Button>
+            <Button variant="outline" onClick={() => navigate('/shops')} className="rounded-full">
+              <Store className="mr-2 h-4 w-4" />
+              Browse Shops
+            </Button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  const { storefront, products } = data;
+
+  if (storefront.status === 'paused') {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#faf8f5]">
+        <Header />
+        <main className="flex-1 flex flex-col items-center justify-center py-24 px-4 text-center">
+          <h1 className="text-xl md:text-2xl font-bold text-[#111]">Temporarily unavailable</h1>
+          <p className="mt-3 text-[#666] max-w-md">
+            This storefront is temporarily unavailable. Check back soon or explore other vendors.
+          </p>
+          <Button onClick={() => navigate('/shops')} className="mt-6 rounded-full" size="lg">
+            <Store className="mr-2 h-4 w-4" />
+            Browse Other Vendors
+          </Button>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  return (
+    <StorefrontActive storefront={storefront} products={products} />
+  );
+}
+
+function StorefrontActive({ storefront, products }: { storefront: Storefront; products: VendorProduct[] }) {
+  const navigate = useNavigate();
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 0]);
+  const priceRangeInitialized = useRef(false);
+
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    products.forEach(p => { if (p.category) set.add(p.category); });
+    return Array.from(set).sort();
+  }, [products]);
+
+  const priceBounds = useMemo((): [number, number] => {
+    let min = Infinity, max = -Infinity;
+    products.forEach(p => {
+      const lo = p.price_min ?? p.price_max ?? null;
+      const hi = p.price_max ?? p.price_min ?? null;
+      if (lo != null && lo < min) min = lo;
+      if (hi != null && hi > max) max = hi;
+    });
+    if (min === Infinity) min = 0;
+    if (max === -Infinity) max = 0;
+    return [min, max];
+  }, [products]);
+
+  useEffect(() => {
+    priceRangeInitialized.current = false;
+  }, [storefront.id]);
+
+  useEffect(() => {
+    if (!priceRangeInitialized.current && priceBounds[0] < priceBounds[1]) {
+      priceRangeInitialized.current = true;
+      setPriceRange(priceBounds);
+    }
+  }, [priceBounds, storefront.id]);
+
+  const [priceMin, priceMax] = priceRange;
+
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => {
+      if (categoryFilter && p.category !== categoryFilter) return false;
+      const pMin = p.price_min ?? p.price_max ?? null;
+      const pMax = p.price_max ?? p.price_min ?? null;
+      if (priceMin != null && priceMax != null && priceMin <= priceMax) {
+        if (pMin == null && pMax == null) return true;
+        const lo = pMin ?? 0, hi = pMax ?? Infinity;
+        if (hi < priceMin || lo > priceMax) return false;
+      }
+      return true;
+    });
+  }, [products, categoryFilter, priceMin, priceMax]);
+
+  const whatsapp = whatsappUrl(storefront.whatsapp_number);
+
+  return (
+    <div className="min-h-screen flex flex-col bg-[#faf8f5]">
+      <Header />
+
+      <main className="flex-1">
+        {/* Hero */}
+        <section className="relative border-b border-[#2a2a2a] bg-[#1a1a1a] min-h-[200px]">
+          {storefront.banner_url ? (
+            <div className="absolute inset-0">
+              <img src={storefront.banner_url} alt="" className="w-full h-full object-cover opacity-60" />
+              <div className="absolute inset-0 bg-black/50" />
+            </div>
+          ) : (
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,#d4734c33,transparent_55%),radial-gradient(circle_at_bottom_right,#f5e1c233,transparent_55%)]" />
+          )}
+          <div className="relative container mx-auto max-w-6xl px-4 md:px-6 lg:px-8 py-8 md:py-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 md:gap-8">
+              <div className="flex justify-center md:justify-start">
+                <div className="h-24 w-24 md:h-28 md:w-28 rounded-full border-4 border-[#d4734c] bg-black/60 overflow-hidden shadow-[0_12px_30px_rgba(0,0,0,0.5)]">
+                  {storefront.logo_url ? (
+                    <img src={storefront.logo_url} alt={storefront.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center text-white text-2xl font-bold">
+                      {storefront.name.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex-1 text-center md:text-left text-white">
+                <h1 className="text-2xl md:text-3xl lg:text-[32px] font-bold tracking-tight">{storefront.name}</h1>
+                {storefront.location && (
+                  <p className="mt-1 text-sm md:text-base text-white/80">{storefront.location}</p>
+                )}
+                {storefront.instagram_handle && (
+                  <a
+                    href={`https://instagram.com/${storefront.instagram_handle.replace(/^@/, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-flex items-center gap-2 text-xs md:text-sm text-white/80 hover:text-white transition-colors"
+                  >
+                    <Instagram className="h-4 w-4" />
+                    @{storefront.instagram_handle.replace(/^@/, '')}
+                  </a>
+                )}
+              </div>
+              <div className="hidden md:flex flex-col items-end gap-3">
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#25D366]" />
+                  <span className="font-medium text-white text-xs">Custom orders available</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Products + filters */}
+        <section className="py-8 md:py-10">
+          <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8">
+            <h2 className="text-lg md:text-xl font-semibold text-[#1a1a1a]">Signature pieces</h2>
+            <p className="mt-1 text-xs md:text-sm text-[#666]">
+              {products.length} custom-made pieces{storefront.vendor_type === 'carpenter' ? ', crafted to order' : ''}.
+            </p>
+
+            {/* Category pills */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setCategoryFilter(null)}
+                className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs md:text-sm font-medium transition-colors ${
+                  categoryFilter === null
+                    ? 'bg-[#1a1a1a] text-white'
+                    : 'bg-white border border-gray-200 text-[#555] hover:bg-gray-50'
+                }`}
+              >
+                All
+              </button>
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setCategoryFilter(cat)}
+                  className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs md:text-sm font-medium transition-colors ${
+                    categoryFilter === cat
+                      ? 'bg-[#1a1a1a] text-white'
+                      : 'bg-white border border-gray-200 text-[#555] hover:bg-gray-50'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            {/* Price range slider (only if we have prices) */}
+            {priceBounds[0] < priceBounds[1] && (
+              <div className="mt-4 max-w-xs">
+                <label className="text-xs font-medium text-[#666]">Price range</label>
+                <div className="flex items-center gap-2 mt-1">
+                  <input
+                    type="range"
+                    min={priceBounds[0]}
+                    max={priceBounds[1]}
+                    value={priceMin}
+                    onChange={e => {
+                      const v = Number(e.target.value);
+                      setPriceRange([v, Math.max(v, priceMax)]);
+                    }}
+                    className="flex-1 h-2 rounded-full accent-[#d4734c]"
+                  />
+                  <input
+                    type="range"
+                    min={priceBounds[0]}
+                    max={priceBounds[1]}
+                    value={priceMax}
+                    onChange={e => {
+                      const v = Number(e.target.value);
+                      setPriceRange([Math.min(v, priceMin), v]);
+                    }}
+                    className="flex-1 h-2 rounded-full accent-[#d4734c]"
+                  />
+                </div>
+                <p className="text-xs text-[#777] mt-1">
+                  ₦{priceMin.toLocaleString()} – ₦{priceMax.toLocaleString()}
+                </p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 mt-6">
+              {filteredProducts.map((product, index) => {
+                const aspectClass = index % 3 === 0 ? 'aspect-[4/5]' : index % 3 === 1 ? 'aspect-[3/4]' : 'aspect-square';
+                return (
+                  <div
+                    key={product.id}
+                    className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left"
+                  >
+                    <div className={`${aspectClass} w-full bg-gray-100 relative overflow-hidden rounded-2xl`}>
+                      {product.image_url ? (
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[#999] text-sm">No image</div>
+                      )}
+                      <div className="absolute top-2 left-2">
+                        <Badge className="bg-[#d4734c] text-white text-[10px] font-medium border-0 shadow-sm px-2 py-1 rounded-full">
+                          Custom order
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="px-2.5 pt-2.5 pb-3 md:px-3 md:pt-3">
+                      <h3 className="text-[13px] md:text-sm font-semibold text-[#222] leading-snug">{product.name}</h3>
+                      <p className="text-xs text-[#666] mt-1">
+                        {formatPrice(product.price_min, product.price_max)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {filteredProducts.length === 0 && (
+              <p className="text-[#666] py-8 text-center">No products match the current filters.</p>
+            )}
+          </div>
+        </section>
+      </main>
+
+      <div className="hidden md:flex fixed bottom-6 right-6 z-40">
+        <Button
+          onClick={() => window.open(whatsapp, '_blank')}
+          className="bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-full px-6 py-5 text-sm font-semibold shadow-[0_12px_35px_rgba(0,0,0,0.5)]"
+        >
+          <MessageCircle className="mr-2 h-5 w-5" />
+          Discuss on WhatsApp
+        </Button>
+      </div>
+
+      <div className="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 backdrop-blur-sm">
+        <div className="px-4 py-3">
+          <Button
+            onClick={() => window.open(whatsapp, '_blank')}
+            className="w-full bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-full font-semibold py-5 shadow-md"
+          >
+            <MessageCircle className="mr-2 h-5 w-5" />
+            Discuss on WhatsApp
+          </Button>
+        </div>
+      </div>
+
+      <Footer />
+    </div>
+  );
+}

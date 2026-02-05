@@ -154,3 +154,42 @@ export interface HistoryItem {
   search_queries?: string[];
   board_id?: string;
 }
+
+// Storefront (vendor catalog page)
+export type StorefrontVendorType = 'carpenter' | 'decor_store';
+export type StorefrontStatus = 'active' | 'paused';
+
+export interface Storefront {
+  id: string;
+  slug: string;
+  name: string;
+  location: string | null;
+  description: string | null;
+  logo_url: string | null;
+  banner_url: string | null;
+  whatsapp_number: string;
+  instagram_handle: string | null;
+  vendor_type: StorefrontVendorType;
+  status: StorefrontStatus;
+  active_since: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VendorProduct {
+  id: string;
+  storefront_id: string;
+  slug: string;
+  name: string;
+  category: string | null;
+  room: string | null;
+  material: string | null;
+  price_min: number | null;
+  price_max: number | null;
+  currency: string | null;
+  image_url: string | null;
+  image_urls: string[] | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
