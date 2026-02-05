@@ -132,7 +132,7 @@ export default function ShopsProductDetail() {
                     <img
                       src={product.image_url}
                       alt={product.name}
-                      className="w-full h-auto max-h-[420px] object-contain rounded-xl shadow-md"
+                      className="w-full h-full max-h-[420px] object-cover object-center rounded-xl shadow-md"
                     />
                   </button>
                 ) : (
@@ -311,7 +311,7 @@ export default function ShopsProductDetail() {
             <img
               src={product.image_url}
               alt={product.name}
-              className="w-full h-full object-contain rounded-xl shadow-2xl"
+              className="w-full h-full object-cover object-center rounded-xl shadow-2xl"
             />
           </div>
         </div>
