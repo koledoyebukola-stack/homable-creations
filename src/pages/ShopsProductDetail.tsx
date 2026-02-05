@@ -35,6 +35,11 @@ export default function ShopsProductDetail() {
     getProductBySlug(slug).then(setData);
   }, [slug]);
 
+  // Always scroll to top when slug (product) changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [slug]);
+
   // Load more products from same vendor when product is ready
   useEffect(() => {
     if (!data || data.storefront.status !== 'active') {
