@@ -25,6 +25,7 @@ export default function ShopsProductDetail() {
   const navigate = useNavigate();
   const [data, setData] = useState<{ storefront: Storefront; product: VendorProduct } | null | undefined>(undefined);
   const [moreProducts, setMoreProducts] = useState<VendorProduct[]>([]);
+  const [isImageOpen, setIsImageOpen] = useState(false);
 
   useEffect(() => {
     if (!slug) {
@@ -52,9 +53,29 @@ export default function ShopsProductDetail() {
     }
   }, [data, navigate]);
 
+  // Full-screen image overlay: ESC to close, lock body scroll
+  useEffect(() => {
+    if (!isImageOpen) return;
+
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsImageOpen(false);
+      }
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKey);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [isImageOpen]);
+
   if (data === undefined) {
     return (
-      <div className="min-h-screen flex flex-col bg-[#faf8f5]">
+      <div className="min-h-screen flex flex-col bg-gray-50">
         <Header />
         <main className="flex-1 flex items-center justify-center py-24">
           <p className="text-[#666]">Loading…</p>
@@ -80,14 +101,14 @@ export default function ShopsProductDetail() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#faf8f5]">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
       <main className="flex-1">
         <section className="container mx-auto max-w-4xl px-4 md:px-6 lg:px-8 py-6 md:py-8">
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="inline-flex items-center text-xs md:text-sm text-[#555] hover:text-[#111] mb-4"
+            className="inline-flex items-center text-xs md:text-sm text-gray-600 hover:text-gray-900 mb-4"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
@@ -96,15 +117,21 @@ export default function ShopsProductDetail() {
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
             <div className="grid grid-cols-1 md:grid-cols-[3fr,2fr] gap-0">
               {/* Image */}
-              <div className="bg-[#f5f3f0] flex items-center justify-center p-4 md:p-6">
+              <div className="bg-gray-100 flex items-center justify-center p-4 md:p-6">
                 {product.image_url ? (
-                  <img
-                    src={product.image_url}
-                    alt={product.name}
-                    className="w-full h-auto max-h-[420px] object-contain rounded-xl"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsImageOpen(true)}
+                    className="w-full h-auto max-h-[420px] flex items-center justify-center cursor-zoom-in"
+                  >
+                    <img
+                      src={product.image_url}
+                      alt={product.name}
+                      className="w-full h-auto max-h-[420px] object-contain rounded-xl shadow-md"
+                    />
+                  </button>
                 ) : (
-                  <div className="w-full h-64 flex items-center justify-center text-[#999] text-sm">
+                  <div className="w-full h-64 flex items-center justify-center text-gray-500 text-sm">
                     No image available
                   </div>
                 )}
@@ -114,24 +141,24 @@ export default function ShopsProductDetail() {
               <div className="p-5 md:p-6 flex flex-col justify-between border-t md:border-t-0 md:border-l border-gray-100">
                 <div>
                   {product.category && (
-                    <Badge className="mb-3 bg-[#f5e1c2] text-[#7a4c1c] border-0 text-xs font-medium">
+                    <Badge className="mb-3 bg-gray-100 text-gray-700 border border-gray-200 text-xs font-medium">
                       {product.category}
                     </Badge>
                   )}
-                  <h1 className="text-xl md:text-2xl font-semibold text-[#111] leading-snug">
+                  <h1 className="text-xl md:text-2xl font-semibold text-gray-900 leading-snug">
                     {product.name}
                   </h1>
-                  <p className="mt-2 text-base md:text-lg font-semibold text-[#1a1a1a]">
+                  <p className="mt-2 text-base md:text-lg font-semibold text-gray-900">
                     {formatPrice(product.price_min, product.price_max)}
                   </p>
 
                   {/* Trust badges */}
                   <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
-                    <span className="inline-flex items-center rounded-full bg-[#1a1a1a] text-white px-3 py-1">
+                    <span className="inline-flex items-center rounded-full bg-gray-900 text-white px-3 py-1">
                       Custom orders available
                     </span>
                     {storefront.location && (
-                      <span className="inline-flex items-center rounded-full bg-[#f5e1c2] text-[#7a4c1c] px-3 py-1">
+                      <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-700 border border-gray-200 px-3 py-1">
                         Made in {storefront.location}
                       </span>
                     )}
@@ -140,53 +167,53 @@ export default function ShopsProductDetail() {
 
                 {/* Vendor + product details */}
                 <div className="mt-6 space-y-4">
-                  <div className="space-y-1 text-sm text-[#555]">
+                  <div className="space-y-1 text-sm text-gray-600">
                     <p>
                       Sold by{' '}
                       <button
                         type="button"
                         onClick={() => navigate(`/stores/${storefront.slug}`)}
-                        className="font-medium text-[#d4734c] hover:underline"
+                        className="font-medium text-gray-900 hover:underline"
                       >
                         {storefront.name}
                       </button>
                     </p>
                     {storefront.location && (
-                      <p className="text-xs md:text-sm text-[#777]">{storefront.location}</p>
+                      <p className="text-xs md:text-sm text-gray-500">{storefront.location}</p>
                     )}
                     {storefront.description && (
-                      <p className="text-xs md:text-sm text-[#666] mt-2">{storefront.description}</p>
+                      <p className="text-xs md:text-sm text-gray-600 mt-2">{storefront.description}</p>
                     )}
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => navigate(`/stores/${storefront.slug}`)}
-                      className="mt-3 rounded-full border-[#d4734c] text-[#d4734c] hover:bg-[#d4734c]/5"
+                      className="mt-3 rounded-full border-gray-300 text-gray-900 hover:bg-gray-50 hover:border-gray-900"
                     >
                       View all products
                     </Button>
                   </div>
 
                   {/* Product Details */}
-                  <div className="mt-4 rounded-xl border border-gray-100 bg-[#faf5ef] p-3 md:p-4 space-y-2">
-                    <h2 className="text-xs font-semibold tracking-wide text-[#7a4c1c] uppercase">
+                  <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-3 md:p-4 space-y-2">
+                    <h2 className="text-xs font-semibold tracking-wide text-gray-700 uppercase">
                       Product Details
                     </h2>
-                    <div className="mt-1 space-y-1.5 text-xs md:text-sm text-[#555]">
+                    <div className="mt-1 space-y-1.5 text-xs md:text-sm text-gray-600">
                       {product.room && (
                         <div className="flex justify-between gap-3">
-                          <span className="font-medium text-[#777]">Room</span>
+                          <span className="font-medium text-gray-500">Room</span>
                           <span className="text-right">{product.room}</span>
                         </div>
                       )}
                       {product.material && (
                         <div className="flex justify-between gap-3">
-                          <span className="font-medium text-[#777]">Material</span>
+                          <span className="font-medium text-gray-500">Material</span>
                           <span className="text-right">{product.material}</span>
                         </div>
                       )}
-                      <p className="pt-1 text-xs text-[#777]">
+                      <p className="pt-1 text-xs text-gray-500">
                         Custom-made furniture crafted to order. Contact vendor for exact dimensions and
                         customization options.
                       </p>
@@ -213,7 +240,7 @@ export default function ShopsProductDetail() {
       {data && moreProducts.length > 0 && (
         <section className="pb-24 md:pb-10">
           <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8">
-            <h2 className="text-base md:text-lg font-semibold text-[#1a1a1a]">
+            <h2 className="text-base md:text-lg font-semibold text-gray-900">
               More from {data.storefront.name}
             </h2>
             <div className="mt-3 overflow-x-auto pb-1">
@@ -237,16 +264,16 @@ export default function ShopsProductDetail() {
                             loading="lazy"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[#999] text-xs">
+                          <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">
                             No image
                           </div>
                         )}
                       </div>
                       <div className="px-2.5 pt-2.5 pb-3 md:px-3 md:pt-3">
-                        <h3 className="text-[13px] md:text-sm font-semibold text-[#222] leading-snug line-clamp-2">
+                        <h3 className="text-[13px] md:text-sm font-semibold text-gray-900 leading-snug line-clamp-2">
                           {p.name}
                         </h3>
-                        <p className="text-xs text-[#666] mt-1">
+                        <p className="text-xs text-gray-600 mt-1">
                           {formatPrice(p.price_min, p.price_max)}
                         </p>
                       </div>
@@ -257,6 +284,32 @@ export default function ShopsProductDetail() {
             </div>
           </div>
         </section>
+      )}
+
+      {/* Full-screen image overlay */}
+      {isImageOpen && product.image_url && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 md:p-8 transition-opacity"
+          onClick={() => setIsImageOpen(false)}
+        >
+          <div
+            className="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center"
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setIsImageOpen(false)}
+              className="absolute top-3 right-3 rounded-full bg-black/60 hover:bg-black text-white p-2 text-xs md:text-sm"
+            >
+              ×
+            </button>
+            <img
+              src={product.image_url}
+              alt={product.name}
+              className="w-full h-full object-contain rounded-xl shadow-2xl"
+            />
+          </div>
+        </div>
       )}
 
       {/* Sticky WhatsApp CTA on mobile */}
