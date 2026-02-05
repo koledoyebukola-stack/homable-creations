@@ -1474,3 +1474,34 @@ export async function getStorefrontBySlug(slug: string): Promise<{ storefront: S
     products: (products || []) as VendorProduct[],
   };
 }
+
+/**
+ * Fetch a vendor product by its globally-unique slug, including parent storefront.
+ * Returns null if not found or storefront missing.
+ */
+export async function getProductBySlug(slug: string): Promise<{ storefront: Storefront; product: VendorProduct } | null> {
+  const { data: product, error: productError } = await supabase
+    .from('vendor_products')
+    .select('*')
+    .eq('slug', slug)
+    .maybeSingle();
+
+  if (productError || !product) {
+    return null;
+  }
+
+  const { data: storefront, error: storeError } = await supabase
+    .from('storefronts')
+    .select('*')
+    .eq('id', (product as VendorProduct).storefront_id)
+    .maybeSingle();
+
+  if (storeError || !storefront) {
+    return null;
+  }
+
+  return {
+    storefront: storefront as Storefront,
+    product: product as VendorProduct,
+  };
+}

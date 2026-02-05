@@ -294,7 +294,8 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
                 return (
                   <div
                     key={product.id}
-                    className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left"
+                    onClick={() => navigate(`/shops/products/${product.slug}`)}
+                    className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer"
                   >
                     <div className={`${aspectClass} w-full bg-gray-100 relative overflow-hidden rounded-2xl`}>
                       {product.image_url ? (
