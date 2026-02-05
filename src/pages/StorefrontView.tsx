@@ -144,6 +144,15 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
 
   const whatsapp = whatsappUrl(storefront.whatsapp_number);
 
+  // Derive subtitle from vendor_type
+  const getVendorSubtitle = (vendorType: string | null | undefined): string | null => {
+    if (vendorType === 'carpenter') return 'Custom Furniture & Carpentry';
+    if (vendorType === 'decor_store') return 'Home Decor & Styling';
+    return null;
+  };
+
+  const vendorSubtitle = getVendorSubtitle(storefront.vendor_type);
+
   return (
     <div className="min-h-screen flex flex-col bg-[#faf8f5]">
       <Header />
@@ -175,7 +184,13 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
               <div className="flex-1 text-center md:text-left text-white">
                 <h1 className="text-2xl md:text-3xl lg:text-[32px] font-bold tracking-tight">{storefront.name}</h1>
                 {storefront.location && (
-                  <p className="mt-1 text-sm md:text-base text-white/80">{storefront.location}</p>
+                  <p className="mt-1 text-sm md:text-base text-white/80">
+                    {storefront.location}
+                    {vendorSubtitle && ` · ${vendorSubtitle}`}
+                  </p>
+                )}
+                {storefront.description && (
+                  <p className="mt-2 text-xs md:text-sm text-white/70 max-w-md">{storefront.description}</p>
                 )}
                 {storefront.instagram_handle && (
                   <a
