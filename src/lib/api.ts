@@ -1505,3 +1505,28 @@ export async function getProductBySlug(slug: string): Promise<{ storefront: Stor
     product: product as VendorProduct,
   };
 }
+
+/**
+ * Fetch up to `limit` other products from the same storefront, excluding a given product ID.
+ */
+export async function getOtherVendorProducts(
+  storefrontId: string,
+  excludeProductId: string,
+  limit = 4
+): Promise<VendorProduct[]> {
+  const { data, error } = await supabase
+    .from('vendor_products')
+    .select('*')
+    .eq('storefront_id', storefrontId)
+    .neq('id', excludeProductId)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    console.error('Failed to fetch other vendor products:', error);
+    return [];
+  }
+
+  return (data || []) as VendorProduct[];
+}
