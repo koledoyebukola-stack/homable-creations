@@ -34,10 +34,10 @@ export default function StorefrontView() {
 
   if (data === undefined) {
     return (
-      <div className="min-h-screen flex flex-col bg-[#faf8f5]">
+      <div className="min-h-screen flex flex-col bg-gray-50">
         <Header />
         <main className="flex-1 flex items-center justify-center py-24">
-          <p className="text-[#666]">Loading…</p>
+          <p className="text-gray-600">Loading…</p>
         </main>
         <Footer />
       </div>
@@ -46,11 +46,11 @@ export default function StorefrontView() {
 
   if (data === null) {
     return (
-      <div className="min-h-screen flex flex-col bg-[#faf8f5]">
+      <div className="min-h-screen flex flex-col bg-gray-50">
         <Header />
         <main className="flex-1 flex flex-col items-center justify-center py-24 px-4 text-center">
-          <h1 className="text-2xl font-bold text-[#111]">Storefront not found</h1>
-          <p className="mt-2 text-[#666]">This page doesn’t exist or may have been removed.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Storefront not found</h1>
+          <p className="mt-2 text-gray-600">This page doesn’t exist or may have been removed.</p>
           <div className="mt-6 flex flex-wrap gap-3 justify-center">
             <Button onClick={() => navigate('/')} className="rounded-full">Return Home</Button>
             <Button variant="outline" onClick={() => navigate('/shops')} className="rounded-full">
@@ -68,11 +68,11 @@ export default function StorefrontView() {
 
   if (storefront.status === 'paused') {
     return (
-      <div className="min-h-screen flex flex-col bg-[#faf8f5]">
+      <div className="min-h-screen flex flex-col bg-gray-50">
         <Header />
         <main className="flex-1 flex flex-col items-center justify-center py-24 px-4 text-center">
-          <h1 className="text-xl md:text-2xl font-bold text-[#111]">Temporarily unavailable</h1>
-          <p className="mt-3 text-[#666] max-w-md">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900">Temporarily unavailable</h1>
+          <p className="mt-3 text-gray-600 max-w-md">
             This storefront is temporarily unavailable. Check back soon or explore other vendors.
           </p>
           <Button onClick={() => navigate('/shops')} className="mt-6 rounded-full" size="lg">
@@ -157,24 +157,24 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
   const vendorSubtitle = getVendorSubtitle(storefront.vendor_type);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#faf8f5]">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="relative border-b border-[#2a2a2a] bg-[#1a1a1a] min-h-[200px]">
+        <section className="relative border-b border-gray-900 bg-gray-900 min-h-[200px]">
           {storefront.banner_url ? (
             <div className="absolute inset-0">
               <img src={storefront.banner_url} alt="" className="w-full h-full object-cover opacity-60" />
               <div className="absolute inset-0 bg-black/50" />
             </div>
           ) : (
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,#d4734c33,transparent_55%),radial-gradient(circle_at_bottom_right,#f5e1c233,transparent_55%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,#4b556333,transparent_55%),radial-gradient(circle_at_bottom_right,#11182733,transparent_55%)]" />
           )}
           <div className="relative container mx-auto max-w-6xl px-4 md:px-6 lg:px-8 py-8 md:py-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 md:gap-8">
               <div className="flex justify-center md:justify-start">
-                <div className="h-24 w-24 md:h-28 md:w-28 rounded-full border-4 border-[#d4734c] bg-black/60 overflow-hidden shadow-[0_12px_30px_rgba(0,0,0,0.5)]">
+                <div className="h-24 w-24 md:h-28 md:w-28 rounded-full border-4 border-gray-300 bg-black/70 overflow-hidden shadow-[0_12px_30px_rgba(0,0,0,0.5)]">
                   {storefront.logo_url ? (
                     <img src={storefront.logo_url} alt={storefront.name} className="h-full w-full object-cover" />
                   ) : (
@@ -185,7 +185,9 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
                 </div>
               </div>
               <div className="flex-1 text-center md:text-left text-white">
-                <h1 className="text-2xl md:text-3xl lg:text-[32px] font-bold tracking-tight">{storefront.name}</h1>
+                <h1 className="text-2xl md:text-3xl lg:text-[32px] font-bold tracking-tight">
+                  {storefront.name}
+                </h1>
                 {storefront.location && (
                   <p className="mt-1 text-sm md:text-base text-white/80">
                     {storefront.location}
@@ -193,7 +195,16 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
                   </p>
                 )}
                 {storefront.description && (
-                  <p className="mt-2 text-xs md:text-sm text-white/70 max-w-md">{storefront.description}</p>
+                  <p className="mt-2 text-xs md:text-sm text-white/80 max-w-md">{storefront.description}</p>
+                )}
+                {storefront.active_since && (
+                  <p className="mt-1 text-[11px] md:text-xs text-white/60">
+                    Active since{' '}
+                    {new Date(storefront.active_since).toLocaleDateString(undefined, {
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </p>
                 )}
                 {storefront.instagram_handle && (
                   <a
@@ -220,8 +231,8 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
         {/* Products + filters */}
         <section className="py-8 md:py-10">
           <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8">
-            <h2 className="text-lg md:text-xl font-semibold text-[#1a1a1a]">Signature pieces</h2>
-            <p className="mt-1 text-xs md:text-sm text-[#666]">
+            <h2 className="text-lg md:text-xl font-semibold text-gray-900">Signature pieces</h2>
+            <p className="mt-1 text-xs md:text-sm text-gray-600">
               {products.length} custom-made pieces{storefront.vendor_type === 'carpenter' ? ', crafted to order' : ''}.
             </p>
 
@@ -232,8 +243,8 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
                 onClick={() => setCategoryFilter(null)}
                 className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs md:text-sm font-medium transition-colors ${
                   categoryFilter === null
-                    ? 'bg-[#1a1a1a] text-white'
-                    : 'bg-white border border-gray-200 text-[#555] hover:bg-gray-50'
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
                 }`}
               >
                 All
@@ -245,8 +256,8 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
                   onClick={() => setCategoryFilter(cat)}
                   className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs md:text-sm font-medium transition-colors ${
                     categoryFilter === cat
-                      ? 'bg-[#1a1a1a] text-white'
-                      : 'bg-white border border-gray-200 text-[#555] hover:bg-gray-50'
+                      ? 'bg-gray-900 text-white'
+                      : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
                   }`}
                 >
                   {cat}
@@ -257,7 +268,7 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
             {/* Price range slider (only if we have prices) */}
             {priceBounds[0] < priceBounds[1] && (
               <div className="mt-4 max-w-xs">
-                <label className="text-xs font-medium text-[#666]">Price range</label>
+                <label className="text-xs font-medium text-gray-600">Price range</label>
                 <div className="flex items-center gap-2 mt-1">
                   <input
                     type="range"
@@ -268,7 +279,7 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
                       const v = Number(e.target.value);
                       setPriceRange([v, Math.max(v, priceMax)]);
                     }}
-                    className="flex-1 h-2 rounded-full accent-[#d4734c]"
+                    className="flex-1 h-2 rounded-full accent-gray-900"
                   />
                   <input
                     type="range"
@@ -279,12 +290,20 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
                       const v = Number(e.target.value);
                       setPriceRange([Math.min(v, priceMin), v]);
                     }}
-                    className="flex-1 h-2 rounded-full accent-[#d4734c]"
+                    className="flex-1 h-2 rounded-full accent-gray-900"
                   />
                 </div>
-                <p className="text-xs text-[#777] mt-1">
-                  ₦{priceMin.toLocaleString()} – ₦{priceMax.toLocaleString()}
-                </p>
+                <div className="mt-2 flex items-center justify-between text-[11px] text-gray-600 gap-2">
+                  <span>Min: ₦{priceMin.toLocaleString()}</span>
+                  <span>Max: ₦{priceMax.toLocaleString()}</span>
+                  <button
+                    type="button"
+                    onClick={() => setPriceRange(priceBounds)}
+                    className="ml-2 text-gray-500 hover:text-gray-900 underline-offset-2 hover:underline"
+                  >
+                    Reset
+                  </button>
+                </div>
               </div>
             )}
 
@@ -309,14 +328,16 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
                         <div className="w-full h-full flex items-center justify-center text-[#999] text-sm">No image</div>
                       )}
                       <div className="absolute top-2 left-2">
-                        <Badge className="bg-[#d4734c] text-white text-[10px] font-medium border-0 shadow-sm px-2 py-1 rounded-full">
+                        <Badge className="bg-gray-900 text-white text-[10px] font-medium border-0 shadow-sm px-2 py-1 rounded-full">
                           Custom order
                         </Badge>
                       </div>
                     </div>
                     <div className="px-2.5 pt-2.5 pb-3 md:px-3 md:pt-3">
-                      <h3 className="text-[13px] md:text-sm font-semibold text-[#222] leading-snug">{product.name}</h3>
-                      <p className="text-xs text-[#666] mt-1">
+                      <h3 className="text-[13px] md:text-sm font-semibold text-gray-900 leading-snug">
+                        {product.name}
+                      </h3>
+                      <p className="text-xs text-gray-600 mt-1">
                         {formatPrice(product.price_min, product.price_max)}
                       </p>
                     </div>
@@ -325,7 +346,7 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
               })}
             </div>
             {filteredProducts.length === 0 && (
-              <p className="text-[#666] py-8 text-center">No products match the current filters.</p>
+              <p className="text-gray-600 py-8 text-center">No products match the current filters.</p>
             )}
           </div>
         </section>
