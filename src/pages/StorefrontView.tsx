@@ -148,6 +148,7 @@ function StorefrontActive({
   const [searchInput, setSearchInput] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [loadingMore, setLoadingMore] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const priceRangeInitialized = useRef(false);
 
   const categories = useMemo(() => {
@@ -318,17 +319,21 @@ function StorefrontActive({
             </p>
 
             {/* Search: above filters, full width on mobile, max-width on desktop. Debounced client-side. */}
+            {/* type="text" + custom clear only = single clear button (type="search" adds native clear on desktop). */}
             <div className="mt-4 w-full max-w-xl">
               <label htmlFor="storefront-search" className="sr-only">Search products</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" aria-hidden />
                 <input
                   id="storefront-search"
-                  type="search"
+                  type="text"
+                  autoComplete="off"
                   value={searchInput}
                   onChange={e => setSearchInput(e.target.value)}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onBlur={() => setIsSearchFocused(false)}
                   placeholder="Search: bed, wardrobe, L-shape sofa, TV stand"
-                  className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                  className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
                   aria-label="Search products by name or category"
                 />
                 {searchInput.length > 0 && (
@@ -515,17 +520,20 @@ function StorefrontActive({
         </Button>
       </div>
 
-      <div className="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 backdrop-blur-sm">
-        <div className="px-4 py-3">
-          <Button
-            onClick={() => window.open(whatsapp, '_blank')}
-            className="w-full bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-full font-semibold py-5 shadow-md"
-          >
-            <MessageCircle className="mr-2 h-5 w-5" />
-            Discuss on WhatsApp
-          </Button>
+      {/* Mobile: hide when search is focused so bar doesn't float above keyboard; use fixed positioning that stays at viewport bottom. */}
+      {!isSearchFocused && (
+        <div className="md:hidden fixed left-0 right-0 bottom-0 w-full z-40 border-t border-gray-200 bg-white/95 backdrop-blur-sm">
+          <div className="px-4 py-3 pb-[env(safe-area-inset-bottom,0)]">
+            <Button
+              onClick={() => window.open(whatsapp, '_blank')}
+              className="w-full bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-full font-semibold py-5 shadow-md"
+            >
+              <MessageCircle className="mr-2 h-5 w-5" />
+              Discuss on WhatsApp
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       <Footer />
     </div>

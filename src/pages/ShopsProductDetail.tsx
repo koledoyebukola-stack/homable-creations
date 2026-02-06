@@ -317,9 +317,9 @@ export default function ShopsProductDetail() {
         </div>
       )}
 
-      {/* Sticky WhatsApp CTA on mobile */}
-      <div className="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 backdrop-blur-sm">
-        <div className="px-4 py-3">
+      {/* Sticky WhatsApp CTA on mobile - fixed to viewport bottom for consistent stickiness when scrolling up/down */}
+      <div className="md:hidden fixed left-0 right-0 bottom-0 w-full z-40 border-t border-gray-200 bg-white/95 backdrop-blur-sm">
+        <div className="px-4 py-3 pb-[env(safe-area-inset-bottom,0)]">
           <Button
             onClick={handleWhatsAppClick}
             className="w-full bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-full font-semibold py-5 shadow-md"
