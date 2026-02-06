@@ -100,7 +100,7 @@ function CaptureReferrerAndRoutes() {
           <Route path="/shops/products/:slug" element={<ShopsProductDetail />} />
           <Route path="/shops/:query" element={<ShopsSearch />} />
           {/* Demo storefront - hidden route, direct access only */}
-          <Route path="/stores/ayo-custom-furniture" element={<DemoStorefront />} />
+          <Route path="/stores/demo-decor-store" element={<DemoStorefront />} />
           {/* Dynamic storefront - real data from Supabase */}
           <Route path="/stores/:slug" element={<StorefrontView />} />
           {/* Other results pages require authentication */}
