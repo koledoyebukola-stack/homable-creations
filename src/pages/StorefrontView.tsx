@@ -50,6 +50,19 @@ export default function StorefrontView() {
     });
   }, [slug]);
 
+  // Must be called unconditionally (before any early return) to avoid React "rendered more hooks" error #310.
+  const loadMore = useCallback(async () => {
+    if (!data || data === null || !('storefront' in data)) return;
+    const { storefront, products } = data;
+    const next = await getStorefrontProductsPage(storefront.id, products.length);
+    if (next.length === 0) return;
+    setData(prev => (prev && 'products' in prev ? {
+      ...prev,
+      products: [...prev.products, ...next],
+      hasMore: prev.products.length + next.length < prev.totalCount,
+    } : prev));
+  }, [data]);
+
   if (data === undefined) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
@@ -83,16 +96,6 @@ export default function StorefrontView() {
   }
 
   const { storefront, products, totalCount, hasMore } = data;
-
-  const loadMore = useCallback(async () => {
-    const next = await getStorefrontProductsPage(storefront.id, products.length);
-    if (next.length === 0) return;
-    setData(prev => (prev ? {
-      ...prev,
-      products: [...prev.products, ...next],
-      hasMore: prev.products.length + next.length < prev.totalCount,
-    } : prev));
-  }, [storefront.id, products.length]);
 
   if (storefront.status === 'paused') {
     return (
