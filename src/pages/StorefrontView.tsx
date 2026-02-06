@@ -1,12 +1,15 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Instagram, MessageCircle, Store } from 'lucide-react';
-import { getStorefrontBySlug } from '@/lib/api';
+import { Instagram, MessageCircle, Store, Search, X } from 'lucide-react';
+import { getStorefrontBySlug, getStorefrontProductsPage } from '@/lib/api';
 import type { Storefront, VendorProduct } from '@/lib/types';
+
+/** Debounce delay for search input (ms). */
+const SEARCH_DEBOUNCE_MS = 300;
 
 /** Price display: range, "From ₦X", or "Price on request". */
 function formatPrice(min: number | null, max: number | null): string {
@@ -22,14 +25,29 @@ function whatsappUrl(number: string): string {
   return `https://wa.me/${digits}`;
 }
 
+/** Human-readable category label for display (e.g. accent_chair → Accent Chair). */
+function formatCategoryLabel(category: string): string {
+  return category.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+type StorefrontData = {
+  storefront: Storefront;
+  products: VendorProduct[];
+  totalCount: number;
+  hasMore: boolean;
+};
+
 export default function StorefrontView() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const [data, setData] = useState<{ storefront: Storefront; products: VendorProduct[] } | null | undefined>(undefined);
+  const [data, setData] = useState<StorefrontData | null | undefined>(undefined);
 
   useEffect(() => {
     if (!slug) return;
-    getStorefrontBySlug(slug).then(setData);
+    getStorefrontBySlug(slug).then(result => {
+      if (result) setData(result);
+      else setData(null);
+    });
   }, [slug]);
 
   if (data === undefined) {
@@ -64,7 +82,17 @@ export default function StorefrontView() {
     );
   }
 
-  const { storefront, products } = data;
+  const { storefront, products, totalCount, hasMore } = data;
+
+  const loadMore = useCallback(async () => {
+    const next = await getStorefrontProductsPage(storefront.id, products.length);
+    if (next.length === 0) return;
+    setData(prev => (prev ? {
+      ...prev,
+      products: [...prev.products, ...next],
+      hasMore: prev.products.length + next.length < prev.totalCount,
+    } : prev));
+  }, [storefront.id, products.length]);
 
   if (storefront.status === 'paused') {
     return (
@@ -86,14 +114,37 @@ export default function StorefrontView() {
   }
 
   return (
-    <StorefrontActive storefront={storefront} products={products} />
+    <StorefrontActive
+      storefront={storefront}
+      products={products}
+      totalCount={totalCount}
+      hasMore={hasMore}
+      onLoadMore={loadMore}
+    />
   );
 }
 
-function StorefrontActive({ storefront, products }: { storefront: Storefront; products: VendorProduct[] }) {
+function StorefrontActive({
+  storefront,
+  products,
+  totalCount,
+  hasMore,
+  onLoadMore,
+}: {
+  storefront: Storefront;
+  products: VendorProduct[];
+  totalCount: number;
+  hasMore: boolean;
+  onLoadMore: () => void;
+}) {
   const navigate = useNavigate();
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const { category: categoryParam } = useParams<{ slug: string; category?: string }>();
+
+  const [categoryFilter, setCategoryFilterState] = useState<string | null>(null);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 0]);
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [loadingMore, setLoadingMore] = useState(false);
   const priceRangeInitialized = useRef(false);
 
   const categories = useMemo(() => {
@@ -101,6 +152,29 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
     products.forEach(p => { if (p.category) set.add(p.category); });
     return Array.from(set).sort();
   }, [products]);
+
+  // Sync category filter from URL on mount and when category param changes (shareable links).
+  // We allow any category string from URL so shared links work even before "Load more" has run.
+  useEffect(() => {
+    const decoded = categoryParam ? decodeURIComponent(categoryParam) : null;
+    setCategoryFilterState(decoded);
+  }, [categoryParam]);
+
+  // Use path segments (/stores/slug/category) for shareable, SEO-friendly category URLs (e.g. WhatsApp).
+  const setCategoryFilter = useCallback((cat: string | null) => {
+    setCategoryFilterState(cat);
+    if (cat) {
+      navigate(`/stores/${storefront.slug}/${encodeURIComponent(cat)}`, { replace: true });
+    } else {
+      navigate(`/stores/${storefront.slug}`, { replace: true });
+    }
+  }, [navigate, storefront.slug]);
+
+  // Debounce search input (300ms) to avoid excessive re-renders and feel responsive.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchInput.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const priceBounds = useMemo((): [number, number] => {
     let min = Infinity, max = -Infinity;
@@ -116,13 +190,11 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
   }, [products]);
 
   useEffect(() => {
-    // reset initializer when switching storefronts
     priceRangeInitialized.current = false;
   }, [storefront.id]);
 
   useEffect(() => {
     const [min, max] = priceBounds;
-    // Initialize once when we have any non-zero bounds
     if (!priceRangeInitialized.current && (min !== 0 || max !== 0)) {
       priceRangeInitialized.current = true;
       setPriceRange(priceBounds);
@@ -132,6 +204,7 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
   const [priceMin, priceMax] = priceRange;
 
   const filteredProducts = useMemo(() => {
+    const q = debouncedSearch.toLowerCase();
     return products.filter(p => {
       if (categoryFilter && p.category !== categoryFilter) return false;
       const pMin = p.price_min ?? p.price_max ?? null;
@@ -141,9 +214,14 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
         const lo = pMin ?? 0, hi = pMax ?? Infinity;
         if (hi < priceMin || lo > priceMax) return false;
       }
+      if (q) {
+        const nameMatch = p.name?.toLowerCase().includes(q);
+        const categoryMatch = p.category?.toLowerCase().includes(q);
+        if (!nameMatch && !categoryMatch) return false;
+      }
       return true;
     });
-  }, [products, categoryFilter, priceMin, priceMax]);
+  }, [products, categoryFilter, priceMin, priceMax, debouncedSearch]);
 
   const whatsapp = whatsappUrl(storefront.whatsapp_number);
 
@@ -233,8 +311,56 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
           <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8">
             <h2 className="text-lg md:text-xl font-semibold text-gray-900">Signature pieces</h2>
             <p className="mt-1 text-xs md:text-sm text-gray-600">
-              {products.length} custom-made pieces{storefront.vendor_type === 'carpenter' ? ', crafted to order' : ''}.
+              {totalCount} custom-made pieces{storefront.vendor_type === 'carpenter' ? ', crafted to order' : ''}.
             </p>
+
+            {/* Search: above filters, full width on mobile, max-width on desktop. Debounced client-side. */}
+            <div className="mt-4 w-full max-w-xl">
+              <label htmlFor="storefront-search" className="sr-only">Search products</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" aria-hidden />
+                <input
+                  id="storefront-search"
+                  type="search"
+                  value={searchInput}
+                  onChange={e => setSearchInput(e.target.value)}
+                  placeholder="Search: bed, wardrobe, L-shape sofa, TV stand"
+                  className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                  aria-label="Search products by name or category"
+                />
+                {searchInput.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchInput('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Results count: "Showing X products" or "X results for 'sofa'" */}
+            <p className="mt-2 text-xs text-gray-600">
+              {debouncedSearch
+                ? `${filteredProducts.length} result${filteredProducts.length !== 1 ? 's' : ''} for "${debouncedSearch}"`
+                : `Showing ${filteredProducts.length} product${filteredProducts.length !== 1 ? 's' : ''}`}
+            </p>
+
+            {/* Category from URL: "Showing: Beds" with clear */}
+            {categoryFilter && (
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-gray-600">Showing: {formatCategoryLabel(categoryFilter)}</span>
+                <button
+                  type="button"
+                  onClick={() => setCategoryFilter(null)}
+                  className="text-xs text-gray-500 hover:text-gray-900 underline underline-offset-2"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
 
             {/* Category pills */}
             <div className="mt-4 flex flex-wrap gap-2">
@@ -310,6 +436,7 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 mt-6">
               {filteredProducts.map((product, index) => {
                 const aspectClass = index % 3 === 0 ? 'aspect-[4/5]' : index % 3 === 1 ? 'aspect-[3/4]' : 'aspect-square';
+                const isAboveFold = index < 6;
                 return (
                   <div
                     key={product.id}
@@ -321,8 +448,11 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
                         <img
                           src={product.image_url}
                           alt={product.name}
+                          width={400}
+                          height={index % 3 === 0 ? 500 : index % 3 === 1 ? 533 : 400}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          loading="lazy"
+                          loading={isAboveFold ? 'eager' : 'lazy'}
+                          fetchPriority={isAboveFold ? 'high' : undefined}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-[#999] text-sm">No image</div>
@@ -346,7 +476,27 @@ function StorefrontActive({ storefront, products }: { storefront: Storefront; pr
               })}
             </div>
             {filteredProducts.length === 0 && (
-              <p className="text-gray-600 py-8 text-center">No products match the current filters.</p>
+              <p className="text-gray-600 py-8 text-center">
+                {debouncedSearch ? `No results for "${debouncedSearch}". Try a different search or clear filters.` : 'No products match the current filters.'}
+              </p>
+            )}
+
+            {/* Load more: only when backend has more and we're not in a loading state */}
+            {hasMore && filteredProducts.length > 0 && (
+              <div className="mt-8 flex justify-center">
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    setLoadingMore(true);
+                    await onLoadMore();
+                    setLoadingMore(false);
+                  }}
+                  disabled={loadingMore}
+                  className="rounded-full"
+                >
+                  {loadingMore ? 'Loading…' : `Load more (${products.length} of ${totalCount})`}
+                </Button>
+              </div>
             )}
           </div>
         </section>

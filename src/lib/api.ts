@@ -1443,11 +1443,25 @@ export async function deleteChecklistItem(itemId: string): Promise<void> {
   }
 }
 
+/** Fields needed for storefront listing only (smaller payload, faster for slow networks). */
+const VENDOR_PRODUCTS_LIST_FIELDS =
+  'id,storefront_id,slug,name,category,room,price_min,price_max,image_url,sort_order,created_at';
+
+const STOREFRONT_PAGE_SIZE = 24;
+const STOREFRONT_PAGINATION_THRESHOLD = 50;
+
 /**
  * Fetch storefront by slug with its vendor products (for /stores/:slug).
  * Returns null if not found.
+ * Performance: selects only list-needed fields; if product count > 50, returns first page only (24)
+ * so "Load more" can fetch next page via getStorefrontProductsPage.
  */
-export async function getStorefrontBySlug(slug: string): Promise<{ storefront: Storefront; products: VendorProduct[] } | null> {
+export async function getStorefrontBySlug(slug: string): Promise<{
+  storefront: Storefront;
+  products: VendorProduct[];
+  totalCount: number;
+  hasMore: boolean;
+} | null> {
   const { data: storefront, error: storeError } = await supabase
     .from('storefronts')
     .select('*')
@@ -1458,21 +1472,61 @@ export async function getStorefrontBySlug(slug: string): Promise<{ storefront: S
     return null;
   }
 
+  const { count, error: countError } = await supabase
+    .from('vendor_products')
+    .select('*', { count: 'exact', head: true })
+    .eq('storefront_id', storefront.id);
+
+  const totalCount = countError ? 0 : count ?? 0;
+  const usePagination = totalCount > STOREFRONT_PAGINATION_THRESHOLD;
+
+  const limit = usePagination ? STOREFRONT_PAGE_SIZE : totalCount || 100;
   const { data: products, error: productsError } = await supabase
     .from('vendor_products')
-    .select('*')
+    .select(VENDOR_PRODUCTS_LIST_FIELDS)
     .eq('storefront_id', storefront.id)
     .order('sort_order', { ascending: true })
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: true })
+    .range(0, limit - 1);
 
   if (productsError) {
-    return { storefront: storefront as Storefront, products: [] };
+    return {
+      storefront: storefront as Storefront,
+      products: [],
+      totalCount: 0,
+      hasMore: false,
+    };
   }
 
   return {
     storefront: storefront as Storefront,
     products: (products || []) as VendorProduct[],
+    totalCount,
+    hasMore: usePagination && (products?.length ?? 0) >= STOREFRONT_PAGE_SIZE,
   };
+}
+
+/**
+ * Fetch next page of vendor products for a storefront (for "Load more" when totalCount > 50).
+ */
+export async function getStorefrontProductsPage(
+  storefrontId: string,
+  offset: number,
+  limit: number = STOREFRONT_PAGE_SIZE
+): Promise<VendorProduct[]> {
+  const { data, error } = await supabase
+    .from('vendor_products')
+    .select(VENDOR_PRODUCTS_LIST_FIELDS)
+    .eq('storefront_id', storefrontId)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+    .range(offset, offset + limit - 1);
+
+  if (error) {
+    console.error('Failed to fetch storefront products page:', error);
+    return [];
+  }
+  return (data || []) as VendorProduct[];
 }
 
 /**
