@@ -18,7 +18,6 @@ const VENDOR = {
 
 const PRODUCTS = [
   { id: 1, name: 'Modern Geometric Area Rug', price: 45000, category: 'Rugs', room: 'Living Room', image: 'https://images.unsplash.com/photo-1600166898405-da9535204843?w=800' },
-  { id: 2, name: 'Contemporary Pattern Rug', price: 52000, category: 'Rugs', room: 'Bedroom', image: 'https://images.unsplash.com/photo-1601887282257-b9f0d807ce8d?w=800' },
   { id: 3, name: 'Minimalist Textured Rug', price: 38000, category: 'Rugs', room: 'Dining Room', image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800' },
   { id: 4, name: 'Modern Chandelier', price: 85000, category: 'Lighting', room: 'Living Room', image: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=800' },
   { id: 5, name: 'Contemporary Pendant Light', price: 42000, category: 'Lighting', room: 'Dining Room', image: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=800' },
