@@ -1461,6 +1461,7 @@ export async function getStorefrontBySlug(slug: string): Promise<{
   products: VendorProduct[];
   totalCount: number;
   hasMore: boolean;
+  categories: string[];
 } | null> {
   const { data: storefront, error: storeError } = await supabase
     .from('storefronts')
@@ -1481,13 +1482,23 @@ export async function getStorefrontBySlug(slug: string): Promise<{
   const usePagination = totalCount > STOREFRONT_PAGINATION_THRESHOLD;
 
   const limit = usePagination ? STOREFRONT_PAGE_SIZE : totalCount || 100;
-  const { data: products, error: productsError } = await supabase
-    .from('vendor_products')
-    .select(VENDOR_PRODUCTS_LIST_FIELDS)
-    .eq('storefront_id', storefront.id)
-    .order('sort_order', { ascending: true })
-    .order('created_at', { ascending: true })
-    .range(0, limit - 1);
+  const [productsRes, categoriesRes] = await Promise.all([
+    supabase
+      .from('vendor_products')
+      .select(VENDOR_PRODUCTS_LIST_FIELDS)
+      .eq('storefront_id', storefront.id)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true })
+      .range(0, limit - 1),
+    supabase.from('vendor_products').select('category').eq('storefront_id', storefront.id),
+  ]);
+
+  const { data: products, error: productsError } = productsRes;
+  const { data: categoryRows } = categoriesRes;
+
+  const categories: string[] = categoryRows
+    ? [...new Set((categoryRows as { category: string | null }[]).map(r => r.category).filter(Boolean))].sort() as string[]
+    : [];
 
   if (productsError) {
     return {
@@ -1495,6 +1506,7 @@ export async function getStorefrontBySlug(slug: string): Promise<{
       products: [],
       totalCount: 0,
       hasMore: false,
+      categories,
     };
   }
 
@@ -1503,6 +1515,7 @@ export async function getStorefrontBySlug(slug: string): Promise<{
     products: (products || []) as VendorProduct[],
     totalCount,
     hasMore: usePagination && (products?.length ?? 0) >= STOREFRONT_PAGE_SIZE,
+    categories,
   };
 }
 

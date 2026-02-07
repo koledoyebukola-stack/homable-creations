@@ -35,6 +35,7 @@ type StorefrontData = {
   products: VendorProduct[];
   totalCount: number;
   hasMore: boolean;
+  categories: string[];
 };
 
 export default function StorefrontView() {
@@ -95,7 +96,7 @@ export default function StorefrontView() {
     );
   }
 
-  const { storefront, products, totalCount, hasMore } = data;
+  const { storefront, products, totalCount, hasMore, categories } = data;
 
   if (storefront.status === 'paused') {
     return (
@@ -122,6 +123,7 @@ export default function StorefrontView() {
       products={products}
       totalCount={totalCount}
       hasMore={hasMore}
+      categories={categories ?? []}
       onLoadMore={loadMore}
     />
   );
@@ -132,12 +134,14 @@ function StorefrontActive({
   products,
   totalCount,
   hasMore,
+  categories,
   onLoadMore,
 }: {
   storefront: Storefront;
   products: VendorProduct[];
   totalCount: number;
   hasMore: boolean;
+  categories: string[];
   onLoadMore: () => void;
 }) {
   const navigate = useNavigate();
@@ -151,11 +155,7 @@ function StorefrontActive({
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const priceRangeInitialized = useRef(false);
 
-  const categories = useMemo(() => {
-    const set = new Set<string>();
-    products.forEach(p => { if (p.category) set.add(p.category); });
-    return Array.from(set).sort();
-  }, [products]);
+  // Categories come from API (all storefront categories), not from loaded products, so pills show on initial load.
 
   // Sync category filter from URL on mount and when category param changes (shareable links).
   // We allow any category string from URL so shared links work even before "Load more" has run.
