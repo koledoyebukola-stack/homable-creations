@@ -39,30 +39,32 @@ type StorefrontData = {
 };
 
 export default function StorefrontView() {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug, category: categoryParam } = useParams<{ slug: string; category?: string }>();
   const navigate = useNavigate();
   const [data, setData] = useState<StorefrontData | null | undefined>(undefined);
 
+  const categoryFilter = categoryParam ? decodeURIComponent(categoryParam) : null;
+
   useEffect(() => {
     if (!slug) return;
-    getStorefrontBySlug(slug).then(result => {
+    getStorefrontBySlug(slug, categoryFilter).then(result => {
       if (result) setData(result);
       else setData(null);
     });
-  }, [slug]);
+  }, [slug, categoryFilter]);
 
   // Must be called unconditionally (before any early return) to avoid React "rendered more hooks" error #310.
   const loadMore = useCallback(async () => {
     if (!data || data === null || !('storefront' in data)) return;
     const { storefront, products } = data;
-    const next = await getStorefrontProductsPage(storefront.id, products.length);
+    const next = await getStorefrontProductsPage(storefront.id, products.length, 24, categoryFilter);
     if (next.length === 0) return;
     setData(prev => (prev && 'products' in prev ? {
       ...prev,
       products: [...prev.products, ...next],
       hasMore: prev.products.length + next.length < prev.totalCount,
     } : prev));
-  }, [data]);
+  }, [data, categoryFilter]);
 
   if (data === undefined) {
     return (
@@ -207,10 +209,10 @@ function StorefrontActive({
 
   const [priceMin, priceMax] = priceRange;
 
+  // Category is applied server-side when a pill is selected; products here are already filtered by category.
   const filteredProducts = useMemo(() => {
     const q = debouncedSearch.toLowerCase();
     return products.filter(p => {
-      if (categoryFilter && p.category !== categoryFilter) return false;
       const pMin = p.price_min ?? p.price_max ?? null;
       const pMax = p.price_max ?? p.price_min ?? null;
       if (priceMin != null && priceMax != null && priceMin <= priceMax) {
@@ -225,7 +227,7 @@ function StorefrontActive({
       }
       return true;
     });
-  }, [products, categoryFilter, priceMin, priceMax, debouncedSearch]);
+  }, [products, priceMin, priceMax, debouncedSearch]);
 
   const whatsapp = whatsappUrl(storefront.whatsapp_number);
 

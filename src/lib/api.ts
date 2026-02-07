@@ -1451,12 +1451,16 @@ const STOREFRONT_PAGE_SIZE = 24;
 const STOREFRONT_PAGINATION_THRESHOLD = 50;
 
 /**
- * Fetch storefront by slug with its vendor products (for /stores/:slug).
+ * Fetch storefront by slug with its vendor products (for /stores/:slug and /stores/:slug/:category).
  * Returns null if not found.
+ * When categoryFilter is set, products are filtered server-side (WHERE category = categoryFilter).
  * Performance: selects only list-needed fields; if product count > 50, returns first page only (24)
  * so "Load more" can fetch next page via getStorefrontProductsPage.
  */
-export async function getStorefrontBySlug(slug: string): Promise<{
+export async function getStorefrontBySlug(
+  slug: string,
+  categoryFilter?: string | null
+): Promise<{
   storefront: Storefront;
   products: VendorProduct[];
   totalCount: number;
@@ -1473,23 +1477,28 @@ export async function getStorefrontBySlug(slug: string): Promise<{
     return null;
   }
 
-  const { count, error: countError } = await supabase
+  const countQuery = supabase
     .from('vendor_products')
     .select('*', { count: 'exact', head: true })
     .eq('storefront_id', storefront.id);
+  if (categoryFilter) countQuery.eq('category', categoryFilter);
+  const { count, error: countError } = await countQuery;
 
   const totalCount = countError ? 0 : count ?? 0;
   const usePagination = totalCount > STOREFRONT_PAGINATION_THRESHOLD;
 
   const limit = usePagination ? STOREFRONT_PAGE_SIZE : totalCount || 100;
+  const productsQuery = supabase
+    .from('vendor_products')
+    .select(VENDOR_PRODUCTS_LIST_FIELDS)
+    .eq('storefront_id', storefront.id)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+    .range(0, limit - 1);
+  if (categoryFilter) productsQuery.eq('category', categoryFilter);
+
   const [productsRes, categoriesRes] = await Promise.all([
-    supabase
-      .from('vendor_products')
-      .select(VENDOR_PRODUCTS_LIST_FIELDS)
-      .eq('storefront_id', storefront.id)
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: true })
-      .range(0, limit - 1),
+    productsQuery,
     supabase.from('vendor_products').select('category').eq('storefront_id', storefront.id),
   ]);
 
@@ -1521,19 +1530,23 @@ export async function getStorefrontBySlug(slug: string): Promise<{
 
 /**
  * Fetch next page of vendor products for a storefront (for "Load more" when totalCount > 50).
+ * When categoryFilter is set, only products in that category are returned (server-side).
  */
 export async function getStorefrontProductsPage(
   storefrontId: string,
   offset: number,
-  limit: number = STOREFRONT_PAGE_SIZE
+  limit: number = STOREFRONT_PAGE_SIZE,
+  categoryFilter?: string | null
 ): Promise<VendorProduct[]> {
-  const { data, error } = await supabase
+  const query = supabase
     .from('vendor_products')
     .select(VENDOR_PRODUCTS_LIST_FIELDS)
     .eq('storefront_id', storefrontId)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true })
     .range(offset, offset + limit - 1);
+  if (categoryFilter) query.eq('category', categoryFilter);
+  const { data, error } = await query;
 
   if (error) {
     console.error('Failed to fetch storefront products page:', error);
