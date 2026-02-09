@@ -420,85 +420,90 @@ function StorefrontActive({
               {totalCount} custom-made pieces{storefront.vendor_type === 'carpenter' ? ', crafted to order' : ''}.
             </p>
 
-            {/* Search: above filters, full width on mobile, max-width on desktop. Debounced client-side. */}
-            {/* type="text" + custom clear only = single clear button (type="search" adds native clear on desktop). */}
-            <div className="mt-4 w-full max-w-xl">
-              <label htmlFor="storefront-search" className="sr-only">Search products</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" aria-hidden />
-                <input
-                  id="storefront-search"
-                  type="text"
-                  autoComplete="off"
-                  value={searchInput}
-                  onChange={e => setSearchInput(e.target.value)}
-                  onFocus={() => setIsSearchFocused(true)}
-                  onBlur={() => setIsSearchFocused(false)}
-                  placeholder="Search: bed, wardrobe, L-shape sofa, TV stand"
-                  className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-10 text-base md:text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
-                  aria-label="Search products by name or category"
-                />
-                {searchInput.length > 0 && (
+            {/* Search + category filters: sticky on mobile so they stay visible while scrolling products */}
+            <div className="mt-4 md:mt-4 sticky top-0 z-20 bg-gray-50/95 backdrop-blur-md border-b border-gray-100 md:static md:bg-transparent md:border-none md:backdrop-blur-0">
+              <div className="pt-1 pb-3">
+                {/* Search: above filters, full width on mobile, max-width on desktop. Debounced client-side. */}
+                {/* type="text" + custom clear only = single clear button (type="search" adds native clear on desktop). */}
+                <div className="w-full max-w-xl">
+                  <label htmlFor="storefront-search" className="sr-only">Search products</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" aria-hidden />
+                    <input
+                      id="storefront-search"
+                      type="text"
+                      autoComplete="off"
+                      value={searchInput}
+                      onChange={e => setSearchInput(e.target.value)}
+                      onFocus={() => setIsSearchFocused(true)}
+                      onBlur={() => setIsSearchFocused(false)}
+                      placeholder="Search: bed, wardrobe, L-shape sofa, TV stand"
+                      className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-10 text-base md:text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
+                      aria-label="Search products by name or category"
+                    />
+                    {searchInput.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchInput('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                        aria-label="Clear search"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Results count: "Showing X products" or "X results for 'sofa'" */}
+                <p className="mt-2 text-xs text-gray-600">
+                  {debouncedSearch
+                    ? `${filteredProducts.length} result${filteredProducts.length !== 1 ? 's' : ''} for "${debouncedSearch}"`
+                    : `Showing ${filteredProducts.length} product${filteredProducts.length !== 1 ? 's' : ''}`}
+                </p>
+
+                {/* Category from URL: "Showing: Beds" with clear */}
+                {categoryFilter && (
+                  <div className="mt-2 flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-gray-600">Showing: {formatCategoryLabel(categoryFilter)}</span>
+                    <button
+                      type="button"
+                      onClick={() => setCategoryFilter(null)}
+                      className="text-xs text-gray-500 hover:text-gray-900 underline underline-offset-2"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+
+                {/* Category pills */}
+                <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => setSearchInput('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                    aria-label="Clear search"
+                    onClick={() => setCategoryFilter(null)}
+                    className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs md:text-sm font-medium transition-colors ${
+                      categoryFilter === null
+                        ? 'bg-gray-900 text-white'
+                        : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
                   >
-                    <X className="h-4 w-4" />
+                    All
                   </button>
-                )}
+                  {categories.map(cat => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setCategoryFilter(cat)}
+                      className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs md:text-sm font-medium transition-colors ${
+                        categoryFilter === cat
+                          ? 'bg-gray-900 text-white'
+                          : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-
-            {/* Results count: "Showing X products" or "X results for 'sofa'" */}
-            <p className="mt-2 text-xs text-gray-600">
-              {debouncedSearch
-                ? `${filteredProducts.length} result${filteredProducts.length !== 1 ? 's' : ''} for "${debouncedSearch}"`
-                : `Showing ${filteredProducts.length} product${filteredProducts.length !== 1 ? 's' : ''}`}
-            </p>
-
-            {/* Category from URL: "Showing: Beds" with clear */}
-            {categoryFilter && (
-              <div className="mt-2 flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-gray-600">Showing: {formatCategoryLabel(categoryFilter)}</span>
-                <button
-                  type="button"
-                  onClick={() => setCategoryFilter(null)}
-                  className="text-xs text-gray-500 hover:text-gray-900 underline underline-offset-2"
-                >
-                  Clear
-                </button>
-              </div>
-            )}
-
-            {/* Category pills */}
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setCategoryFilter(null)}
-                className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs md:text-sm font-medium transition-colors ${
-                  categoryFilter === null
-                    ? 'bg-gray-900 text-white'
-                    : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                All
-              </button>
-              {categories.map(cat => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setCategoryFilter(cat)}
-                  className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs md:text-sm font-medium transition-colors ${
-                    categoryFilter === cat
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
             </div>
 
             {/* Preset price filters (above slider); only when we have a valid price range. */}
