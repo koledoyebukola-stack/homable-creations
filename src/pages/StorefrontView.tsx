@@ -159,6 +159,7 @@ function StorefrontActive({
   const prevCategoryFilterRef = useRef<string | null>(null);
   const prevProductsRef = useRef<VendorProduct[]>([]);
   const categoryChangePendingRef = useRef(false);
+  const scrollRestoredRef = useRef(false);
 
   // Categories come from API (all storefront categories), not from loaded products, so pills show on initial load.
 
@@ -167,6 +168,26 @@ function StorefrontActive({
     const decoded = categoryParam ? decodeURIComponent(categoryParam) : null;
     setCategoryFilterState(decoded);
   }, [categoryParam]);
+
+  // Restore scroll position when returning from product detail page
+  // Only restore if we have saved scroll AND products have loaded (to ensure DOM is ready)
+  useEffect(() => {
+    if (scrollRestoredRef.current || products.length === 0) return;
+    
+    const scrollKey = `storefront_scroll_${storefront.slug}_${categoryFilter || 'all'}`;
+    const savedScroll = sessionStorage.getItem(scrollKey);
+    
+    if (savedScroll) {
+      const scrollY = parseInt(savedScroll, 10);
+      // Use setTimeout to ensure DOM is fully rendered and layout is complete
+      setTimeout(() => {
+        window.scrollTo({ top: scrollY, behavior: 'instant' });
+        scrollRestoredRef.current = true;
+      }, 100);
+    } else {
+      scrollRestoredRef.current = true; // Mark as handled even if no saved position
+    }
+  }, [storefront.slug, categoryFilter, products.length]);
 
   // Use path segments (/stores/slug/category) for shareable, SEO-friendly category URLs (e.g. WhatsApp).
   const setCategoryFilter = useCallback((cat: string | null) => {
@@ -202,6 +223,7 @@ function StorefrontActive({
     prevCategoryFilterRef.current = null;
     prevProductsRef.current = [];
     categoryChangePendingRef.current = false;
+    scrollRestoredRef.current = false; // Reset scroll restoration when storefront changes
   }, [storefront.id]);
 
   // Track when category changes (before products update)
@@ -210,6 +232,7 @@ function StorefrontActive({
       const oldCategory = prevCategoryFilterRef.current;
       prevCategoryFilterRef.current = categoryFilter;
       categoryChangePendingRef.current = true; // Mark that we're waiting for products to update
+      scrollRestoredRef.current = false; // Reset scroll restoration when category changes (new filter = start at top)
       
       console.log('[CATEGORY CHANGE]', {
         oldCategory,
@@ -588,7 +611,12 @@ function StorefrontActive({
                 return (
                   <div
                     key={product.id}
-                    onClick={() => navigate(`/shops/products/${product.slug}`)}
+                    onClick={() => {
+                      // Save scroll position before navigating to product detail
+                      const scrollKey = `storefront_scroll_${storefront.slug}_${categoryFilter || 'all'}`;
+                      sessionStorage.setItem(scrollKey, window.scrollY.toString());
+                      navigate(`/shops/products/${product.slug}`);
+                    }}
                     className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer"
                   >
                     <div className={`${aspectClass} w-full bg-gray-100 relative overflow-hidden rounded-2xl`}>
