@@ -8,17 +8,6 @@ import { getSelectedCountry } from '@/components/LocationSelector';
 import { getActiveStorefrontsByLocation } from '@/lib/api';
 import type { Storefront, VendorProduct } from '@/lib/types';
 
-const CATEGORY_TILES = [
-  { name: 'Sofas', image: '/assets/boucle-sofa.jpg' },
-  { name: 'Tables & Chairs', image: '/assets/oval-dining-table.jpg' },
-  { name: 'Storage', image: '/assets/compact-desk.jpg' },
-  { name: 'Beds', image: '/assets/canopy-bed.jpg' },
-  { name: 'Decor', image: '/assets/persian-rug.jpg' },
-  { name: 'Lighting', image: '/assets/carousel-living-room-1.jpg' },
-  { name: 'Dining', image: '/assets/carousel-dining-room-5.jpg' },
-  { name: 'Office', image: '/assets/wood-minimalist-desk.jpg' },
-] as const;
-
 const FEATURE_CARDS = [
   {
     title: 'Vendor discovery',
@@ -37,7 +26,8 @@ const FEATURE_CARDS = [
   },
 ] as const;
 
-const HERO_IMAGE = '/assets/sample-afro-modern-living-1.jpg';
+const HERO_IMAGE =
+  'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/storefront-assets/Shops%20Banner.png';
 
 function formatPrice(min: number | null, max: number | null): string {
   if (min != null && max != null && min !== max) return `₦${min.toLocaleString()} – ₦${max.toLocaleString()}`;
@@ -54,12 +44,20 @@ const COUNTRY_NAMES: Record<string, string> = {
   OTHER: 'your area',
 };
 
+function formatCategoryLabel(category: string): string {
+  return category
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
 export default function ShopsHome() {
   const navigate = useNavigate();
   const [country, setCountry] = useState<string>(() => getSelectedCountry());
   const [loading, setLoading] = useState<boolean>(true);
   const [storefronts, setStorefronts] = useState<Storefront[]>([]);
   const [products, setProducts] = useState<VendorProduct[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   // Listen for global location changes from Header's LocationSelector
   useEffect(() => {
@@ -106,49 +104,92 @@ export default function ShopsHome() {
     return counts;
   }, [products]);
 
-  // Featured products preview: first 6 items for hero/preview section
-  const previewProducts = useMemo(() => products.slice(0, 6), [products]);
+  // Map categories -> representative product (for category nav images)
+  const categoriesWithRepresentative = useMemo(() => {
+    const map = new Map<string, VendorProduct>();
+    for (const p of products) {
+      if (p.category && !map.has(p.category)) {
+        map.set(p.category, p);
+      }
+    }
+    return Array.from(map.entries());
+  }, [products]);
 
-  // Full grid products (can be paged later if needed)
-  const gridProducts = useMemo(() => products, [products]);
+  const filteredProducts = useMemo(() => {
+    if (!selectedCategory) return products;
+    return products.filter(p => p.category === selectedCategory);
+  }, [products, selectedCategory]);
+
+  // Featured products preview: first 6 items for hero/preview section (after category filter)
+  const previewProducts = useMemo(() => filteredProducts.slice(0, 6), [filteredProducts]);
+
+  // Full grid products (after category filter; can be paged later if needed)
+  const gridProducts = useMemo(() => filteredProducts, [filteredProducts]);
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <Header />
 
       <main className="flex-1 flex flex-col">
-        {/* 1. Category preview tiles - visual only, not clickable */}
-        <section
-          className="border-b border-gray-100 bg-[#fafaf9] py-6 md:py-8"
-          aria-label="Category preview"
-        >
-          <div className="overflow-x-auto overflow-y-hidden">
-            <div className="flex gap-4 px-4 min-w-max md:px-6 lg:px-8 pb-2">
-              {CATEGORY_TILES.map(({ name, image }) => (
-                <div
-                  key={name}
-                  className="flex-shrink-0 w-[140px] md:w-[160px] rounded-lg bg-[#f0eeeb] overflow-hidden opacity-90 cursor-default select-none"
-                  style={{ cursor: 'default' }}
-                  role="img"
-                  aria-label={name}
+        {/* 1. Category navigation strip (functional filters when marketplace is active) */}
+        {hasActiveVendors && categoriesWithRepresentative.length > 0 && (
+          <section
+            className="border-b border-gray-100 bg-[#fafaf9] py-4 md:py-5"
+            aria-label="Browse by category"
+          >
+            <div className="overflow-x-auto overflow-y-hidden">
+              <div className="flex gap-3 px-4 md:px-6 lg:px-8 pb-1">
+                {/* All category */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory(null)}
+                  className={`flex-shrink-0 w-[92px] md:w-[96px] rounded-xl border ${
+                    selectedCategory === null
+                      ? 'border-gray-900 bg-white shadow-sm'
+                      : 'border-gray-200 bg-white hover:border-gray-300'
+                  } flex flex-col items-center pt-3 pb-2 transition-colors`}
                 >
-                  <div className="aspect-square w-full bg-gray-200">
-                    <img
-                      src={image}
-                      alt=""
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                      draggable={false}
-                    />
+                  <div className="h-[72px] w-[72px] rounded-lg bg-gray-100 flex items-center justify-center text-[11px] text-gray-500">
+                    All
                   </div>
-                  <p className="text-center text-sm font-medium text-[#333] py-2.5 px-2">
-                    {name}
-                  </p>
-                </div>
-              ))}
+                  <p className="mt-2 text-[11px] text-gray-800 font-medium">All</p>
+                </button>
+
+                {categoriesWithRepresentative.map(([category, rep]) => (
+                  <button
+                    key={category}
+                    type="button"
+                    onClick={() => setSelectedCategory(category)}
+                    className={`flex-shrink-0 w-[92px] md:w-[96px] rounded-xl border ${
+                      selectedCategory === category
+                        ? 'border-gray-900 bg-white shadow-sm'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    } flex flex-col items-center pt-3 pb-2 transition-colors`}
+                  >
+                    <div className="h-[72px] w-[72px] rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center">
+                      {rep.image_url ? (
+                        <img
+                          src={rep.image_url}
+                          alt={formatCategoryLabel(category)}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          draggable={false}
+                        />
+                      ) : (
+                        <span className="text-[11px] text-gray-500 px-1 text-center">
+                          {formatCategoryLabel(category)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-2 text-[11px] text-gray-800 font-medium text-center">
+                      {formatCategoryLabel(category)}
+                    </p>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* 2. Hero: full-width image + text overlay (CTA + marketplace messaging) */}
         <section className="relative w-full min-h-[420px] md:min-h-[520px] lg:min-h-[600px]">
