@@ -156,11 +156,11 @@ function StorefrontActive({
   const [loadingMore, setLoadingMore] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const priceRangeInitialized = useRef(false);
+  const prevCategoryFilterRef = useRef<string | null>(null);
 
   // Categories come from API (all storefront categories), not from loaded products, so pills show on initial load.
 
   // Sync category filter from URL on mount and when category param changes (shareable links).
-  // We allow any category string from URL so shared links work even before "Load more" has run.
   useEffect(() => {
     const decoded = categoryParam ? decodeURIComponent(categoryParam) : null;
     setCategoryFilterState(decoded);
@@ -197,7 +197,30 @@ function StorefrontActive({
 
   useEffect(() => {
     priceRangeInitialized.current = false;
+    prevCategoryFilterRef.current = null;
   }, [storefront.id]);
+
+  // When category changes, reset price range to full bounds so category and price filters stay independent.
+  useEffect(() => {
+    if (categoryFilter !== prevCategoryFilterRef.current) {
+      prevCategoryFilterRef.current = categoryFilter;
+      setPriceRange(priceBounds);
+    }
+  }, [categoryFilter, priceBounds]);
+
+  // When priceBounds change (e.g. after category refetch), clamp range so it stays within bounds.
+  useEffect(() => {
+    const [bMin, bMax] = priceBounds;
+    setPriceRange(prev => {
+      const [pMin, pMax] = prev;
+      if (bMin === bMax) return [bMin, bMax];
+      const newMin = Math.max(pMin, bMin);
+      const newMax = Math.min(pMax, bMax);
+      if (newMin > newMax) return [bMin, bMax];
+      if (newMin !== pMin || newMax !== pMax) return [newMin, newMax];
+      return prev;
+    });
+  }, [priceBounds]);
 
   useEffect(() => {
     const [min, max] = priceBounds;
@@ -335,7 +358,7 @@ function StorefrontActive({
                   onFocus={() => setIsSearchFocused(true)}
                   onBlur={() => setIsSearchFocused(false)}
                   placeholder="Search: bed, wardrobe, L-shape sofa, TV stand"
-                  className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
+                  className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-10 text-base md:text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
                   aria-label="Search products by name or category"
                 />
                 {searchInput.length > 0 && (
@@ -400,6 +423,38 @@ function StorefrontActive({
                 </button>
               ))}
             </div>
+
+            {/* Preset price filters (above slider); only when we have a valid price range. */}
+            {priceBounds[0] < priceBounds[1] && (
+              <div className="mt-4">
+                <span className="text-xs font-medium text-gray-600">Price</span>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {[
+                    { label: 'Under ₦100k', getRange: (b: [number, number]) => [b[0], Math.min(100000, b[1])] as const },
+                    { label: '₦100k – ₦200k', getRange: (b: [number, number]) => [Math.max(100000, b[0]), Math.min(200000, b[1])] as const },
+                    { label: '₦200k – ₦300k', getRange: (b: [number, number]) => [Math.max(200000, b[0]), Math.min(300000, b[1])] as const },
+                    { label: '₦300k+', getRange: (b: [number, number]) => [Math.max(300000, b[0]), b[1]] as const },
+                  ].map(({ label, getRange }) => {
+                    const presetRange = getRange(priceBounds);
+                    const isValid = presetRange[0] <= presetRange[1];
+                    const isActive = isValid && priceMin === presetRange[0] && priceMax === presetRange[1];
+                    return (
+                      <button
+                        key={label}
+                        type="button"
+                        disabled={!isValid}
+                        onClick={() => isValid && setPriceRange([presetRange[0], presetRange[1]])}
+                        className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs md:text-sm font-medium transition-colors ${
+                          !isValid ? 'cursor-not-allowed opacity-50 bg-gray-100 border border-gray-200 text-gray-400' : isActive ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Price range slider (only if we have prices) */}
             {priceBounds[0] < priceBounds[1] && (
