@@ -157,6 +157,7 @@ function StorefrontActive({
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const priceRangeInitialized = useRef(false);
   const prevCategoryFilterRef = useRef<string | null>(null);
+  const prevProductsRef = useRef<VendorProduct[]>([]);
 
   // Categories come from API (all storefront categories), not from loaded products, so pills show on initial load.
 
@@ -198,27 +199,42 @@ function StorefrontActive({
   useEffect(() => {
     priceRangeInitialized.current = false;
     prevCategoryFilterRef.current = null;
+    prevProductsRef.current = [];
   }, [storefront.id]);
 
-  // When category changes, reset price range to full bounds so category and price filters stay independent.
+  // When category changes, reset price range to full bounds when new products arrive.
   useEffect(() => {
-    if (categoryFilter !== prevCategoryFilterRef.current) {
+    const categoryChanged = categoryFilter !== prevCategoryFilterRef.current;
+    const productsReplaced = products.length !== prevProductsRef.current.length || 
+      (products.length > 0 && prevProductsRef.current.length > 0 && products[0]?.id !== prevProductsRef.current[0]?.id);
+    
+    if (categoryChanged) {
       prevCategoryFilterRef.current = categoryFilter;
+    }
+    
+    if (categoryChanged && productsReplaced) {
+      // Category changed and products were replaced (not appended via load more), reset price range
       setPriceRange(priceBounds);
     }
-  }, [categoryFilter, priceBounds]);
+    
+    prevProductsRef.current = products;
+  }, [categoryFilter, products, priceBounds]);
 
-  // When priceBounds change (e.g. after category refetch), clamp range so it stays within bounds.
+  // When priceBounds change (e.g. after load more), clamp range so it stays within bounds.
+  // Only clamp if range is OUTSIDE bounds; don't clamp if it's already within (to avoid overriding user's slider).
   useEffect(() => {
     const [bMin, bMax] = priceBounds;
     setPriceRange(prev => {
       const [pMin, pMax] = prev;
       if (bMin === bMax) return [bMin, bMax];
-      const newMin = Math.max(pMin, bMin);
-      const newMax = Math.min(pMax, bMax);
-      if (newMin > newMax) return [bMin, bMax];
-      if (newMin !== pMin || newMax !== pMax) return [newMin, newMax];
-      return prev;
+      // Only clamp if current range is outside the bounds
+      if (pMin < bMin || pMax > bMax || pMin > bMax || pMax < bMin) {
+        const newMin = Math.max(pMin, bMin);
+        const newMax = Math.min(pMax, bMax);
+        if (newMin > newMax) return [bMin, bMax];
+        return [newMin, newMax];
+      }
+      return prev; // Range is already within bounds, don't change it
     });
   }, [priceBounds]);
 
