@@ -158,6 +158,7 @@ function StorefrontActive({
   const priceRangeInitialized = useRef(false);
   const prevCategoryFilterRef = useRef<string | null>(null);
   const prevProductsRef = useRef<VendorProduct[]>([]);
+  const categoryChangePendingRef = useRef(false);
 
   // Categories come from API (all storefront categories), not from loaded products, so pills show on initial load.
 
@@ -200,38 +201,87 @@ function StorefrontActive({
     priceRangeInitialized.current = false;
     prevCategoryFilterRef.current = null;
     prevProductsRef.current = [];
+    categoryChangePendingRef.current = false;
   }, [storefront.id]);
 
-  // When category changes, reset price range to full bounds when new products arrive.
+  // Track when category changes (before products update)
   useEffect(() => {
-    const categoryChanged = categoryFilter !== prevCategoryFilterRef.current;
-    const productsReplaced = products.length !== prevProductsRef.current.length || 
-      (products.length > 0 && prevProductsRef.current.length > 0 && products[0]?.id !== prevProductsRef.current[0]?.id);
-    
-    if (categoryChanged) {
+    if (categoryFilter !== prevCategoryFilterRef.current) {
+      const oldCategory = prevCategoryFilterRef.current;
       prevCategoryFilterRef.current = categoryFilter;
+      categoryChangePendingRef.current = true; // Mark that we're waiting for products to update
+      
+      console.log('[CATEGORY CHANGE]', {
+        oldCategory,
+        newCategory: categoryFilter,
+        oldPriceBounds: priceBounds,
+        currentPriceRange: priceRange,
+        categoryChangePending: true,
+      });
     }
+  }, [categoryFilter, priceBounds, priceRange]);
+
+  // When products update after a category change, reset price range to new bounds
+  useEffect(() => {
+    const productsChanged = products.length !== prevProductsRef.current.length || 
+      (products.length > 0 && prevProductsRef.current.length > 0 && products[0]?.id !== prevProductsRef.current[0]?.id);
+    const isLoadMore = products.length > prevProductsRef.current.length && 
+      products.length > 0 && prevProductsRef.current.length > 0 && 
+      products[0]?.id === prevProductsRef.current[0]?.id;
     
-    if (categoryChanged && productsReplaced) {
+    console.log('[PRODUCTS UPDATE]', {
+      productsCount: products.length,
+      prevProductsCount: prevProductsRef.current.length,
+      productsChanged,
+      isLoadMore,
+      categoryChangePending: categoryChangePendingRef.current,
+      newPriceBounds: priceBounds,
+      firstProductId: products[0]?.id,
+      prevFirstProductId: prevProductsRef.current[0]?.id,
+    });
+    
+    if (categoryChangePendingRef.current && productsChanged && !isLoadMore) {
       // Category changed and products were replaced (not appended via load more), reset price range
+      console.log('[RESETTING PRICE RANGE]', {
+        reason: 'Category changed and products replaced',
+        newPriceBounds: priceBounds,
+        settingPriceRangeTo: priceBounds,
+      });
       setPriceRange(priceBounds);
+      categoryChangePendingRef.current = false; // Clear the flag
     }
     
     prevProductsRef.current = products;
-  }, [categoryFilter, products, priceBounds]);
+  }, [products, priceBounds]);
 
   // When priceBounds change (e.g. after load more), clamp range so it stays within bounds.
   // Only clamp if range is OUTSIDE bounds; don't clamp if it's already within (to avoid overriding user's slider).
   useEffect(() => {
+    if (categoryChangePendingRef.current) {
+      console.log('[CLAMP EFFECT] Skipping clamp - category change pending');
+      return; // Don't clamp if we're about to reset due to category change
+    }
+    
     const [bMin, bMax] = priceBounds;
     setPriceRange(prev => {
       const [pMin, pMax] = prev;
-      if (bMin === bMax) return [bMin, bMax];
+      if (bMin === bMax) {
+        console.log('[CLAMP EFFECT] Price bounds are equal, setting to', [bMin, bMax]);
+        return [bMin, bMax];
+      }
       // Only clamp if current range is outside the bounds
       if (pMin < bMin || pMax > bMax || pMin > bMax || pMax < bMin) {
         const newMin = Math.max(pMin, bMin);
         const newMax = Math.min(pMax, bMax);
-        if (newMin > newMax) return [bMin, bMax];
+        if (newMin > newMax) {
+          console.log('[CLAMP EFFECT] Clamped range invalid, resetting to bounds', [bMin, bMax]);
+          return [bMin, bMax];
+        }
+        console.log('[CLAMP EFFECT] Clamping range', {
+          oldRange: [pMin, pMax],
+          bounds: [bMin, bMax],
+          newRange: [newMin, newMax],
+        });
         return [newMin, newMax];
       }
       return prev; // Range is already within bounds, don't change it
@@ -251,7 +301,7 @@ function StorefrontActive({
   // Category is applied server-side when a pill is selected; products here are already filtered by category.
   const filteredProducts = useMemo(() => {
     const q = debouncedSearch.toLowerCase();
-    return products.filter(p => {
+    const filtered = products.filter(p => {
       const pMin = p.price_min ?? p.price_max ?? null;
       const pMax = p.price_max ?? p.price_min ?? null;
       if (priceMin != null && priceMax != null && priceMin <= priceMax) {
@@ -266,7 +316,18 @@ function StorefrontActive({
       }
       return true;
     });
-  }, [products, priceMin, priceMax, debouncedSearch]);
+    
+    console.log('[FILTERED PRODUCTS]', {
+      totalProducts: products.length,
+      filteredCount: filtered.length,
+      priceRange: [priceMin, priceMax],
+      priceBounds,
+      searchQuery: q || '(none)',
+      categoryFilter: categoryFilter || '(all)',
+    });
+    
+    return filtered;
+  }, [products, priceMin, priceMax, debouncedSearch, priceBounds, categoryFilter]);
 
   const whatsapp = whatsappUrl(storefront.whatsapp_number);
 
