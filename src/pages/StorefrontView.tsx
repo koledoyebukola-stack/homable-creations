@@ -420,9 +420,9 @@ function StorefrontActive({
               {totalCount} custom-made pieces{storefront.vendor_type === 'carpenter' ? ', crafted to order' : ''}.
             </p>
 
-            {/* Search + category filters: sticky on mobile so they stay visible while scrolling products */}
-            {/* top-14 (56px) accounts for sticky header height on mobile; full-width background on mobile */}
-            <div className="mt-4 md:mt-4 sticky top-14 md:top-0 z-30 bg-gray-50 md:bg-transparent backdrop-blur-sm md:backdrop-blur-0 border-b border-gray-200 md:border-none -mx-4 md:mx-0 px-4 md:px-0 shadow-sm md:shadow-none">
+            {/* Search + category filters: sticky on mobile and desktop so they stay visible while scrolling products */}
+            {/* top-14 (56px) accounts for sticky header height; full-width background on mobile, contained on desktop */}
+            <div className="mt-4 md:mt-4 sticky top-14 z-30 bg-gray-50 backdrop-blur-sm border-b border-gray-200 -mx-4 md:mx-0 px-4 md:px-0 shadow-sm md:bg-white md:backdrop-blur-0 md:shadow-md">
               <div className="pt-2 pb-3">
                 {/* Search: above filters, full width on mobile, max-width on desktop. Debounced client-side. */}
                 {/* type="text" + custom clear only = single clear button (type="search" adds native clear on desktop). */}
