@@ -163,7 +163,8 @@ export interface Storefront {
   id: string;
   slug: string;
   name: string;
-  location: string | null;
+  location: string | null; // ISO country code for filtering (e.g. 'NG')
+  location_display: string | null; // Human-readable location for UI (e.g. 'Ikeja, Lagos, Nigeria')
   description: string | null;
   logo_url: string | null;
   banner_url: string | null;

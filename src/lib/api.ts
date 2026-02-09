@@ -1556,6 +1556,54 @@ export async function getStorefrontProductsPage(
 }
 
 /**
+ * Fetch all active storefronts for a given location (country code) and their products.
+ * Used for the public Shops homepage to power the location-based marketplace.
+ *
+ * - storefronts: all active vendors in the given location
+ * - products: all products from those storefronts (caller can slice for featured grids)
+ */
+export async function getActiveStorefrontsByLocation(
+  location: string
+): Promise<{ storefronts: Storefront[]; products: VendorProduct[] }> {
+  const { data: storefronts, error: storefrontsError } = await supabase
+    .from('storefronts')
+    .select('*')
+    .eq('status', 'active')
+    .eq('location', location);
+
+  if (storefrontsError) {
+    console.error('Failed to fetch storefronts by location:', storefrontsError);
+    return { storefronts: [], products: [] };
+  }
+
+  if (!storefronts || storefronts.length === 0) {
+    return { storefronts: [], products: [] };
+  }
+
+  const storefrontIds = (storefronts as Storefront[]).map(sf => sf.id);
+
+  const { data: products, error: productsError } = await supabase
+    .from('vendor_products')
+    .select('*')
+    .in('storefront_id', storefrontIds)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true });
+
+  if (productsError) {
+    console.error('Failed to fetch vendor products by location:', productsError);
+    return {
+      storefronts: storefronts as Storefront[],
+      products: [],
+    };
+  }
+
+  return {
+    storefronts: storefronts as Storefront[],
+    products: (products || []) as VendorProduct[],
+  };
+}
+
+/**
  * Fetch a vendor product by its globally-unique slug, including parent storefront.
  * Returns null if not found or storefront missing.
  */

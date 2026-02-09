@@ -395,9 +395,9 @@ function StorefrontActive({
                 <h1 className="text-2xl md:text-3xl lg:text-[32px] font-bold tracking-tight">
                   {storefront.name}
                 </h1>
-                {storefront.location && (
+                {(storefront.location_display || storefront.location) && (
                   <p className="mt-1 text-sm md:text-base text-white/80">
-                    {storefront.location}
+                    {storefront.location_display || storefront.location}
                     {vendorSubtitle && ` · ${vendorSubtitle}`}
                   </p>
                 )}
