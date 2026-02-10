@@ -6,8 +6,10 @@ import ImageUploader from '@/components/ImageUploader';
 import StylePreviewModal from '@/components/StylePreviewModal';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { uploadImage, createBoard, validateDecorImage } from '@/lib/api';
+import { uploadImage, createBoard, validateDecorImage, getExploreScenes } from '@/lib/api';
 import { toast } from 'sonner';
+import ExploreSceneCard from '@/components/ExploreSceneCard';
+import type { ExploreScene } from '@/lib/types';
 import { AlertCircle, Info, ChevronLeft, ChevronRight, TestTube } from 'lucide-react';
 import SpecsCategorySelection from '@/components/specs/SpecsCategorySelection';
 import { trackPageView, trackAction, EVENTS } from '@/lib/analytics';
@@ -162,9 +164,17 @@ const DESIGN_STYLES_BY_ROOM = {
 };
 
 type TabType = 'explore' | 'inspiration' | 'specs';
-type RoomFilter = 'All' | 'Living Room' | 'Bedroom' | 'Bathroom' | 'Home Office' | 'Events';
 
-const ITEMS_PER_PAGE = 10;
+/** Room type filter for Explore tab (curated scenes from DB). Values match explore_scenes.room_type. */
+type ExploreRoomTypeFilter = 'all' | 'living_room' | 'bedroom' | 'dining' | 'office';
+
+const EXPLORE_PILLS: { value: ExploreRoomTypeFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'living_room', label: 'Living Room' },
+  { value: 'bedroom', label: 'Bedroom' },
+  { value: 'dining', label: 'Dining' },
+  { value: 'office', label: 'Home Office' },
+];
 
 export default function Upload() {
   const navigate = useNavigate();
@@ -176,13 +186,16 @@ export default function Upload() {
   const [isSampleImage, setIsSampleImage] = useState(false);
   const [sampleImageAlt, setSampleImageAlt] = useState<string>('');
   const [activeTab, setActiveTab] = useState<TabType>('inspiration');
-  const [roomFilter, setRoomFilter] = useState<RoomFilter>('All');
-  const [currentPage, setCurrentPage] = useState(1);
-  
+
   // Modal state for style preview
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedStyleImage, setSelectedStyleImage] = useState<string>('');
   const [selectedStyleName, setSelectedStyleName] = useState<string>('');
+
+  // Explore tab (curated rooms from DB)
+  const [exploreScenes, setExploreScenes] = useState<ExploreScene[]>([]);
+  const [loadingExploreScenes, setLoadingExploreScenes] = useState(false);
+  const [exploreRoomTypeFilter, setExploreRoomTypeFilter] = useState<ExploreRoomTypeFilter>('all');
 
   // Test country parameter for testing from different locations
   const testCountry = searchParams.get('test_country');
@@ -206,10 +219,14 @@ export default function Upload() {
     }
   }, [searchParams]);
 
-  // Reset to page 1 when room filter changes
+  // Fetch all published explore scenes for NG when on Explore tab
   useEffect(() => {
-    setCurrentPage(1);
-  }, [roomFilter]);
+    if (activeTab !== 'explore') return;
+    setLoadingExploreScenes(true);
+    getExploreScenes('NG')
+      .then(setExploreScenes)
+      .finally(() => setLoadingExploreScenes(false));
+  }, [activeTab]);
 
   const handleImageSelect = (file: File) => {
     console.log('Image selected:', file.name, file.type, file.size);
@@ -448,36 +465,6 @@ export default function Upload() {
     }
   };
 
-  // Get filtered styles based on room filter
-  const getFilteredStyles = () => {
-    if (roomFilter === 'All') {
-      // Return all styles from all rooms
-      return Object.entries(DESIGN_STYLES_BY_ROOM).flatMap(([roomType, styles]) => 
-        styles.map(style => ({ ...style, roomType }))
-      );
-    }
-    // Return styles for selected room type
-    return (DESIGN_STYLES_BY_ROOM[roomFilter] || []).map(style => ({ ...style, roomType: roomFilter }));
-  };
-
-  const filteredStyles = getFilteredStyles();
-  
-  // Pagination
-  const totalPages = Math.ceil(filteredStyles.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentStyles = filteredStyles.slice(startIndex, endIndex);
-
-  const handlePreviousPage = () => {
-    setCurrentPage(prev => Math.max(1, prev - 1));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleNextPage = () => {
-    setCurrentPage(prev => Math.min(totalPages, prev + 1));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
       <Header />
@@ -551,119 +538,74 @@ export default function Upload() {
           </div>
 
           {/* Tab Content */}
-          {/* Explore Styles Tab */}
+          {/* Explore Tab - Curated rooms from DB (Nigeria) */}
           {activeTab === 'explore' && (
-            <div className="space-y-8">
-              {/* Info Banner */}
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                <div className="flex items-start gap-3">
-                  <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-blue-900">
-                    Browse curated room styles to find inspiration. Click any room to see what decor items create that look.
-                  </p>
-                </div>
+            <div className="space-y-8 max-w-6xl mx-auto w-full">
+              {/* Page Header */}
+              <div className="text-center">
+                <h1 className="text-3xl md:text-4xl font-bold text-[#111111] mb-2">
+                  Explore Curated Rooms
+                </h1>
+                <p className="text-lg text-[#555555] max-w-xl mx-auto">
+                  Professionally designed rooms you can recreate with local vendors
+                </p>
               </div>
 
-              {/* Room Type Filter */}
-              <div className="flex flex-wrap gap-2 justify-center">
-                {(['All', 'Living Room', 'Bedroom', 'Bathroom', 'Home Office', 'Events'] as RoomFilter[]).map((room) => (
+              {/* Category filter pills - horizontal scroll on mobile, wrap on desktop */}
+              <div className="flex gap-2 overflow-x-auto pb-2 md:overflow-visible md:flex-wrap md:justify-center scrollbar-thin">
+                {EXPLORE_PILLS.map(({ value, label }) => (
                   <button
-                    key={room}
-                    onClick={() => setRoomFilter(room)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                      roomFilter === room
+                    key={value}
+                    onClick={() => setExploreRoomTypeFilter(value)}
+                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                      exploreRoomTypeFilter === value
                         ? 'bg-[#111111] text-white'
-                        : 'bg-white text-[#555555] hover:bg-gray-100 border border-gray-200'
+                        : 'bg-white text-[#555555] hover:bg-gray-100 border border-[#e0e0e0]'
                     }`}
                   >
-                    {room}
+                    {label}
                   </button>
                 ))}
               </div>
 
-              {/* Style Grid */}
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-[#111111]">
-                    {roomFilter === 'All' ? 'All Design Styles' : `${roomFilter} Styles`}
-                  </h2>
-                  <p className="text-sm text-[#555555]">
-                    {filteredStyles.length} styles • Page {currentPage} of {totalPages}
-                  </p>
-                </div>
-                
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {currentStyles.map((style, index) => (
-                    <Card
-                      key={`${style.roomType}-${style.name}-${index}`}
-                      className="overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105 rounded-2xl border-0"
-                      onClick={() => !uploading && handleStyleClick(style.name, style.image)}
-                    >
-                      <div className="aspect-[4/3] overflow-hidden">
-                        <img
-                          src={style.image}
-                          alt={style.name}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-semibold text-base text-[#111111]">
-                          {style.name}
-                        </h3>
-                        <p className="text-xs text-[#555555] mt-1">
-                          {style.roomType}
+              {/* Scenes grid */}
+              <div className="min-h-[200px]">
+                {loadingExploreScenes ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <div key={i} className="aspect-[4/3] rounded-xl bg-gray-200 animate-pulse" />
+                    ))}
+                  </div>
+                ) : (() => {
+                  const filteredScenes =
+                    exploreRoomTypeFilter === 'all'
+                      ? exploreScenes
+                      : exploreScenes.filter((s) => s.room_type === exploreRoomTypeFilter);
+                  if (filteredScenes.length === 0) {
+                    const categoryLabel =
+                      exploreRoomTypeFilter === 'all'
+                        ? ''
+                        : EXPLORE_PILLS.find((p) => p.value === exploreRoomTypeFilter)?.label ?? '';
+                    return (
+                      <div className="text-center py-16 px-4 bg-white rounded-2xl border border-[#e5e5e5]">
+                        <p className="text-[#555555] text-lg">
+                          No {categoryLabel ? `${categoryLabel} ` : ''}designs yet. Check back soon!
                         </p>
                       </div>
-                    </Card>
-                  ))}
-                </div>
-
-                {/* Pagination Controls - FIXED FOR MOBILE */}
-                {totalPages > 1 && (
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8">
-                    <Button
-                      onClick={handlePreviousPage}
-                      disabled={currentPage === 1}
-                      variant="outline"
-                      className="flex items-center gap-2 w-full sm:w-auto"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      <span className="hidden sm:inline">Previous</span>
-                      <span className="sm:hidden">Prev</span>
-                    </Button>
-                    
-                    <div className="flex items-center gap-2 overflow-x-auto max-w-full px-2">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                        <button
-                          key={page}
-                          onClick={() => {
-                            setCurrentPage(page);
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                          }}
-                          className={`w-10 h-10 flex-shrink-0 rounded-full text-sm font-medium transition-all ${
-                            currentPage === page
-                              ? 'bg-[#111111] text-white'
-                              : 'bg-white text-[#555555] hover:bg-gray-100 border border-gray-200'
-                          }`}
-                        >
-                          {page}
-                        </button>
+                    );
+                  }
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                      {filteredScenes.map((scene) => (
+                        <ExploreSceneCard
+                          key={scene.id}
+                          scene={scene}
+                          onSelect={(slug) => navigate(`/explore/${slug}`)}
+                        />
                       ))}
                     </div>
-
-                    <Button
-                      onClick={handleNextPage}
-                      disabled={currentPage === totalPages}
-                      variant="outline"
-                      className="flex items-center gap-2 w-full sm:w-auto"
-                    >
-                      <span className="hidden sm:inline">Next</span>
-                      <span className="sm:hidden">Next</span>
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             </div>
           )}

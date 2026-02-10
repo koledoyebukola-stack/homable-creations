@@ -30,6 +30,7 @@ import ShopsSearch from './pages/ShopsSearch';
 import ShopsProductDetail from './pages/ShopsProductDetail';
 import DemoStorefront from './pages/DemoStorefront';
 import StorefrontView from './pages/StorefrontView';
+import ExploreScenePage from './pages/ExploreScenePage';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -85,6 +86,7 @@ function CaptureReferrerAndRoutes() {
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           {/* Upload, Analyzing, and ItemDetection routes are PUBLIC - auth modal shows on results page */}
           <Route path="/upload" element={<Upload />} />
+          <Route path="/explore/:slug" element={<ExploreScenePage />} />
           <Route path="/analyzing/:boardId" element={<Analyzing />} />
           <Route path="/item-detection/:boardId" element={<ItemDetection />} />
           {/* Design Space flow routes - PUBLIC */}

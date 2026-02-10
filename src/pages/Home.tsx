@@ -3,7 +3,11 @@ import { ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { getSelectedCountry } from '@/components/LocationSelector';
+import { getExploreScenes } from '@/lib/api';
+import type { ExploreScene } from '@/lib/types';
+import ExploreSceneCard from '@/components/ExploreSceneCard';
 
 // Carousel examples showing inspiration photo → checklist
 const CAROUSEL_EXAMPLES = [
@@ -66,10 +70,36 @@ const HERO_CAROUSEL_IMAGES = [
   ...EXPLORE_IMAGES
 ];
 
+const HERO_DESCRIPTION_NG =
+  'Turn decor inspiration into a clear plan. Explore curated styles and upload a room photo to get an instant shopping list, visualize your space in 3D, and invite friends and family to help finish the room.';
+const HERO_DESCRIPTION_DEFAULT =
+  'Turn decor inspiration into a clear plan. Upload a room photo to get an instant shopping list, explore curated styles, visualize your space in 3D, and invite friends and family to help finish the room.';
+
 export default function Home() {
   const navigate = useNavigate();
   const [carouselSlide, setCarouselSlide] = useState(0);
   const [exploreSlide, setExploreSlide] = useState(0);
+  const [country, setCountry] = useState<string>(() => getSelectedCountry());
+  const [exploreScenes, setExploreScenes] = useState<ExploreScene[]>([]);
+  const [loadingExplore, setLoadingExplore] = useState(false);
+  const exploreSectionRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const handleLocationChange = () => setCountry(getSelectedCountry());
+    window.addEventListener('locationChanged', handleLocationChange as EventListener);
+    return () => window.removeEventListener('locationChanged', handleLocationChange as EventListener);
+  }, []);
+
+  useEffect(() => {
+    if (country !== 'NG') {
+      setExploreScenes([]);
+      return;
+    }
+    setLoadingExplore(true);
+    getExploreScenes('NG', 8)
+      .then(setExploreScenes)
+      .finally(() => setLoadingExplore(false));
+  }, [country]);
 
   const nextCarousel = () => {
     setCarouselSlide((prev) => (prev + 1) % CAROUSEL_EXAMPLES.length);
@@ -97,7 +127,7 @@ export default function Home() {
               From inspiration to execution
             </h1>
             <p className="text-lg md:text-xl text-[#555555] text-center md:text-left mb-10">
-              Turn decor inspiration into a clear plan. Upload a room photo to get an instant shopping list, explore curated styles, visualize your space in 3D, and invite friends and family to help finish the room.
+              {country === 'NG' ? HERO_DESCRIPTION_NG : HERO_DESCRIPTION_DEFAULT}
             </p>
 
             {/* CTAs: stacked on mobile, side by side on desktop */}
@@ -111,7 +141,11 @@ export default function Home() {
               </button>
               <button
                 type="button"
-                onClick={() => navigate('/upload?mode=explore')}
+                onClick={() =>
+                  country === 'NG'
+                    ? exploreSectionRef.current?.scrollIntoView({ behavior: 'smooth' })
+                    : navigate('/upload?mode=explore')
+                }
                 className="w-full md:flex-1 h-12 md:h-[60px] flex items-center justify-center rounded-xl bg-white text-black text-[15px] md:text-base font-medium border-[1.5px] border-[#e0e0e0] hover:border-black hover:bg-[#fafafa] transition-colors"
               >
                 Explore Styles & Ideas
@@ -146,6 +180,50 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Explore Preview Section (Nigeria only) - before How It Works */}
+      {country === 'NG' && (
+        <section
+          id="explore-preview"
+          ref={exploreSectionRef}
+          className="bg-gradient-to-br from-gray-50 to-stone-50 pt-10 pb-16 md:pt-12 md:pb-12 px-4 md:px-6"
+        >
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-8 md:mb-10">
+              Explore Curated Rooms
+            </h2>
+            {loadingExplore ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="aspect-[4/3] rounded-xl bg-gray-200 animate-pulse" />
+                ))}
+              </div>
+            ) : (
+              <>
+                {exploreScenes.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                    {exploreScenes.map((scene) => (
+                      <ExploreSceneCard
+                        key={scene.id}
+                        scene={scene}
+                        onSelect={(slug) => navigate(`/explore/${slug}`)}
+                      />
+                    ))}
+                  </div>
+                )}
+                <div className="text-center mt-10">
+                  <Button
+                    onClick={() => navigate('/upload?mode=explore')}
+                    className="bg-[#111111] hover:bg-[#333] text-white rounded-xl font-medium px-8"
+                  >
+                    See More Rooms
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* How It Works Section - 40px gap from hero on mobile; 48px on desktop */}
       <section className="bg-gradient-to-br from-gray-50 to-stone-50 pt-0 pb-16 md:pt-0 md:pb-12">

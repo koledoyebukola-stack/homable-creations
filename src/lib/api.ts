@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Board, DetectedItem, Product, Checklist, ChecklistItem, ChecklistWithItems, HistoryItem, SpecsHistory, CarpenterSpec, Storefront, VendorProduct } from './types';
+import type { Board, DetectedItem, Product, Checklist, ChecklistItem, ChecklistWithItems, HistoryItem, SpecsHistory, CarpenterSpec, Storefront, VendorProduct, ExploreScene, ExploreSceneItem, ExploreSceneItemWithProduct } from './types';
 
 interface RoomMaterials {
   walls?: string;
@@ -1657,4 +1657,112 @@ export async function getOtherVendorProducts(
   }
 
   return (data || []) as VendorProduct[];
+}
+
+// ——— Explore (curated room inspirations) ———
+
+/**
+ * Fetch published explore scenes for a location, ordered by sort_order.
+ * Used for homepage preview (limit 8) and explore tab (no limit).
+ */
+export async function getExploreScenes(
+  location: string,
+  limit?: number
+): Promise<ExploreScene[]> {
+  let query = supabase
+    .from('explore_scenes')
+    .select('*')
+    .eq('status', 'published')
+    .eq('location', location)
+    .order('sort_order', { ascending: true });
+
+  if (limit != null) {
+    query = query.limit(limit);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Failed to fetch explore scenes:', error);
+    return [];
+  }
+
+  return (data || []) as ExploreScene[];
+}
+
+/**
+ * Fetch a single published scene by slug with all items.
+ * For catalog_product items, includes vendor_products and storefronts.
+ */
+export async function getExploreSceneBySlug(slug: string): Promise<{
+  scene: ExploreScene;
+  items: ExploreSceneItemWithProduct[];
+} | null> {
+  const { data: scene, error: sceneError } = await supabase
+    .from('explore_scenes')
+    .select('*')
+    .eq('slug', slug)
+    .eq('status', 'published')
+    .maybeSingle();
+
+  if (sceneError || !scene) {
+    return null;
+  }
+
+  const { data: items, error: itemsError } = await supabase
+    .from('explore_scene_items')
+    .select('*')
+    .eq('scene_id', (scene as ExploreScene).id)
+    .order('sort_order', { ascending: true });
+
+  if (itemsError) {
+    console.error('Failed to fetch explore scene items:', itemsError);
+    return { scene: scene as ExploreScene, items: [] };
+  }
+
+  const rawItems = (items || []) as ExploreSceneItem[];
+
+  const productIds = rawItems
+    .filter((i) => i.item_type === 'catalog_product' && i.vendor_product_id)
+    .map((i) => i.vendor_product_id as string);
+
+  let products: { id: string; [key: string]: unknown }[] = [];
+  let storefronts: { id: string; [key: string]: unknown }[] = [];
+
+  if (productIds.length > 0) {
+    const { data: productsData } = await supabase
+      .from('vendor_products')
+      .select('*')
+      .in('id', productIds);
+    products = (productsData || []) as { id: string; [key: string]: unknown }[];
+
+    const storefrontIds = [...new Set(products.map((p) => p.storefront_id as string))];
+    if (storefrontIds.length > 0) {
+      const { data: storefrontsData } = await supabase
+        .from('storefronts')
+        .select('*')
+        .in('id', storefrontIds);
+      storefronts = (storefrontsData || []) as { id: string; [key: string]: unknown }[];
+    }
+  }
+
+  const storefrontMap = Object.fromEntries(storefronts.map((s) => [s.id, s]));
+  const productMap = Object.fromEntries(products.map((p) => [p.id, p]));
+
+  const itemsWithProduct: ExploreSceneItemWithProduct[] = rawItems.map((item) => {
+    const out: ExploreSceneItemWithProduct = { ...item, vendor_product: null, storefront: null };
+    if (item.item_type === 'catalog_product' && item.vendor_product_id) {
+      const prod = productMap[item.vendor_product_id];
+      if (prod) {
+        out.vendor_product = prod as VendorProduct;
+        out.storefront = (storefrontMap[(prod as VendorProduct).storefront_id] as Storefront) ?? null;
+      }
+    }
+    return out;
+  });
+
+  return {
+    scene: scene as ExploreScene,
+    items: itemsWithProduct,
+  };
 }

@@ -194,3 +194,42 @@ export interface VendorProduct {
   created_at: string;
   updated_at: string;
 }
+
+// Explore: curated room inspirations (Nigeria)
+export interface ExploreScene {
+  id: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  room_type: string | null;
+  hero_image_url: string | null;
+  location: string | null;
+  total_budget_ngn: number;
+  available_budget_ngn: number;
+  status: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ExploreSceneItemType = 'catalog_product' | 'custom_build' | 'instagram_link';
+
+export interface ExploreSceneItem {
+  id: string;
+  scene_id: string;
+  item_type: ExploreSceneItemType;
+  sort_order: number;
+  name: string;
+  vendor_product_id: string | null;
+  estimated_price_ngn: number | null;
+  description: string | null;
+  external_link: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Scene item with joined vendor_products + storefront (when item_type = catalog_product) */
+export interface ExploreSceneItemWithProduct extends ExploreSceneItem {
+  vendor_product?: VendorProduct | null;
+  storefront?: Storefront | null;
+}

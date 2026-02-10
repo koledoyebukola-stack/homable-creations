@@ -4,13 +4,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { X } from 'lucide-react';
 
 interface AuthModalProps {
   onSuccess: () => void;
   redirectPath?: string;
+  /** Custom title (e.g. for Explore gate: "Sign in to continue") */
+  title?: string;
+  /** Custom subtitle/description */
+  subtitle?: string;
+  /** When set, show X button that calls onClose (e.g. redirect home – no bypass) */
+  onClose?: () => void;
 }
 
-export default function AuthModal({ onSuccess }: AuthModalProps) {
+export default function AuthModal({ onSuccess, title, subtitle, onClose }: AuthModalProps) {
   const [isSignUp, setIsSignUp] = useState(true);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -73,22 +80,34 @@ export default function AuthModal({ onSuccess }: AuthModalProps) {
 
       {/* Modal */}
       <div className="relative z-10 w-full max-w-md mx-4">
-        <div className="bg-white rounded-3xl shadow-2xl p-8">
+        <div className="relative bg-white rounded-3xl shadow-2xl p-8">
+          {/* Close button (e.g. Explore gate: X redirects home, no bypass) */}
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5 text-gray-500" />
+            </button>
+          )}
+
           {/* Header */}
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-[#111111] mb-2">
-              {isForgotPassword 
-                ? 'Reset Your Password' 
-                : isSignUp 
-                ? 'Your Decor Matches Are Ready' 
-                : 'Welcome Back'}
+              {title ?? (isForgotPassword
+                ? 'Reset Your Password'
+                : isSignUp
+                  ? 'Your Decor Matches Are Ready'
+                  : 'Welcome Back')}
             </h2>
             <p className="text-[#555555]">
-              {isForgotPassword
+              {subtitle ?? (isForgotPassword
                 ? 'Enter your email and we\'ll send you a reset link.'
-                : isSignUp 
-                ? 'Create a free account to see your personalized results.'
-                : 'Sign in to see your personalized results.'}
+                : isSignUp
+                  ? 'Create a free account to see your personalized results.'
+                  : 'Sign in to see your personalized results.')}
             </p>
           </div>
 
