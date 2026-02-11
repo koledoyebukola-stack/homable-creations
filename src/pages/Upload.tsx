@@ -10,6 +10,13 @@ import { uploadImage, createBoard, validateDecorImage, getExploreScenes } from '
 import { toast } from 'sonner';
 import ExploreSceneCard from '@/components/ExploreSceneCard';
 import type { ExploreScene } from '@/lib/types';
+import {
+  EXPLORE_CATEGORY_PILLS,
+  EXPLORE_PRICE_PILLS,
+  matchesExplorePriceFilter,
+  type ExploreRoomTypeFilter,
+  type ExplorePriceFilter,
+} from '@/lib/explore-filters';
 import { AlertCircle, Info, ChevronLeft, ChevronRight, TestTube } from 'lucide-react';
 import SpecsCategorySelection from '@/components/specs/SpecsCategorySelection';
 import { trackPageView, trackAction, EVENTS } from '@/lib/analytics';
@@ -165,17 +172,6 @@ const DESIGN_STYLES_BY_ROOM = {
 
 type TabType = 'explore' | 'inspiration' | 'specs';
 
-/** Room type filter for Explore tab (curated scenes from DB). Values match explore_scenes.room_type. */
-type ExploreRoomTypeFilter = 'all' | 'living_room' | 'bedroom' | 'dining' | 'office';
-
-const EXPLORE_PILLS: { value: ExploreRoomTypeFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'living_room', label: 'Living Room' },
-  { value: 'bedroom', label: 'Bedroom' },
-  { value: 'dining', label: 'Dining' },
-  { value: 'office', label: 'Home Office' },
-];
-
 export default function Upload() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -196,6 +192,7 @@ export default function Upload() {
   const [exploreScenes, setExploreScenes] = useState<ExploreScene[]>([]);
   const [loadingExploreScenes, setLoadingExploreScenes] = useState(false);
   const [exploreRoomTypeFilter, setExploreRoomTypeFilter] = useState<ExploreRoomTypeFilter>('all');
+  const [explorePriceFilter, setExplorePriceFilter] = useState<ExplorePriceFilter>('all');
 
   // Test country parameter for testing from different locations
   const testCountry = searchParams.get('test_country');
@@ -553,7 +550,7 @@ export default function Upload() {
 
               {/* Category filter pills - horizontal scroll on mobile, wrap on desktop */}
               <div className="flex gap-2 overflow-x-auto pb-2 md:overflow-visible md:flex-wrap md:justify-center scrollbar-thin">
-                {EXPLORE_PILLS.map(({ value, label }) => (
+                {EXPLORE_CATEGORY_PILLS.map(({ value, label }) => (
                   <button
                     key={value}
                     onClick={() => setExploreRoomTypeFilter(value)}
@@ -568,6 +565,26 @@ export default function Upload() {
                 ))}
               </div>
 
+              {/* Price filters */}
+              <div className="mt-4 mb-6">
+                <p className="text-xs font-medium text-[#666666] mb-2">Price</p>
+                <div className="flex gap-2 overflow-x-auto pb-2 md:overflow-visible md:flex-wrap scrollbar-thin">
+                  {EXPLORE_PRICE_PILLS.map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => setExplorePriceFilter(value)}
+                      className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                        explorePriceFilter === value
+                          ? 'bg-[#111111] text-white'
+                          : 'bg-white text-[#555555] hover:bg-gray-100 border border-[#e0e0e0]'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Scenes grid */}
               <div className="min-h-[200px]">
                 {loadingExploreScenes ? (
@@ -577,15 +594,19 @@ export default function Upload() {
                     ))}
                   </div>
                 ) : (() => {
-                  const filteredScenes =
+                  const byCategory =
                     exploreRoomTypeFilter === 'all'
                       ? exploreScenes
                       : exploreScenes.filter((s) => s.room_type === exploreRoomTypeFilter);
+                  const filteredScenes = byCategory.filter((s) => {
+                    const catalogBudget = Number(s.catalog_budget_ngn) || 0;
+                    return matchesExplorePriceFilter(catalogBudget, explorePriceFilter);
+                  });
                   if (filteredScenes.length === 0) {
                     const categoryLabel =
                       exploreRoomTypeFilter === 'all'
                         ? ''
-                        : EXPLORE_PILLS.find((p) => p.value === exploreRoomTypeFilter)?.label ?? '';
+                        : EXPLORE_CATEGORY_PILLS.find((p) => p.value === exploreRoomTypeFilter)?.label ?? '';
                     return (
                       <div className="text-center py-16 px-4 bg-white rounded-2xl border border-[#e5e5e5]">
                         <p className="text-[#555555] text-lg">

@@ -8,6 +8,13 @@ import { getSelectedCountry } from '@/components/LocationSelector';
 import { getExploreScenes } from '@/lib/api';
 import type { ExploreScene } from '@/lib/types';
 import ExploreSceneCard from '@/components/ExploreSceneCard';
+import {
+  EXPLORE_CATEGORY_PILLS,
+  EXPLORE_PRICE_PILLS,
+  matchesExplorePriceFilter,
+  type ExploreRoomTypeFilter,
+  type ExplorePriceFilter,
+} from '@/lib/explore-filters';
 
 // Carousel examples showing inspiration photo → checklist
 const CAROUSEL_EXAMPLES = [
@@ -82,6 +89,8 @@ export default function Home() {
   const [country, setCountry] = useState<string>(() => getSelectedCountry());
   const [exploreScenes, setExploreScenes] = useState<ExploreScene[]>([]);
   const [loadingExplore, setLoadingExplore] = useState(false);
+  const [exploreCategoryFilter, setExploreCategoryFilter] = useState<ExploreRoomTypeFilter>('all');
+  const [explorePriceFilter, setExplorePriceFilter] = useState<ExplorePriceFilter>('all');
   const exploreSectionRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -209,9 +218,49 @@ export default function Home() {
             <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-2">
               Explore Curated Rooms
             </h2>
-            <p className="text-center text-[#555555] text-lg mb-8 md:mb-10 max-w-2xl mx-auto">
+            <p className="text-center text-[#555555] text-lg mb-6 md:mb-8 max-w-2xl mx-auto">
               Recreate real Nigerian rooms with a clear budget and locally sourced pieces
             </p>
+
+            {/* Category filters */}
+            <div className="flex gap-2 overflow-x-auto pb-2 md:overflow-visible md:flex-wrap md:justify-center scrollbar-thin mb-4">
+              {EXPLORE_CATEGORY_PILLS.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setExploreCategoryFilter(value)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    exploreCategoryFilter === value
+                      ? 'bg-[#111111] text-white'
+                      : 'bg-white text-[#555555] hover:bg-gray-100 border border-[#e0e0e0]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Price filters */}
+            <div className="mb-8">
+              <p className="text-xs font-medium text-[#666666] mb-2">Price</p>
+              <div className="flex gap-2 overflow-x-auto pb-2 md:overflow-visible md:flex-wrap scrollbar-thin">
+                {EXPLORE_PRICE_PILLS.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setExplorePriceFilter(value)}
+                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                      explorePriceFilter === value
+                        ? 'bg-[#111111] text-white'
+                        : 'bg-white text-[#555555] hover:bg-gray-100 border border-[#e0e0e0]'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {loadingExplore ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                 {[1, 2, 3].map((i) => (
@@ -220,17 +269,30 @@ export default function Home() {
               </div>
             ) : (
               <>
-                {exploreScenes.length > 0 && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                    {exploreScenes.map((scene) => (
-                      <ExploreSceneCard
-                        key={scene.id}
-                        scene={scene}
-                        onSelect={(slug) => navigate(`/explore/${slug}`)}
-                      />
-                    ))}
-                  </div>
-                )}
+                {(() => {
+                  const filtered =
+                    exploreScenes.filter((s) => {
+                      const matchCategory =
+                        exploreCategoryFilter === 'all' || s.room_type === exploreCategoryFilter;
+                      const catalogBudget = Number(s.catalog_budget_ngn) || 0;
+                      const matchPrice = matchesExplorePriceFilter(catalogBudget, explorePriceFilter);
+                      return matchCategory && matchPrice;
+                    });
+                  if (filtered.length > 0) {
+                    return (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                        {filtered.map((scene) => (
+                          <ExploreSceneCard
+                            key={scene.id}
+                            scene={scene}
+                            onSelect={(slug) => navigate(`/explore/${slug}`)}
+                          />
+                        ))}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
                 <div className="text-center mt-10">
                   <Button
                     onClick={() => navigate('/upload?mode=explore')}
