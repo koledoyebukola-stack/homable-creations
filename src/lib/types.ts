@@ -205,6 +205,8 @@ export interface ExploreScene {
   hero_image_url: string | null;
   location: string | null;
   total_budget_ngn: number;
+  /** Sum of catalog (vendor_products) items — shown on scene cards as "From ₦X" */
+  catalog_budget_ngn: number;
   available_budget_ngn: number;
   status: string;
   sort_order: number;

@@ -6,8 +6,9 @@ interface ExploreSceneCardProps {
 }
 
 export default function ExploreSceneCard({ scene, onSelect }: ExploreSceneCardProps) {
-  const coverage =
-    scene.total_budget_ngn > 0 ? scene.available_budget_ngn / scene.total_budget_ngn : 0;
+  const catalogBudget = Number(scene.catalog_budget_ngn) || 0;
+  const totalBudget = Number(scene.total_budget_ngn) || 0;
+  const coverage = totalBudget > 0 ? catalogBudget / totalBudget : 0;
   const isFullyShoppable = coverage >= 0.7;
 
   return (
@@ -26,7 +27,7 @@ export default function ExploreSceneCard({ scene, onSelect }: ExploreSceneCardPr
       <div className="p-4">
         <h3 className="font-semibold text-[#111111] mb-2 line-clamp-2">{scene.title}</h3>
         <p className="text-sm text-[#555555] mb-2">
-          From ₦{Number(scene.available_budget_ngn).toLocaleString('en-NG')}
+          From ₦{catalogBudget.toLocaleString('en-NG')}
         </p>
         <span
           className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${
