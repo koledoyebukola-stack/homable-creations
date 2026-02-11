@@ -7,9 +7,6 @@ interface ExploreSceneCardProps {
 
 export default function ExploreSceneCard({ scene, onSelect }: ExploreSceneCardProps) {
   const catalogBudget = Number(scene.catalog_budget_ngn) || 0;
-  const totalBudget = Number(scene.total_budget_ngn) || 0;
-  const coverage = totalBudget > 0 ? catalogBudget / totalBudget : 0;
-  const isFullyShoppable = coverage >= 0.7;
 
   return (
     <button
@@ -29,13 +26,11 @@ export default function ExploreSceneCard({ scene, onSelect }: ExploreSceneCardPr
         <p className="text-sm text-[#555555] mb-2">
           From ₦{catalogBudget.toLocaleString('en-NG')}
         </p>
-        <span
-          className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${
-            isFullyShoppable ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'
-          }`}
-        >
-          {isFullyShoppable ? 'Fully shoppable' : 'Partially available'}
-        </span>
+        {catalogBudget > 0 && (
+          <span className="inline-block text-xs font-medium px-2.5 py-1 rounded-full bg-blue-100 text-blue-800">
+            Available on Homable
+          </span>
+        )}
       </div>
     </button>
   );

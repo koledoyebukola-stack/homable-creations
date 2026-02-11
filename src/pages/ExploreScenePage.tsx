@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import AuthModal from '@/components/AuthModal';
 import { getExploreSceneBySlug } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
@@ -111,6 +112,8 @@ export default function ExploreScenePage() {
 
   const customBuildTotal = customBuildItems.reduce((sum, i) => sum + (i.estimated_price_ngn ?? 0), 0);
   const decorTotal = decorItems.reduce((sum, i) => sum + (i.estimated_price_ngn ?? 0), 0);
+  const catalogBudget = Number(scene.catalog_budget_ngn) || 0;
+  const computedTotal = catalogBudget + customBuildTotal + decorTotal;
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-stone-50">
@@ -132,13 +135,13 @@ export default function ExploreScenePage() {
           )}
         </section>
 
-        {/* Budget Summary Card */}
+        {/* Budget Summary Card (catalog from scene; custom/decor summed from items) */}
         <section className="mb-10 p-6 rounded-2xl bg-white border border-[#e5e5e5] shadow-sm">
           <h2 className="text-xl font-semibold text-[#111111] mb-4">Budget Summary</h2>
           <ul className="space-y-2 text-[#333333]">
             <li className="flex justify-between">
               <span>Available on Homable</span>
-              <span className="font-medium">{formatNgn(scene.available_budget_ngn)}</span>
+              <span className="font-medium">{formatNgn(catalogBudget)}</span>
             </li>
             <li className="flex justify-between">
               <span>Custom Builds</span>
@@ -150,66 +153,64 @@ export default function ExploreScenePage() {
             </li>
             <li className="flex justify-between pt-2 border-t border-[#e5e5e5]">
               <span className="font-semibold">Total</span>
-              <span className="font-semibold">{formatNgn(scene.total_budget_ngn)}</span>
+              <span className="font-semibold">{formatNgn(computedTotal)}</span>
             </li>
           </ul>
         </section>
 
-        {/* Section A: Available on Homable */}
+        {/* Section A: Available on Homable — storefront-style cards, whole card links to product */}
         {catalogItems.length > 0 && (
           <section className="mb-10">
             <h2 className="text-xl font-semibold text-[#111111] mb-4 flex items-center gap-2">
               <ShoppingBag className="w-5 h-5" />
               Available on Homable
             </h2>
-            <ul className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
               {catalogItems.map((item) => {
                 const product = item.vendor_product;
-                const storefront = item.storefront;
                 if (!product) return null;
                 return (
-                  <li
+                  <div
                     key={item.id}
-                    className="flex flex-col sm:flex-row gap-4 p-4 rounded-xl bg-white border border-[#e5e5e5]"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(`/shops/products/${product.slug}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        navigate(`/shops/products/${product.slug}`);
+                      }
+                    }}
+                    className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer border border-[#e5e5e5]"
                   >
-                    <div className="w-full sm:w-32 aspect-square rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                      <img
-                        src={product.image_url || 'https://placehold.co/200/f5f5f5/999?text=Product'}
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-[#111111]">{product.name}</h3>
-                      <p className="text-[#555555] text-sm mt-0.5">{formatVendorPrice(product)}</p>
-                      {storefront && (
-                        <p className="text-sm text-[#666666] mt-1">Vendor: {storefront.name}</p>
+                    <div className="aspect-square w-full bg-gray-100 relative overflow-hidden rounded-2xl">
+                      {product.image_url ? (
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[#999] text-sm">No image</div>
                       )}
-                      <div className="flex flex-wrap gap-2 mt-3">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="rounded-lg"
-                          onClick={() => navigate(`/shops/products/${product.slug}`)}
-                        >
-                          View Product
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="rounded-lg bg-[#111111] hover:bg-[#333]"
-                          onClick={() => {
-                            // Auth placeholder: will wire when auth flow is defined
-                            // toast or modal "Sign in to add to list"
-                          }}
-                        >
-                          Add to Shopping List
-                        </Button>
+                      <div className="absolute top-2 left-2">
+                        <Badge className="bg-gray-900 text-white text-[10px] font-medium border-0 shadow-sm px-2 py-1 rounded-full">
+                          Custom order
+                        </Badge>
                       </div>
                     </div>
-                  </li>
+                    <div className="px-2.5 pt-2.5 pb-3 md:px-3 md:pt-3">
+                      <h3 className="text-[13px] md:text-sm font-semibold text-gray-900 leading-snug">
+                        {product.name}
+                      </h3>
+                      <p className="text-xs text-gray-600 mt-1">
+                        {formatVendorPrice(product)}
+                      </p>
+                    </div>
+                  </div>
                 );
               })}
-            </ul>
+            </div>
           </section>
         )}
 
@@ -227,11 +228,7 @@ export default function ExploreScenePage() {
                   className="p-4 rounded-xl bg-white border border-[#e5e5e5]"
                 >
                   <h3 className="font-semibold text-[#111111]">{item.name}</h3>
-                  {item.estimated_price_ngn != null && (
-                    <p className="text-[#555555] text-sm mt-1">
-                      Estimated: {formatNgn(item.estimated_price_ngn)}
-                    </p>
-                  )}
+                  <p className="text-[#555555] text-sm mt-1">Price on request</p>
                   {item.description && (
                     <p className="text-[#666666] mt-2">{item.description}</p>
                   )}
@@ -266,11 +263,7 @@ export default function ExploreScenePage() {
                   className="p-4 rounded-xl bg-white border border-[#e5e5e5]"
                 >
                   <h3 className="font-semibold text-[#111111]">{item.name}</h3>
-                  {item.estimated_price_ngn != null && (
-                    <p className="text-[#555555] text-sm mt-1">
-                      Estimated: {formatNgn(item.estimated_price_ngn)}
-                    </p>
-                  )}
+                  <p className="text-[#555555] text-sm mt-1">Contact vendor for price</p>
                   {item.external_link && (
                     <p className="text-sm text-[#666666] mt-1">
                       Handle: @{item.external_link.replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/?$/, '')}
