@@ -110,10 +110,7 @@ export default function ExploreScenePage() {
   const customBuildItems = items.filter((i) => i.item_type === 'custom_build');
   const decorItems = items.filter((i) => i.item_type === 'instagram_link');
 
-  const customBuildTotal = customBuildItems.reduce((sum, i) => sum + (i.estimated_price_ngn ?? 0), 0);
-  const decorTotal = decorItems.reduce((sum, i) => sum + (i.estimated_price_ngn ?? 0), 0);
   const catalogBudget = Number(scene.catalog_budget_ngn) || 0;
-  const computedTotal = catalogBudget + customBuildTotal + decorTotal;
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-stone-50">
@@ -135,27 +132,34 @@ export default function ExploreScenePage() {
           )}
         </section>
 
-        {/* Budget Summary Card (catalog from scene; custom/decor summed from items) */}
+        {/* Items available on Homable — line list + total (no custom/decor breakdown) */}
         <section className="mb-10 p-6 rounded-2xl bg-white border border-[#e5e5e5] shadow-sm">
-          <h2 className="text-xl font-semibold text-[#111111] mb-4">Budget Summary</h2>
-          <ul className="space-y-2 text-[#333333]">
-            <li className="flex justify-between">
-              <span>Available on Homable</span>
-              <span className="font-medium">{formatNgn(catalogBudget)}</span>
-            </li>
-            <li className="flex justify-between">
-              <span>Custom Builds</span>
-              <span className="font-medium">{formatNgn(customBuildTotal)}</span>
-            </li>
-            <li className="flex justify-between">
-              <span>Decor & Styling</span>
-              <span className="font-medium">{formatNgn(decorTotal)}</span>
-            </li>
-            <li className="flex justify-between pt-2 border-t border-[#e5e5e5]">
-              <span className="font-semibold">Total</span>
-              <span className="font-semibold">{formatNgn(computedTotal)}</span>
-            </li>
-          </ul>
+          <h2 className="text-xl font-semibold text-[#111111] mb-1">Items available on Homable</h2>
+          <p className="text-sm text-[#666666] mb-4">Prices below; click any item to view and contact the vendor.</p>
+          {catalogItems.length > 0 ? (
+            <>
+              <ul className="space-y-2 text-[#333333]">
+                {catalogItems.map((item) => {
+                  const product = item.vendor_product;
+                  if (!product) return null;
+                  return (
+                    <li key={item.id} className="flex justify-between items-baseline gap-3">
+                      <span className="text-[#111111] truncate">{product.name}</span>
+                      <span className="font-medium text-[#111111] flex-shrink-0">
+                        {formatVendorPrice(product)}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="flex justify-between items-baseline pt-3 mt-3 border-t border-[#e5e5e5]">
+                <span className="font-semibold text-[#111111]">Total</span>
+                <span className="font-semibold text-[#111111]">{formatNgn(catalogBudget)}</span>
+              </div>
+            </>
+          ) : (
+            <p className="text-[#666666] text-sm">No catalog items in this room yet.</p>
+          )}
         </section>
 
         {/* Section A: Available on Homable — storefront-style cards, whole card links to product */}
