@@ -130,26 +130,43 @@ export default function Home() {
               {country === 'NG' ? HERO_DESCRIPTION_NG : HERO_DESCRIPTION_DEFAULT}
             </p>
 
-            {/* CTAs: stacked on mobile, side by side on desktop */}
+            {/* CTAs: Nigeria = Explore primary, Upload secondary; rest = Upload primary, Explore secondary */}
             <div className="flex flex-col md:flex-row md:gap-3 gap-4">
-              <button
-                type="button"
-                onClick={() => navigate('/upload?mode=inspiration')}
-                className="w-full md:flex-1 h-[56px] md:h-[60px] flex items-center justify-center rounded-xl bg-[#000000] text-white text-base md:text-[18px] font-semibold hover:bg-[#1a1a1a] hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-all duration-200"
-              >
-                Upload Your Inspiration
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  country === 'NG'
-                    ? exploreSectionRef.current?.scrollIntoView({ behavior: 'smooth' })
-                    : navigate('/upload?mode=explore')
-                }
-                className="w-full md:flex-1 h-12 md:h-[60px] flex items-center justify-center rounded-xl bg-white text-black text-[15px] md:text-base font-medium border-[1.5px] border-[#e0e0e0] hover:border-black hover:bg-[#fafafa] transition-colors"
-              >
-                Explore Styles & Ideas
-              </button>
+              {country === 'NG' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => exploreSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                    className="w-full md:flex-1 h-[56px] md:h-[60px] flex items-center justify-center rounded-xl bg-[#000000] text-white text-base md:text-[18px] font-semibold hover:bg-[#1a1a1a] hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-all duration-200"
+                  >
+                    Explore Styles & Ideas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/upload?mode=inspiration')}
+                    className="w-full md:flex-1 h-12 md:h-[60px] flex items-center justify-center rounded-xl bg-white text-black text-[15px] md:text-base font-medium border-[1.5px] border-[#e0e0e0] hover:border-black hover:bg-[#fafafa] transition-colors"
+                  >
+                    Upload Your Inspiration
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/upload?mode=inspiration')}
+                    className="w-full md:flex-1 h-[56px] md:h-[60px] flex items-center justify-center rounded-xl bg-[#000000] text-white text-base md:text-[18px] font-semibold hover:bg-[#1a1a1a] hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-all duration-200"
+                  >
+                    Upload Your Inspiration
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/upload?mode=explore')}
+                    className="w-full md:flex-1 h-12 md:h-[60px] flex items-center justify-center rounded-xl bg-white text-black text-[15px] md:text-base font-medium border-[1.5px] border-[#e0e0e0] hover:border-black hover:bg-[#fafafa] transition-colors"
+                  >
+                    Explore Styles & Ideas
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
@@ -189,9 +206,12 @@ export default function Home() {
           className="bg-gradient-to-br from-gray-50 to-stone-50 pt-10 pb-16 md:pt-12 md:pb-12 px-4 md:px-6"
         >
           <div className="max-w-6xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-8 md:mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-2">
               Explore Curated Rooms
             </h2>
+            <p className="text-center text-[#555555] text-lg mb-8 md:mb-10 max-w-2xl mx-auto">
+              Recreate real Nigerian rooms with a clear budget and locally sourced pieces
+            </p>
             {loadingExplore ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                 {[1, 2, 3].map((i) => (
@@ -287,81 +307,83 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Explore Styles & Ideas Section - tighter desktop spacing */}
-      <section className="bg-white py-16 md:py-12">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="max-w-6xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-12 md:mb-16">
-              Explore Styles & Ideas
-            </h2>
-            <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-              <div className="bg-[#f9f9f9] rounded-2xl p-8 md:p-10">
-                <div className="space-y-6 mb-8">
-                  {EXPLORE_STEPS.map((step, index) => (
-                    <div key={index} className="flex items-start gap-4">
-                      <div className="flex-shrink-0 w-8 h-8 bg-[#111111] text-white rounded-full flex items-center justify-center font-bold">
-                        {index + 1}
+      {/* Old Explore Styles & Ideas Section — hidden for Nigeria (they see Explore Curated Rooms above) */}
+      {country !== 'NG' && (
+        <section className="bg-white py-16 md:py-12">
+          <div className="container mx-auto px-4 md:px-6">
+            <div className="max-w-6xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-12 md:mb-16">
+                Explore Styles & Ideas
+              </h2>
+              <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+                <div className="bg-[#f9f9f9] rounded-2xl p-8 md:p-10">
+                  <div className="space-y-6 mb-8">
+                    {EXPLORE_STEPS.map((step, index) => (
+                      <div key={index} className="flex items-start gap-4">
+                        <div className="flex-shrink-0 w-8 h-8 bg-[#111111] text-white rounded-full flex items-center justify-center font-bold">
+                          {index + 1}
+                        </div>
+                        <p className="text-lg text-[#333333] pt-1">{step}</p>
                       </div>
-                      <p className="text-lg text-[#333333] pt-1">{step}</p>
-                    </div>
-                  ))}
-                </div>
-                <Button
-                  onClick={() => navigate('/upload?mode=explore')}
-                  variant="outline"
-                  className="w-full border-[1.5px] border-[#e0e0e0] hover:border-black rounded-xl font-medium"
-                >
-                  Explore styles
-                </Button>
-                <div className="text-center mt-3">
-                  <button
-                    type="button"
-                    onClick={() => navigate('/upload?mode=find')}
-                    className="text-sm font-normal text-[#666666] hover:text-black hover:underline cursor-pointer"
-                  >
-                    Or find one specific item →
-                  </button>
-                </div>
-              </div>
-              <div className="relative">
-                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-xl">
-                  <img
-                    src={EXPLORE_IMAGES[exploreSlide].url}
-                    alt={EXPLORE_IMAGES[exploreSlide].alt}
-                    className="w-full h-full object-cover"
-                  />
-                  <button
-                    onClick={prevExplore}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/90 hover:bg-white transition-colors shadow-lg"
-                    aria-label="Previous"
-                  >
-                    <ChevronLeft className="w-6 h-6 text-[#111111]" />
-                  </button>
-                  <button
-                    onClick={nextExplore}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/90 hover:bg-white transition-colors shadow-lg"
-                    aria-label="Next"
-                  >
-                    <ChevronRight className="w-6 h-6 text-[#111111]" />
-                  </button>
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                    {EXPLORE_IMAGES.map((_, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setExploreSlide(i)}
-                        className={`h-2 rounded-full transition-all ${
-                          i === exploreSlide ? 'bg-white w-8' : 'bg-white/50 w-2'
-                        }`}
-                        aria-label={`Slide ${i + 1}`}
-                      />
                     ))}
+                  </div>
+                  <Button
+                    onClick={() => navigate('/upload?mode=explore')}
+                    variant="outline"
+                    className="w-full border-[1.5px] border-[#e0e0e0] hover:border-black rounded-xl font-medium"
+                  >
+                    Explore styles
+                  </Button>
+                  <div className="text-center mt-3">
+                    <button
+                      type="button"
+                      onClick={() => navigate('/upload?mode=find')}
+                      className="text-sm font-normal text-[#666666] hover:text-black hover:underline cursor-pointer"
+                    >
+                      Or find one specific item →
+                    </button>
+                  </div>
+                </div>
+                <div className="relative">
+                  <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-xl">
+                    <img
+                      src={EXPLORE_IMAGES[exploreSlide].url}
+                      alt={EXPLORE_IMAGES[exploreSlide].alt}
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      onClick={prevExplore}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/90 hover:bg-white transition-colors shadow-lg"
+                      aria-label="Previous"
+                    >
+                      <ChevronLeft className="w-6 h-6 text-[#111111]" />
+                    </button>
+                    <button
+                      onClick={nextExplore}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/90 hover:bg-white transition-colors shadow-lg"
+                      aria-label="Next"
+                    >
+                      <ChevronRight className="w-6 h-6 text-[#111111]" />
+                    </button>
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                      {EXPLORE_IMAGES.map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setExploreSlide(i)}
+                          className={`h-2 rounded-full transition-all ${
+                            i === exploreSlide ? 'bg-white w-8' : 'bg-white/50 w-2'
+                          }`}
+                          aria-label={`Slide ${i + 1}`}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* From Inspiration to Shopping List Section - tighter desktop spacing */}
       <section className="bg-white py-16 md:py-12">
