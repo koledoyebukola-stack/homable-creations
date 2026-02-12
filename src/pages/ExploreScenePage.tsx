@@ -76,9 +76,14 @@ export default function ExploreScenePage() {
   useEffect(() => {
     if (!slug) return;
     getExploreSceneBySlug(slug).then(result => {
+      console.log('[ExploreScenePage] getExploreSceneBySlug result:', result);
       if (result) {
+        console.log('[ExploreScenePage] Scene:', result.scene.title);
+        console.log('[ExploreScenePage] Items count:', result.items.length);
+        console.log('[ExploreScenePage] Items:', result.items);
         setData(result);
       } else {
+        console.warn('[ExploreScenePage] No scene found for slug:', slug);
         setData(null);
       }
     });
@@ -203,9 +208,22 @@ export default function ExploreScenePage() {
   }
 
   const { scene, items } = data;
+  console.log('[ExploreScenePage] Rendering with items:', items.length);
+  console.log('[ExploreScenePage] Items breakdown:', {
+    catalog: items.filter(i => i.item_type === 'catalog_product').length,
+    custom_build: items.filter(i => i.item_type === 'custom_build').length,
+    instagram_link: items.filter(i => i.item_type === 'instagram_link').length,
+  });
+  
   const catalogItems = items.filter((i) => i.item_type === 'catalog_product');
   const customBuildItems = items.filter((i) => i.item_type === 'custom_build');
   const decorItems = items.filter((i) => i.item_type === 'instagram_link');
+  
+  console.log('[ExploreScenePage] Filtered items:', {
+    catalogItems: catalogItems.length,
+    customBuildItems: customBuildItems.length,
+    decorItems: decorItems.length,
+  });
 
   const hasSavableItems = items.some((i) =>
     i.item_type === 'catalog_product' ? !!i.vendor_product?.name : !!i.name

@@ -1822,22 +1822,55 @@ export async function getExploreSceneBySlug(slug: string): Promise<{
     .eq('status', 'published')
     .maybeSingle();
 
-  if (sceneError || !scene) {
+  if (sceneError) {
+    console.error('[getExploreSceneBySlug] Scene query error:', sceneError);
     return null;
   }
 
+  if (!scene) {
+    console.warn('[getExploreSceneBySlug] No scene found for slug:', slug);
+    return null;
+  }
+
+  const sceneId = (scene as ExploreScene).id;
+  console.log('[getExploreSceneBySlug] Scene found:', {
+    id: sceneId,
+    title: (scene as ExploreScene).title,
+    slug: (scene as ExploreScene).slug,
+  });
+  console.log('[getExploreSceneBySlug] Fetching items for scene ID:', sceneId);
+  
   const { data: items, error: itemsError } = await supabase
     .from('explore_scene_items')
     .select('*')
-    .eq('scene_id', (scene as ExploreScene).id)
+    .eq('scene_id', sceneId)
     .order('sort_order', { ascending: true });
 
   if (itemsError) {
-    console.error('Failed to fetch explore scene items:', itemsError);
+    console.error('[getExploreSceneBySlug] Failed to fetch explore scene items:', itemsError);
+    console.error('[getExploreSceneBySlug] Error details:', JSON.stringify(itemsError, null, 2));
     return { scene: scene as ExploreScene, items: [] };
   }
 
+  console.log('[getExploreSceneBySlug] Raw items response:', {
+    items: items,
+    itemsLength: items?.length || 0,
+    itemsType: typeof items,
+    isArray: Array.isArray(items),
+  });
+  
   const rawItems = (items || []) as ExploreSceneItem[];
+  
+  if (rawItems.length === 0) {
+    console.warn('[getExploreSceneBySlug] No items found for scene:', sceneId, '- This might be expected if scene has no items yet');
+  } else {
+    console.log('[getExploreSceneBySlug] Raw items breakdown:', {
+      total: rawItems.length,
+      catalog_product: rawItems.filter(i => i.item_type === 'catalog_product').length,
+      custom_build: rawItems.filter(i => i.item_type === 'custom_build').length,
+      instagram_link: rawItems.filter(i => i.item_type === 'instagram_link').length,
+    });
+  }
 
   const productIds = rawItems
     .filter((i) => i.item_type === 'catalog_product' && i.vendor_product_id)
@@ -1866,6 +1899,10 @@ export async function getExploreSceneBySlug(slug: string): Promise<{
   const storefrontMap = Object.fromEntries(storefronts.map((s) => [s.id, s]));
   const productMap = Object.fromEntries(products.map((p) => [p.id, p]));
 
+  console.log('[getExploreSceneBySlug] Product IDs to fetch:', productIds);
+  console.log('[getExploreSceneBySlug] Products fetched:', products.length);
+  console.log('[getExploreSceneBySlug] Storefronts fetched:', storefronts.length);
+
   const itemsWithProduct: ExploreSceneItemWithProduct[] = rawItems.map((item) => {
     const out: ExploreSceneItemWithProduct = { ...item, vendor_product: null, storefront: null };
     if (item.item_type === 'catalog_product' && item.vendor_product_id) {
@@ -1873,9 +1910,18 @@ export async function getExploreSceneBySlug(slug: string): Promise<{
       if (prod) {
         out.vendor_product = prod as VendorProduct;
         out.storefront = (storefrontMap[(prod as VendorProduct).storefront_id] as Storefront) ?? null;
+      } else {
+        console.warn('[getExploreSceneBySlug] Product not found for vendor_product_id:', item.vendor_product_id);
       }
     }
     return out;
+  });
+
+  console.log('[getExploreSceneBySlug] Items with product mapped:', itemsWithProduct.length);
+  console.log('[getExploreSceneBySlug] Item types breakdown:', {
+    catalog: itemsWithProduct.filter(i => i.item_type === 'catalog_product').length,
+    custom_build: itemsWithProduct.filter(i => i.item_type === 'custom_build').length,
+    instagram_link: itemsWithProduct.filter(i => i.item_type === 'instagram_link').length,
   });
 
   const catalogBudgetNgn = computeCatalogBudgetFromItems(itemsWithProduct);
