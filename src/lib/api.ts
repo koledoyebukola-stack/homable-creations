@@ -1726,8 +1726,23 @@ export async function getOtherVendorProducts(
 // ——— Explore (curated room inspirations) ———
 
 /**
+ * Sum catalog (vendor product) prices for items. Uses price_min, else price_max; 0 if both null.
+ * Used to compute catalog_budget_ngn from related vendor_products.
+ */
+function computeCatalogBudgetFromItems(
+  items: { vendor_product?: { price_min?: number | null; price_max?: number | null } | null }[]
+): number {
+  return items.reduce((sum, item) => {
+    const p = item.vendor_product;
+    if (!p) return sum;
+    const price = p.price_min != null ? p.price_min : (p.price_max != null ? p.price_max : 0);
+    return sum + Number(price);
+  }, 0);
+}
+
+/**
  * Fetch published explore scenes for a location, ordered by sort_order.
- * Used for homepage preview (limit 8) and explore tab (no limit).
+ * catalog_budget_ngn is computed from related vendor_products (not the stored column).
  */
 export async function getExploreScenes(
   location: string,
@@ -1744,19 +1759,57 @@ export async function getExploreScenes(
     query = query.limit(limit);
   }
 
-  const { data, error } = await query;
+  const { data: scenes, error } = await query;
 
   if (error) {
     console.error('Failed to fetch explore scenes:', error);
     return [];
   }
 
-  return (data || []) as ExploreScene[];
+  const sceneList = (scenes || []) as ExploreScene[];
+  if (sceneList.length === 0) return sceneList;
+
+  const sceneIds = sceneList.map((s) => s.id);
+  const { data: sceneItems } = await supabase
+    .from('explore_scene_items')
+    .select('scene_id, vendor_product_id')
+    .in('scene_id', sceneIds)
+    .eq('item_type', 'catalog_product')
+    .not('vendor_product_id', 'is', null);
+
+  const itemsList = (sceneItems || []) as { scene_id: string; vendor_product_id: string }[];
+  const productIds = [...new Set(itemsList.map((i) => i.vendor_product_id))];
+  if (productIds.length === 0) {
+    return sceneList.map((s) => ({ ...s, catalog_budget_ngn: 0 }));
+  }
+
+  const { data: products } = await supabase
+    .from('vendor_products')
+    .select('id, price_min, price_max')
+    .in('id', productIds);
+  const productPriceMap = new Map(
+    (products || []).map((p: { id: string; price_min?: number | null; price_max?: number | null }) => [
+      p.id,
+      p.price_min != null ? p.price_min : (p.price_max != null ? p.price_max : 0),
+    ])
+  );
+
+  const budgetByScene: Record<string, number> = {};
+  for (const item of itemsList) {
+    const price = productPriceMap.get(item.vendor_product_id) ?? 0;
+    budgetByScene[item.scene_id] = (budgetByScene[item.scene_id] ?? 0) + price;
+  }
+
+  return sceneList.map((s) => ({
+    ...s,
+    catalog_budget_ngn: budgetByScene[s.id] ?? 0,
+  }));
 }
 
 /**
  * Fetch a single published scene by slug with all items.
  * For catalog_product items, includes vendor_products and storefronts.
+ * catalog_budget_ngn is computed from related vendor_products (not the stored column).
  */
 export async function getExploreSceneBySlug(slug: string): Promise<{
   scene: ExploreScene;
@@ -1825,8 +1878,11 @@ export async function getExploreSceneBySlug(slug: string): Promise<{
     return out;
   });
 
+  const catalogBudgetNgn = computeCatalogBudgetFromItems(itemsWithProduct);
+  const sceneWithBudget: ExploreScene = { ...(scene as ExploreScene), catalog_budget_ngn: catalogBudgetNgn };
+
   return {
-    scene: scene as ExploreScene,
+    scene: sceneWithBudget,
     items: itemsWithProduct,
   };
 }
