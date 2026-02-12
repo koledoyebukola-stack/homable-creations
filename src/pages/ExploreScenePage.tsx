@@ -223,19 +223,19 @@ export default function ExploreScenePage() {
             <p className="text-lg text-[#555555] mb-6">{scene.description}</p>
           )}
 
-          {/* Action buttons: directly below room description */}
-          <div className="flex flex-col xs:flex-row gap-3 flex-wrap">
+          {/* Action buttons: stacked on mobile, side by side on desktop */}
+          <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
             <Button
               onClick={handleSaveShoppingList}
               disabled={savingChecklist || !hasSavableItems}
-              className="bg-[#111111] hover:bg-[#333] text-white rounded-xl font-medium px-5 py-2.5 h-auto text-sm flex items-center gap-2 w-full xs:w-auto"
+              className="bg-[#111111] hover:bg-[#333] text-white rounded-xl font-medium px-5 py-2.5 h-auto text-sm flex items-center gap-2 w-full sm:w-auto"
             >
               <ListChecks className="w-4 h-4 shrink-0" />
               {savingChecklist ? 'Saving...' : 'Save as Shopping List'}
             </Button>
             <Button
               variant="outline"
-              className="rounded-xl border-[#e0e0e0] hover:border-black flex items-center gap-2 px-5 py-2.5 h-auto text-sm w-full xs:w-auto"
+              className="rounded-xl border-[#e0e0e0] hover:border-black flex items-center gap-2 px-5 py-2.5 h-auto text-sm w-full sm:w-auto"
               onClick={() => navigate('/upload?mode=explore')}
             >
               <Upload className="w-4 h-4 shrink-0" />
@@ -351,8 +351,7 @@ export default function ExploreScenePage() {
                   <p className="text-sm text-[#777777] mt-2">Not currently available on Homable</p>
                   <Button
                     size="sm"
-                    variant="outline"
-                    className="mt-3 rounded-lg"
+                    className="mt-3 rounded-lg bg-[#111111] hover:bg-[#333] text-white border-0"
                     onClick={() => {
                       // Placeholder: Request Build Spec - ₦5,000
                     }}
@@ -390,9 +389,9 @@ export default function ExploreScenePage() {
                       href={item.external_link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#e0e0e0] px-3 py-2 text-sm font-medium hover:bg-[#f5f5f5]"
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-[#111111] text-white px-3 py-2 text-sm font-medium hover:bg-[#333] border-0"
                     >
-                      <ExternalLink className="w-4 h-4" />
+                      <ExternalLink className="w-4 h-4 shrink-0" />
                       View on Instagram
                     </a>
                   )}
