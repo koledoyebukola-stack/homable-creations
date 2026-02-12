@@ -5,7 +5,7 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import AuthModal from '@/components/AuthModal';
-import { getExploreSceneBySlug, createChecklist, enableGifting } from '@/lib/api';
+import { getExploreSceneBySlug, createChecklist } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import type { ExploreScene, ExploreSceneItemWithProduct, VendorProduct, Storefront } from '@/lib/types';
 import type { User } from '@supabase/supabase-js';
@@ -135,34 +135,29 @@ export default function ExploreScenePage() {
       return;
     }
 
-    if (catalogItems.length === 0) {
+    // Build names from all item types in scene order: catalog_product, custom_build, instagram_link
+    const itemNames = items
+      .map((item) => {
+        if (item.item_type === 'catalog_product') return item.vendor_product?.name ?? null;
+        return item.name ?? null;
+      })
+      .filter((name): name is string => !!name);
+
+    if (itemNames.length === 0) {
       toast.error('No items available to save');
       return;
     }
 
     setSavingChecklist(true);
     try {
-      // Create checklist with scene title
-      const itemNames = catalogItems
-        .map((item) => item.vendor_product?.name)
-        .filter((name): name is string => !!name);
-
-      if (itemNames.length === 0) {
-        toast.error('No valid items to save');
-        setSavingChecklist(false);
-        return;
-      }
-
       const checklist = await createChecklist(
         `${scene.title} - Shopping List`,
         undefined, // No board_id for explore scenes
-        itemNames
+        itemNames,
+        { sourceImageUrl: scene.hero_image_url ?? undefined }
       );
 
-      // Enable gifting on the checklist
-      await enableGifting(checklist.id);
-
-      toast.success('Shopping list saved! You can share it with friends and family.');
+      toast.success('Shopping list saved!');
       navigate(`/checklists/${checklist.id}`);
     } catch (error) {
       console.error('Failed to save shopping list:', error);
@@ -204,6 +199,9 @@ export default function ExploreScenePage() {
   const customBuildItems = items.filter((i) => i.item_type === 'custom_build');
   const decorItems = items.filter((i) => i.item_type === 'instagram_link');
 
+  const hasSavableItems = items.some((i) =>
+    i.item_type === 'catalog_product' ? !!i.vendor_product?.name : !!i.name
+  );
   const catalogBudget = Number(scene.catalog_budget_ngn) || 0;
 
   return (
@@ -222,8 +220,28 @@ export default function ExploreScenePage() {
           </div>
           <h1 className="text-3xl md:text-4xl font-bold text-[#111111] mb-2">{scene.title}</h1>
           {scene.description && (
-            <p className="text-lg text-[#555555]">{scene.description}</p>
+            <p className="text-lg text-[#555555] mb-6">{scene.description}</p>
           )}
+
+          {/* Action buttons: directly below room description */}
+          <div className="flex flex-col xs:flex-row gap-3 flex-wrap">
+            <Button
+              onClick={handleSaveShoppingList}
+              disabled={savingChecklist || !hasSavableItems}
+              className="bg-[#111111] hover:bg-[#333] text-white rounded-xl font-medium px-5 py-2.5 h-auto text-sm flex items-center gap-2 w-full xs:w-auto"
+            >
+              <ListChecks className="w-4 h-4 shrink-0" />
+              {savingChecklist ? 'Saving...' : 'Save as Shopping List'}
+            </Button>
+            <Button
+              variant="outline"
+              className="rounded-xl border-[#e0e0e0] hover:border-black flex items-center gap-2 px-5 py-2.5 h-auto text-sm w-full xs:w-auto"
+              onClick={() => navigate('/upload?mode=explore')}
+            >
+              <Upload className="w-4 h-4 shrink-0" />
+              Explore Another Room
+            </Button>
+          </div>
         </section>
 
         {/* Items available on Homable — line list + total (no custom/decor breakdown) */}
@@ -384,25 +402,6 @@ export default function ExploreScenePage() {
           </section>
         )}
 
-        {/* Action buttons: Save Shopping List + Explore Another Room */}
-        <div className="pt-6 flex flex-col sm:flex-row gap-4 justify-center">
-          <Button
-            onClick={handleSaveShoppingList}
-            disabled={savingChecklist || catalogItems.length === 0}
-            className="bg-[#111111] hover:bg-[#333] text-white rounded-xl font-medium px-6 flex items-center gap-2"
-          >
-            <ListChecks className="w-4 h-4" />
-            {savingChecklist ? 'Saving...' : 'Save as Shopping List'}
-          </Button>
-          <Button
-            variant="outline"
-            className="rounded-xl border-[#e0e0e0] hover:border-black flex items-center gap-2"
-            onClick={() => navigate('/upload?mode=explore')}
-          >
-            <Upload className="w-4 h-4" />
-            Explore Another Room
-          </Button>
-        </div>
       </main>
 
       <Footer />

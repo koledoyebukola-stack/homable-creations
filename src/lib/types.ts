@@ -104,6 +104,8 @@ export interface Checklist {
   user_id: string;
   name: string;
   board_id?: string;
+  /** Explore scene hero image URL when checklist was created from explore flow */
+  source_image_url?: string;
   gifting_enabled?: boolean;
   gifting_token?: string;
   created_at: string;

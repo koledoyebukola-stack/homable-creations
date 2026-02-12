@@ -477,7 +477,8 @@ export async function logAnalysis(
 export async function createChecklist(
   name: string,
   boardId: string | undefined,
-  items: string[]
+  items: string[],
+  options?: { sourceImageUrl?: string }
 ): Promise<Checklist> {
   const { data: { user } } = await supabase.auth.getUser();
   
@@ -485,13 +486,18 @@ export async function createChecklist(
     throw new Error('User must be authenticated to create checklists');
   }
 
+  const insertPayload: Record<string, unknown> = {
+    user_id: user.id,
+    name,
+    board_id: boardId || null,
+  };
+  if (options?.sourceImageUrl) {
+    insertPayload.source_image_url = options.sourceImageUrl;
+  }
+
   const { data: checklist, error: checklistError } = await supabase
     .from('app_8574c59127_checklists')
-    .insert({
-      user_id: user.id,
-      name,
-      board_id: boardId || null,
-    })
+    .insert(insertPayload)
     .select()
     .single();
 
@@ -624,7 +630,7 @@ export async function getChecklistById(checklistId: string): Promise<(ChecklistW
     throw itemsError;
   }
 
-  // Fetch board inspiration image when board_id exists (same approach as getChecklistByGiftingToken)
+  // Fetch board inspiration image when board_id exists; otherwise use checklist source_image_url (e.g. explore scene hero)
   let boardImageUrl: string | undefined;
   let boardName: string | undefined;
   if (checklist.board_id) {
@@ -633,6 +639,9 @@ export async function getChecklistById(checklistId: string): Promise<(ChecklistW
       boardImageUrl = board.source_image_url || board.cover_image_url;
       boardName = board.name;
     }
+  }
+  if (!boardImageUrl && checklist.source_image_url) {
+    boardImageUrl = checklist.source_image_url;
   }
 
   // Calculate completed count (only items with status='completed' or is_completed=true)
@@ -952,7 +961,7 @@ export async function getChecklistByGiftingToken(token: string): Promise<Checkli
     throw itemsError;
   }
 
-  // Fetch board info if board_id exists (for inspiration image)
+  // Fetch board info if board_id exists; otherwise use checklist source_image_url (e.g. explore scene hero)
   let boardImageUrl: string | undefined;
   let boardName: string | undefined;
   if (checklist.board_id) {
@@ -961,6 +970,9 @@ export async function getChecklistByGiftingToken(token: string): Promise<Checkli
       boardImageUrl = board.source_image_url || board.cover_image_url;
       boardName = board.name;
     }
+  }
+  if (!boardImageUrl && checklist.source_image_url) {
+    boardImageUrl = checklist.source_image_url;
   }
 
   // Calculate completed count (only items with status='completed')
