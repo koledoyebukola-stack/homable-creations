@@ -5,9 +5,9 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import AuthModal from '@/components/AuthModal';
-import { getExploreSceneBySlug, createChecklist } from '@/lib/api';
+import { getExploreSceneBySlug, createChecklist, getChecklistByExploreSceneId } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
-import type { ExploreScene, ExploreSceneItemWithProduct, VendorProduct, Storefront } from '@/lib/types';
+import type { ExploreScene, ExploreSceneItemWithProduct, VendorProduct, Storefront, Checklist } from '@/lib/types';
 import type { User } from '@supabase/supabase-js';
 import { ExternalLink, ShoppingBag, Wrench, Instagram, ListChecks, Upload } from 'lucide-react';
 import { toast } from 'sonner';
@@ -38,6 +38,7 @@ export default function ExploreScenePage() {
   const [showAuthGate, setShowAuthGate] = useState(false);
   const scrollGateTriggered = useRef(false);
   const [savingChecklist, setSavingChecklist] = useState(false);
+  const [existingChecklist, setExistingChecklist] = useState<Checklist | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user: u } }) => {
@@ -88,6 +89,12 @@ export default function ExploreScenePage() {
     if (user && data && 'scene' in data) {
       trackExploreSceneView(data.scene.id, data.scene.slug, data.scene.title, data.scene.hero_image_url);
     }
+  }, [user, data]);
+
+  // Fetch existing checklist for this scene when user and scene are loaded (for "View Shopping List" attached state)
+  useEffect(() => {
+    if (!user || !data || !('scene' in data)) return;
+    getChecklistByExploreSceneId(data.scene.id).then(setExistingChecklist);
   }, [user, data]);
 
   // Track explore scene view in history
@@ -154,9 +161,10 @@ export default function ExploreScenePage() {
         `${scene.title} - Shopping List`,
         undefined, // No board_id for explore scenes
         itemNames,
-        { sourceImageUrl: scene.hero_image_url ?? undefined }
+        { sourceImageUrl: scene.hero_image_url ?? undefined, exploreSceneId: scene.id }
       );
 
+      setExistingChecklist(checklist);
       toast.success('Shopping list saved!');
       navigate(`/checklists/${checklist.id}`);
     } catch (error) {
@@ -223,16 +231,26 @@ export default function ExploreScenePage() {
             <p className="text-lg text-[#555555] mb-6">{scene.description}</p>
           )}
 
-          {/* Action buttons: stacked on mobile, side by side on desktop */}
+          {/* Action buttons: stacked on mobile, side by side on desktop; show green "View Shopping List" when already saved */}
           <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
-            <Button
-              onClick={handleSaveShoppingList}
-              disabled={savingChecklist || !hasSavableItems}
-              className="bg-[#111111] hover:bg-[#333] text-white rounded-xl font-medium px-5 py-2.5 h-auto text-sm flex items-center gap-2 w-full sm:w-auto"
-            >
-              <ListChecks className="w-4 h-4 shrink-0" />
-              {savingChecklist ? 'Saving...' : 'Save as Shopping List'}
-            </Button>
+            {existingChecklist ? (
+              <Button
+                onClick={() => navigate(`/checklists/${existingChecklist.id}`)}
+                className="bg-[#2F9E44] hover:bg-[#2F9E44]/90 text-white font-medium rounded-xl px-5 py-2.5 h-auto text-sm flex items-center gap-2 w-full sm:w-auto shadow-md"
+              >
+                <ListChecks className="w-4 h-4 shrink-0" />
+                View Shopping List
+              </Button>
+            ) : (
+              <Button
+                onClick={handleSaveShoppingList}
+                disabled={savingChecklist || !hasSavableItems}
+                className="bg-[#111111] hover:bg-[#333] text-white rounded-xl font-medium px-5 py-2.5 h-auto text-sm flex items-center gap-2 w-full sm:w-auto"
+              >
+                <ListChecks className="w-4 h-4 shrink-0" />
+                {savingChecklist ? 'Saving...' : 'Save as Shopping List'}
+              </Button>
+            )}
             <Button
               variant="outline"
               className="rounded-xl border-[#e0e0e0] hover:border-black flex items-center gap-2 px-5 py-2.5 h-auto text-sm w-full sm:w-auto"

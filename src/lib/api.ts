@@ -478,7 +478,7 @@ export async function createChecklist(
   name: string,
   boardId: string | undefined,
   items: string[],
-  options?: { sourceImageUrl?: string }
+  options?: { sourceImageUrl?: string; exploreSceneId?: string }
 ): Promise<Checklist> {
   const { data: { user } } = await supabase.auth.getUser();
   
@@ -493,6 +493,9 @@ export async function createChecklist(
   };
   if (options?.sourceImageUrl) {
     insertPayload.source_image_url = options.sourceImageUrl;
+  }
+  if (options?.exploreSceneId) {
+    insertPayload.explore_scene_id = options.exploreSceneId;
   }
 
   const { data: checklist, error: checklistError } = await supabase
@@ -544,6 +547,30 @@ export async function getChecklistByBoardId(boardId: string): Promise<Checklist 
 
   if (error) {
     console.error('Failed to fetch checklist by board ID:', error);
+    return null;
+  }
+
+  return data;
+}
+
+export async function getChecklistByExploreSceneId(sceneId: string): Promise<Checklist | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from('app_8574c59127_checklists')
+    .select('*')
+    .eq('explore_scene_id', sceneId)
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Failed to fetch checklist by explore scene ID:', error);
     return null;
   }
 

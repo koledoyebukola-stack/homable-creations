@@ -106,6 +106,8 @@ export interface Checklist {
   board_id?: string;
   /** Explore scene hero image URL when checklist was created from explore flow */
   source_image_url?: string;
+  /** When set, checklist was created from this explore scene (for attached state on scene page) */
+  explore_scene_id?: string;
   gifting_enabled?: boolean;
   gifting_token?: string;
   created_at: string;
