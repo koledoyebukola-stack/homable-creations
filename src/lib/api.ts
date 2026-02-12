@@ -769,6 +769,17 @@ export async function getCombinedHistory(): Promise<HistoryItem[]> {
     console.error('Failed to fetch specs history:', specsError);
   }
 
+  // Fetch explore scene views
+  const { data: exploreViews, error: exploreError } = await supabase
+    .from('explore_scene_views')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('viewed_at', { ascending: false });
+
+  if (exploreError) {
+    console.error('Failed to fetch explore scene views:', exploreError);
+  }
+
   const historyItems: HistoryItem[] = [];
 
   // Convert boards to history items
@@ -800,7 +811,21 @@ export async function getCombinedHistory(): Promise<HistoryItem[]> {
     });
   }
 
-  // Sort by created_at descending
+  // Convert explore scene views to history items
+  if (exploreViews) {
+    exploreViews.forEach((view: { id: string; scene_slug: string; scene_title: string; scene_image_url: string | null; viewed_at: string }) => {
+      historyItems.push({
+        id: view.id,
+        type: 'explore',
+        title: view.scene_title,
+        created_at: view.viewed_at,
+        image_url: view.scene_image_url || undefined,
+        scene_slug: view.scene_slug,
+      });
+    });
+  }
+
+  // Sort by created_at/viewed_at descending
   historyItems.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   return historyItems;

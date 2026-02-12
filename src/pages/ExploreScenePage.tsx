@@ -5,11 +5,12 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import AuthModal from '@/components/AuthModal';
-import { getExploreSceneBySlug } from '@/lib/api';
+import { getExploreSceneBySlug, createChecklist, enableGifting } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import type { ExploreScene, ExploreSceneItemWithProduct, VendorProduct, Storefront } from '@/lib/types';
 import type { User } from '@supabase/supabase-js';
-import { ExternalLink, ShoppingBag, Wrench, Instagram } from 'lucide-react';
+import { ExternalLink, ShoppingBag, Wrench, Instagram, ListChecks, Upload } from 'lucide-react';
+import { toast } from 'sonner';
 
 const SCROLL_THRESHOLD_PX = 150;
 
@@ -36,6 +37,7 @@ export default function ExploreScenePage() {
   const [authChecked, setAuthChecked] = useState(false);
   const [showAuthGate, setShowAuthGate] = useState(false);
   const scrollGateTriggered = useRef(false);
+  const [savingChecklist, setSavingChecklist] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user: u } }) => {
@@ -73,10 +75,102 @@ export default function ExploreScenePage() {
   useEffect(() => {
     if (!slug) return;
     getExploreSceneBySlug(slug).then(result => {
-      if (result) setData(result);
-      else setData(null);
+      if (result) {
+        setData(result);
+      } else {
+        setData(null);
+      }
     });
   }, [slug]);
+
+  // Track explore scene view when user is authenticated and scene is loaded
+  useEffect(() => {
+    if (user && data && 'scene' in data) {
+      trackExploreSceneView(data.scene.id, data.scene.slug, data.scene.title, data.scene.hero_image_url);
+    }
+  }, [user, data]);
+
+  // Track explore scene view in history
+  const trackExploreSceneView = async (
+    sceneId: string,
+    sceneSlug: string,
+    sceneTitle: string,
+    heroImageUrl: string | null
+  ) => {
+    if (!user) return;
+    try {
+      // Check if view already exists
+      const { data: existing } = await supabase
+        .from('explore_scene_views')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('scene_id', sceneId)
+        .maybeSingle();
+
+      if (!existing) {
+        // Create new view record
+        await supabase.from('explore_scene_views').insert({
+          user_id: user.id,
+          scene_id: sceneId,
+          scene_slug: sceneSlug,
+          scene_title: sceneTitle,
+          scene_image_url: heroImageUrl,
+        });
+      } else {
+        // Update last viewed timestamp
+        await supabase
+          .from('explore_scene_views')
+          .update({ viewed_at: new Date().toISOString() })
+          .eq('id', existing.id);
+      }
+    } catch (error) {
+      console.error('Failed to track explore scene view:', error);
+      // Don't block user if tracking fails
+    }
+  };
+
+  const handleSaveShoppingList = async () => {
+    if (!user) {
+      toast.error('Please sign in to save a shopping list');
+      return;
+    }
+
+    if (catalogItems.length === 0) {
+      toast.error('No items available to save');
+      return;
+    }
+
+    setSavingChecklist(true);
+    try {
+      // Create checklist with scene title
+      const itemNames = catalogItems
+        .map((item) => item.vendor_product?.name)
+        .filter((name): name is string => !!name);
+
+      if (itemNames.length === 0) {
+        toast.error('No valid items to save');
+        setSavingChecklist(false);
+        return;
+      }
+
+      const checklist = await createChecklist(
+        `${scene.title} - Shopping List`,
+        undefined, // No board_id for explore scenes
+        itemNames
+      );
+
+      // Enable gifting on the checklist
+      await enableGifting(checklist.id);
+
+      toast.success('Shopping list saved! You can share it with friends and family.');
+      navigate(`/checklists/${checklist.id}`);
+    } catch (error) {
+      console.error('Failed to save shopping list:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to save shopping list');
+    } finally {
+      setSavingChecklist(false);
+    }
+  };
 
   if (data === undefined) {
     return (
@@ -290,13 +384,23 @@ export default function ExploreScenePage() {
           </section>
         )}
 
-        <div className="pt-6 text-center">
+        {/* Action buttons: Save Shopping List + Explore Another Room */}
+        <div className="pt-6 flex flex-col sm:flex-row gap-4 justify-center">
+          <Button
+            onClick={handleSaveShoppingList}
+            disabled={savingChecklist || catalogItems.length === 0}
+            className="bg-[#111111] hover:bg-[#333] text-white rounded-xl font-medium px-6 flex items-center gap-2"
+          >
+            <ListChecks className="w-4 h-4" />
+            {savingChecklist ? 'Saving...' : 'Save as Shopping List'}
+          </Button>
           <Button
             variant="outline"
-            className="rounded-xl"
+            className="rounded-xl border-[#e0e0e0] hover:border-black flex items-center gap-2"
             onClick={() => navigate('/upload?mode=explore')}
           >
-            Back to all rooms
+            <Upload className="w-4 h-4" />
+            Explore Another Room
           </Button>
         </div>
       </main>

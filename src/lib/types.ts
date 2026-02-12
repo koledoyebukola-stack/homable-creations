@@ -145,7 +145,7 @@ export interface SpecsHistory {
 
 export interface HistoryItem {
   id: string;
-  type: 'inspiration' | 'specs';
+  type: 'inspiration' | 'specs' | 'explore';
   title: string;
   created_at: string;
   image_url?: string;
@@ -153,6 +153,8 @@ export interface HistoryItem {
   specifications?: Record<string, string | boolean>;
   search_queries?: string[];
   board_id?: string;
+  /** For explore scenes: slug to navigate to /explore/[slug] */
+  scene_slug?: string;
 }
 
 // Storefront (vendor catalog page)

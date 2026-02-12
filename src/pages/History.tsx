@@ -5,7 +5,7 @@ import { HistoryItem } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Image as ImageIcon, FileText, Plus } from 'lucide-react';
+import { Loader2, Image as ImageIcon, FileText, Plus, Sparkles } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
@@ -62,6 +62,8 @@ export default function History() {
   const handleItemClick = (item: HistoryItem) => {
     if (item.type === 'inspiration') {
       navigate(`/product-matches/${item.board_id}`);
+    } else if (item.type === 'explore' && item.scene_slug) {
+      navigate(`/explore/${item.scene_slug}`);
     } else {
       // Navigate to specs results with data
       const queryParams = new URLSearchParams();
@@ -163,6 +165,14 @@ export default function History() {
                       className="w-full h-full object-cover"
                     />
                   </div>
+                ) : item.type === 'explore' && item.image_url ? (
+                  <div className="aspect-[4/3] overflow-hidden bg-gray-100">
+                    <img
+                      src={item.image_url}
+                      alt={item.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 ) : item.type === 'specs' && item.category && CATEGORY_THUMBNAILS[item.category] ? (
                   <div className="aspect-[4/3] overflow-hidden bg-gray-100 relative">
                     <img
@@ -176,7 +186,11 @@ export default function History() {
                   </div>
                 ) : (
                   <div className="aspect-[4/3] bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center">
-                    <FileText className="h-16 w-16 text-purple-400" />
+                    {item.type === 'explore' ? (
+                      <Sparkles className="h-16 w-16 text-purple-400" />
+                    ) : (
+                      <FileText className="h-16 w-16 text-purple-400" />
+                    )}
                   </div>
                 )}
                 
@@ -184,9 +198,15 @@ export default function History() {
                   <div className="flex items-start justify-between mb-2">
                     <Badge 
                       variant="outline" 
-                      className={item.type === 'inspiration' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-purple-50 text-purple-700 border-purple-200'}
+                      className={
+                        item.type === 'inspiration'
+                          ? 'bg-blue-50 text-blue-700 border-blue-200'
+                          : item.type === 'explore'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-purple-50 text-purple-700 border-purple-200'
+                      }
                     >
-                      {item.type === 'inspiration' ? 'Inspiration' : 'Specs'}
+                      {item.type === 'inspiration' ? 'Inspiration' : item.type === 'explore' ? 'Explore' : 'Specs'}
                     </Badge>
                   </div>
                   
