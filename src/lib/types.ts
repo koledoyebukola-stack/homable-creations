@@ -223,6 +223,8 @@ export interface ExploreSceneItem {
   vendor_product_id: string | null;
   estimated_price_ngn: number | null;
   description: string | null;
+  /** Optional Instagram handle for styling/decor items (e.g. '@plant_home.ng') */
+  instagram_handle?: string | null;
   external_link: string | null;
   created_at: string;
   updated_at: string;

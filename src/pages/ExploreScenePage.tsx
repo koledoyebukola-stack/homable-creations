@@ -268,9 +268,9 @@ export default function ExploreScenePage() {
                 >
                   <h3 className="font-semibold text-[#111111]">{item.name}</h3>
                   <p className="text-[#555555] text-sm mt-1">Contact vendor for price</p>
-                  {item.external_link && (
+                  {item.instagram_handle && (
                     <p className="text-sm text-[#666666] mt-1">
-                      Handle: @{item.external_link.replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/?$/, '')}
+                      Handle: {item.instagram_handle}
                     </p>
                   )}
                   {item.external_link && (
