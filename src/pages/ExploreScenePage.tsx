@@ -358,6 +358,7 @@ export default function ExploreScenePage() {
                       <p className="text-xs text-gray-600 mt-1">
                         {formatVendorPrice(product)}
                       </p>
+                      <p className="text-sm text-gray-500 mt-1.5">Tap to view details →</p>
                     </div>
                   </div>
                 );
@@ -407,6 +408,9 @@ export default function ExploreScenePage() {
               <Instagram className="w-5 h-5" />
               Styling & Decor
             </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              These items are available from trusted Instagram vendors. Contact them directly for pricing and availability.
+            </p>
             <ul className="space-y-6">
               {decorItems.map((item) => (
                 <li
