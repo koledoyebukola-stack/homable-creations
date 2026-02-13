@@ -323,10 +323,12 @@ export default function Home() {
                   <span className="text-2xl font-bold text-white">1</span>
                 </div>
                 <h3 className="text-xl font-semibold text-[#111111]">
-                  Upload Your Photo
+                  {country === 'NG' ? 'Start with Inspiration' : 'Upload Your Photo'}
                 </h3>
                 <p className="text-[#555555]">
-                  Share any inspiration photo you love, whether it's from Pinterest, Instagram, or your own space.
+                  {country === 'NG'
+                    ? 'Browse our curated Nigerian rooms or upload any room photo you love from Pinterest, Instagram, or your own space.'
+                    : "Share any inspiration photo you love, whether it's from Pinterest, Instagram, or your own space."}
                 </p>
               </div>
 
@@ -336,10 +338,12 @@ export default function Home() {
                   <span className="text-2xl font-bold text-white">2</span>
                 </div>
                 <h3 className="text-xl font-semibold text-[#111111]">
-                  AI Identifies the Decor
+                  {country === 'NG' ? 'Find Everything Locally' : 'AI Identifies the Decor'}
                 </h3>
                 <p className="text-[#555555]">
-                  Homable analyzes the photo and gives you a clear list of every decor item it finds, from furniture to textiles to seasonal pieces.
+                  {country === 'NG'
+                    ? 'Homable shows you each item with verified Nigerian vendors, real prices in Naira, and direct WhatsApp contact.'
+                    : 'Homable analyzes the photo and gives you a clear list of every decor item it finds, from furniture to textiles to seasonal pieces.'}
                 </p>
               </div>
 
@@ -349,10 +353,12 @@ export default function Home() {
                   <span className="text-2xl font-bold text-white">3</span>
                 </div>
                 <h3 className="text-xl font-semibold text-[#111111]">
-                  Shop and Track Your List
+                  {country === 'NG' ? 'Shop and Track Progress' : 'Shop and Track Your List'}
                 </h3>
                 <p className="text-[#555555]">
-                  Use the item names to search for products online and save them as a checklist so you can plan, shop, and decorate at your own pace.
+                  {country === 'NG'
+                    ? 'Create your shopping list, monitor your budget, and invite others to help you complete the space.'
+                    : 'Use the item names to search for products online and save them as a checklist so you can plan, shop, and decorate at your own pace.'}
                 </p>
               </div>
             </div>
