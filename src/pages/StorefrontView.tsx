@@ -606,7 +606,6 @@ function StorefrontActive({
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 mt-6">
               {filteredProducts.map((product, index) => {
-                const aspectClass = index % 3 === 0 ? 'aspect-[4/5]' : index % 3 === 1 ? 'aspect-[3/4]' : 'aspect-square';
                 const isAboveFold = index < 6;
                 return (
                   <div
@@ -617,16 +616,14 @@ function StorefrontActive({
                       sessionStorage.setItem(scrollKey, window.scrollY.toString());
                       navigate(`/shops/products/${product.slug}`);
                     }}
-                    className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer"
+                    className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer flex flex-col"
                   >
-                    <div className={`${aspectClass} w-full bg-gray-100 relative overflow-hidden rounded-2xl`}>
+                    <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
                       {product.image_url ? (
                         <img
                           src={product.image_url}
                           alt={product.name}
-                          width={400}
-                          height={index % 3 === 0 ? 500 : index % 3 === 1 ? 533 : 400}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                           loading={isAboveFold ? 'eager' : 'lazy'}
                           fetchPriority={isAboveFold ? 'high' : undefined}
                         />

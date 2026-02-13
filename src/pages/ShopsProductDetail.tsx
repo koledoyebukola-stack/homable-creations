@@ -250,22 +250,19 @@ export default function ShopsProductDetail() {
             </h2>
             <div className="mt-3 overflow-x-auto pb-1">
               <div className="flex gap-4 md:grid md:grid-cols-4 md:gap-6 min-w-full">
-                {moreProducts.map((p, index) => {
-                  const aspectClass =
-                    index % 3 === 0 ? 'aspect-[4/5]' : index % 3 === 1 ? 'aspect-[3/4]' : 'aspect-square';
-                  return (
+                {moreProducts.map((p) => (
                     <button
                       key={p.id}
                       type="button"
                       onClick={() => navigate(`/shops/products/${p.slug}`)}
-                      className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer min-w-[160px]"
+                      className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer min-w-[160px] flex flex-col"
                     >
-                      <div className={`${aspectClass} w-full bg-gray-100 relative overflow-hidden`}>
+                      <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden flex-shrink-0">
                         {p.image_url ? (
                           <img
                             src={p.image_url}
                             alt={p.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                             loading="lazy"
                           />
                         ) : (
@@ -283,8 +280,7 @@ export default function ShopsProductDetail() {
                         </p>
                       </div>
                     </button>
-                  );
-                })}
+                ))}
               </div>
             </div>
           </div>

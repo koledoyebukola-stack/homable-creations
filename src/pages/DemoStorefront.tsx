@@ -229,21 +229,19 @@ export default function DemoStorefront() {
 
             {/* Product grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 mt-6">
-              {filteredProducts.map((product, index) => {
-                const aspectClass = index % 3 === 0 ? 'aspect-[4/5]' : index % 3 === 1 ? 'aspect-[3/4]' : 'aspect-square';
-                return (
+              {filteredProducts.map((product) => (
                   <button
                     key={product.id}
                     type="button"
                     onClick={handleItemClick}
-                    className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer"
+                    className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer flex flex-col"
                     aria-label={product.name}
                   >
-                    <div className={`${aspectClass} w-full bg-gray-100 relative overflow-hidden rounded-2xl`}>
+                    <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
                       <img
                         src={product.image}
                         alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                         loading="lazy"
                       />
                       <div className="absolute top-2 left-2">
@@ -259,8 +257,7 @@ export default function DemoStorefront() {
                       <p className="text-xs text-gray-600 mt-1">{formatPrice(product.price)}</p>
                     </div>
                   </button>
-                );
-              })}
+              ))}
             </div>
             {filteredProducts.length === 0 && (
               <p className="text-gray-600 py-8 text-center">No products match the current filters.</p>
