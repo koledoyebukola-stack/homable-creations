@@ -560,7 +560,7 @@ export default function Upload() {
               </div>
 
               {/* Category filter pills - horizontal scroll on mobile, wrap on desktop */}
-              <div className="flex gap-2 overflow-x-auto pb-2 md:overflow-visible md:flex-wrap md:justify-center scrollbar-thin">
+              <div className="flex gap-2 overflow-x-auto pb-2 md:overflow-visible md:flex-wrap md:justify-center scroll-pills-hide-scrollbar">
                 {EXPLORE_CATEGORY_PILLS.map(({ value, label }) => (
                   <button
                     key={value}
@@ -579,7 +579,7 @@ export default function Upload() {
               {/* Price filters */}
               <div className="mt-4 mb-6">
                 <p className="text-xs font-medium text-[#666666] mb-2">Price</p>
-                <div className="flex gap-2 overflow-x-auto pb-2 md:overflow-visible md:flex-wrap scrollbar-thin">
+                <div className="flex gap-2 overflow-x-auto pb-2 md:overflow-visible md:flex-wrap scroll-pills-hide-scrollbar">
                   {EXPLORE_PRICE_PILLS.map(({ value, label }) => (
                     <button
                       key={value}

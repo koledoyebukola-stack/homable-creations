@@ -99,3 +99,17 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Hide scrollbar and remove focus/scroll artifacts on horizontal pill strips (iOS Safari grey line fix) */
+.scroll-pills-hide-scrollbar {
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scroll-pills-hide-scrollbar:focus {
+  outline: none;
+}
+.scroll-pills-hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
