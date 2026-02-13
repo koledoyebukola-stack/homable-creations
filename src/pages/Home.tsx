@@ -132,8 +132,8 @@ export default function Home() {
         <div className="max-w-[560px] md:max-w-6xl mx-auto md:grid md:grid-cols-2 md:gap-12 lg:gap-16 md:items-center min-h-0">
           {/* Left: heading, subtitle, CTAs — vertically centered with carousel on desktop, text left-aligned */}
           <div className="md:max-w-[480px] md:flex md:flex-col md:justify-center">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#111111] leading-tight text-center md:text-left mb-3">
-              From inspiration to execution
+            <h1 className={`font-bold text-[#111111] leading-tight text-center md:text-left mb-3 ${country === 'NG' ? 'text-3xl md:text-4xl lg:text-5xl' : 'text-4xl md:text-5xl lg:text-6xl'}`}>
+              {country === 'NG' ? 'From inspiration to execution. Built for Nigeria.' : 'From inspiration to execution'}
             </h1>
             <p className="text-lg md:text-xl text-[#555555] text-center md:text-left mb-10">
               {country === 'NG' ? HERO_DESCRIPTION_NG : HERO_DESCRIPTION_DEFAULT}
@@ -219,7 +219,8 @@ export default function Home() {
               Explore Curated Rooms
             </h2>
             <p className="text-center text-[#555555] text-lg mb-6 md:mb-8 max-w-2xl mx-auto">
-              Recreate real Nigerian rooms with a clear budget and locally sourced pieces
+              <span className="font-semibold text-teal-800 underline decoration-2 underline-offset-2 decoration-teal-300/90">Recreate real Nigerian rooms</span>
+              {' '}with a clear budget and locally sourced pieces
             </p>
 
             {/* Category filters */}
