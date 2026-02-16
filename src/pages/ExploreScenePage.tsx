@@ -280,9 +280,12 @@ export default function ExploreScenePage() {
           </div>
         </section>
 
-        {/* Shop This Look — intro above items */}
+        {/* Shop This Look — intro above items (secondary to room title) */}
         <div className="text-center mt-12 mb-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-[#111111] mb-2">Shop This Look</h2>
+          <h2 className="text-2xl font-bold text-[#111111] mb-2 flex items-center justify-center gap-2">
+            <ShoppingBag className="w-6 h-6 text-[#111111]" aria-hidden />
+            Shop This Look
+          </h2>
           <p className="text-lg text-gray-600 max-w-xl mx-auto">
             Everything in this room can be recreated with verified Nigerian vendors
           </p>
