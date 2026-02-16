@@ -280,9 +280,17 @@ export default function ExploreScenePage() {
           </div>
         </section>
 
+        {/* Shop This Look — intro above items */}
+        <div className="text-center mt-12 mb-8">
+          <h2 className="text-3xl md:text-4xl font-bold text-[#111111] mb-2">Shop This Look</h2>
+          <p className="text-lg text-gray-600 max-w-xl mx-auto">
+            Everything in this room can be recreated with verified Nigerian vendors
+          </p>
+        </div>
+
         {/* Items available on Homable — line list + total (no custom/decor breakdown) */}
         <section className="mb-10 p-6 rounded-2xl bg-white border border-[#e5e5e5] shadow-sm">
-          <h2 className="text-xl font-semibold text-[#111111] mb-1">Items available on Homable</h2>
+          <h3 className="text-base font-semibold text-[#111111] mb-1">Items available on Homable</h3>
           <p className="text-sm text-[#666666] mb-4">Prices below; click any item to view and contact the vendor.</p>
           {catalogItems.length > 0 ? (
             <>
@@ -313,10 +321,10 @@ export default function ExploreScenePage() {
         {/* Section A: Available on Homable — storefront-style cards, whole card links to product */}
         {catalogItems.length > 0 && (
           <section className="mb-10">
-            <h2 className="text-xl font-semibold text-[#111111] mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-[#111111] mb-4 flex items-center gap-2">
               <ShoppingBag className="w-5 h-5" />
               Available on Homable
-            </h2>
+            </h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
               {catalogItems.map((item) => {
                 const product = item.vendor_product;
