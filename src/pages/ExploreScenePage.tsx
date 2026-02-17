@@ -218,12 +218,10 @@ export default function ExploreScenePage() {
   const catalogItems = items.filter((i) => i.item_type === 'catalog_product');
   const customBuildItems = items.filter((i) => i.item_type === 'custom_build');
   const decorItems = items.filter((i) => i.item_type === 'instagram_link');
-  
-  console.log('[ExploreScenePage] Filtered items:', {
-    catalogItems: catalogItems.length,
-    customBuildItems: customBuildItems.length,
-    decorItems: decorItems.length,
-  });
+
+  /** Split catalog items by vendor_type for "Available on Homable": Furniture (carpenter) first, Decorative Items (decor_store) second. */
+  const furnitureItems = catalogItems.filter((i) => i.storefront?.vendor_type !== 'decor_store');
+  const decorativeItems = catalogItems.filter((i) => i.storefront?.vendor_type === 'decor_store');
 
   const hasSavableItems = items.some((i) =>
     i.item_type === 'catalog_product' ? !!i.vendor_product?.name : !!i.name
@@ -321,60 +319,119 @@ export default function ExploreScenePage() {
           )}
         </section>
 
-        {/* Section A: Available on Homable — storefront-style cards, whole card links to product */}
+        {/* Section A: Available on Homable — grouped by vendor_type: Furniture (carpenter) then Decorative Items (decor_store) */}
         {catalogItems.length > 0 && (
           <section className="mb-10">
             <h3 className="text-lg font-semibold text-[#111111] mb-4 flex items-center gap-2">
               <ShoppingBag className="w-5 h-5" />
               Available on Homable
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-              {catalogItems.map((item) => {
-                const product = item.vendor_product;
-                if (!product) return null;
-                return (
-                  <div
-                    key={item.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => navigate(`/shops/products/${product.slug}`)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        navigate(`/shops/products/${product.slug}`);
-                      }
-                    }}
-                    className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer border border-[#e5e5e5] flex flex-col"
-                  >
-                    <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
-                      {product.image_url ? (
-                        <img
-                          src={product.image_url}
-                          alt={product.name}
-                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[#999] text-sm">No image</div>
-                      )}
-                      <div className="absolute top-2 left-2">
-                        <Badge className="bg-gray-900 text-white text-[10px] font-medium border-0 shadow-sm px-2 py-1 rounded-full">
-                          Custom order
-                        </Badge>
+
+            {furnitureItems.length > 0 && (
+              <div className="mb-8">
+                <h4 className="text-base font-semibold text-[#111111] mb-3">Furniture</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+                  {furnitureItems.map((item) => {
+                    const product = item.vendor_product;
+                    if (!product) return null;
+                    return (
+                      <div
+                        key={item.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => navigate(`/shops/products/${product.slug}`)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            navigate(`/shops/products/${product.slug}`);
+                          }
+                        }}
+                        className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer border border-[#e5e5e5] flex flex-col"
+                      >
+                        <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
+                          {product.image_url ? (
+                            <img
+                              src={product.image_url}
+                              alt={product.name}
+                              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[#999] text-sm">No image</div>
+                          )}
+                          <div className="absolute top-2 left-2">
+                            <Badge className="bg-gray-900 text-white text-[10px] font-medium border-0 shadow-sm px-2 py-1 rounded-full">
+                              Custom order
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="px-2.5 pt-2.5 pb-3 md:px-3 md:pt-3">
+                          <h3 className="text-[13px] md:text-sm font-semibold text-gray-900 leading-snug">
+                            {product.name}
+                          </h3>
+                          <p className="text-xs text-gray-600 mt-1">
+                            {formatVendorPrice(product)}
+                          </p>
+                          <p className="text-sm text-gray-500 mt-1.5">Tap to view details →</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="px-2.5 pt-2.5 pb-3 md:px-3 md:pt-3">
-                      <h3 className="text-[13px] md:text-sm font-semibold text-gray-900 leading-snug">
-                        {product.name}
-                      </h3>
-                      <p className="text-xs text-gray-600 mt-1">
-                        {formatVendorPrice(product)}
-                      </p>
-                      <p className="text-sm text-gray-500 mt-1.5">Tap to view details →</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {decorativeItems.length > 0 && (
+              <div>
+                <h4 className="text-base font-semibold text-[#111111] mb-3">Decorative Items</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+                  {decorativeItems.map((item) => {
+                    const product = item.vendor_product;
+                    if (!product) return null;
+                    return (
+                      <div
+                        key={item.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => navigate(`/shops/products/${product.slug}`)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            navigate(`/shops/products/${product.slug}`);
+                          }
+                        }}
+                        className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer border border-[#e5e5e5] flex flex-col"
+                      >
+                        <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
+                          {product.image_url ? (
+                            <img
+                              src={product.image_url}
+                              alt={product.name}
+                              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[#999] text-sm">No image</div>
+                          )}
+                          <div className="absolute top-2 left-2">
+                            <Badge className="bg-gray-900 text-white text-[10px] font-medium border-0 shadow-sm px-2 py-1 rounded-full">
+                              Custom order
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="px-2.5 pt-2.5 pb-3 md:px-3 md:pt-3">
+                          <h3 className="text-[13px] md:text-sm font-semibold text-gray-900 leading-snug">
+                            {product.name}
+                          </h3>
+                          <p className="text-xs text-gray-600 mt-1">
+                            {formatVendorPrice(product)}
+                          </p>
+                          <p className="text-sm text-gray-500 mt-1.5">Tap to view details →</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </section>
         )}
 
