@@ -150,6 +150,7 @@ function StorefrontActive({
   const { category: categoryParam } = useParams<{ slug: string; category?: string }>();
 
   const [categoryFilter, setCategoryFilterState] = useState<string | null>(null);
+  const [roomFilter, setRoomFilter] = useState<string | null>(null);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 0]);
   const [searchInput, setSearchInput] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -160,6 +161,13 @@ function StorefrontActive({
   const prevProductsRef = useRef<VendorProduct[]>([]);
   const categoryChangePendingRef = useRef(false);
   const scrollRestoredRef = useRef(false);
+
+  const isDecorStore = storefront.vendor_type === 'decor_store';
+  const rooms = useMemo(() => {
+    if (!isDecorStore) return [] as string[];
+    const roomValues = products.map(p => p.room).filter((r): r is string => Boolean(r));
+    return [...new Set(roomValues)].sort();
+  }, [isDecorStore, products]);
 
   // Categories come from API (all storefront categories), not from loaded products, so pills show on initial load.
 
@@ -322,9 +330,11 @@ function StorefrontActive({
   const [priceMin, priceMax] = priceRange;
 
   // Category is applied server-side when a pill is selected; products here are already filtered by category.
+  // For decor_store, room filter is applied client-side.
   const filteredProducts = useMemo(() => {
     const q = debouncedSearch.toLowerCase();
     const filtered = products.filter(p => {
+      if (roomFilter && p.room !== roomFilter) return false;
       const pMin = p.price_min ?? p.price_max ?? null;
       const pMax = p.price_max ?? p.price_min ?? null;
       if (priceMin != null && priceMax != null && priceMin <= priceMax) {
@@ -335,22 +345,13 @@ function StorefrontActive({
       if (q) {
         const nameMatch = p.name?.toLowerCase().includes(q);
         const categoryMatch = p.category?.toLowerCase().includes(q);
-        if (!nameMatch && !categoryMatch) return false;
+        const roomMatch = p.room?.toLowerCase().includes(q);
+        if (!nameMatch && !categoryMatch && !roomMatch) return false;
       }
       return true;
     });
-    
-    console.log('[FILTERED PRODUCTS]', {
-      totalProducts: products.length,
-      filteredCount: filtered.length,
-      priceRange: [priceMin, priceMax],
-      priceBounds,
-      searchQuery: q || '(none)',
-      categoryFilter: categoryFilter || '(all)',
-    });
-    
     return filtered;
-  }, [products, priceMin, priceMax, debouncedSearch, priceBounds, categoryFilter]);
+  }, [products, priceMin, priceMax, debouncedSearch, priceBounds, categoryFilter, roomFilter]);
 
   const whatsapp = whatsappUrl(storefront.whatsapp_number);
 
@@ -527,6 +528,38 @@ function StorefrontActive({
                     </button>
                   ))}
                 </div>
+
+                {/* Room pills (decor_store only): client-side filter by product.room */}
+                {isDecorStore && rooms.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="text-xs font-medium text-gray-600 w-full">Room</span>
+                    <button
+                      type="button"
+                      onClick={() => setRoomFilter(null)}
+                      className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs md:text-sm font-medium transition-colors ${
+                        roomFilter === null
+                          ? 'bg-gray-900 text-white'
+                          : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      All rooms
+                    </button>
+                    {rooms.map(room => (
+                      <button
+                        key={room}
+                        type="button"
+                        onClick={() => setRoomFilter(room)}
+                        className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs md:text-sm font-medium transition-colors ${
+                          roomFilter === room
+                            ? 'bg-gray-900 text-white'
+                            : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        {room}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

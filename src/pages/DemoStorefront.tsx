@@ -1,9 +1,11 @@
-import { useRef, useState, useMemo } from 'react';
+import { useRef, useState, useMemo, useEffect } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Instagram, MessageCircle } from 'lucide-react';
+import { Instagram, MessageCircle, Search, X } from 'lucide-react';
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 // Hardcoded demo: decor store
 const VENDOR = {
@@ -45,7 +47,14 @@ export default function DemoStorefront() {
   const [roomFilter, setRoomFilter] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [priceRange, setPriceRange] = useState<[number, number]>([15000, 85000]);
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const priceBounds: [number, number] = [15000, 85000];
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchInput.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const rooms = useMemo(() => {
     const set = new Set(PRODUCTS.map(p => p.room));
@@ -63,9 +72,16 @@ export default function DemoStorefront() {
       if (categoryFilter && p.category !== categoryFilter) return false;
       const [min, max] = priceRange;
       if (p.price < min || p.price > max) return false;
+      if (debouncedSearch) {
+        const q = debouncedSearch.toLowerCase();
+        const nameMatch = p.name?.toLowerCase().includes(q);
+        const categoryMatch = p.category?.toLowerCase().includes(q);
+        const roomMatch = p.room?.toLowerCase().includes(q);
+        if (!nameMatch && !categoryMatch && !roomMatch) return false;
+      }
       return true;
     });
-  }, [roomFilter, categoryFilter, priceRange]);
+  }, [roomFilter, categoryFilter, priceRange, debouncedSearch]);
 
   const handleItemClick = () => {
     whatsappRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -131,99 +147,126 @@ export default function DemoStorefront() {
               {PRODUCTS.length} home decor and interior accessories.
             </p>
 
-            {/* Room filter */}
-            <div className="mt-4">
-              <span className="text-xs font-medium text-gray-600">Room</span>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setRoomFilter(null)}
-                  className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs md:text-sm font-medium transition-colors ${
-                    roomFilter === null ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  All
-                </button>
-                {rooms.map(room => (
+            {/* Search + filters: sticky on mobile, same as carpenter storefront */}
+            <div className="mt-4 sticky md:static top-14 md:top-auto z-20 md:z-auto bg-gray-50/95 md:bg-transparent backdrop-blur-md md:backdrop-blur-none border-b md:border-none border-gray-100 md:border-transparent -mx-4 md:mx-0 px-4 md:px-0 shadow-sm md:shadow-none">
+              <div className="pt-1 pb-3 md:pt-0">
+                <div className="w-full max-w-xl">
+                  <label htmlFor="demo-storefront-search" className="sr-only">Search products</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" aria-hidden />
+                    <input
+                      id="demo-storefront-search"
+                      type="text"
+                      autoComplete="off"
+                      value={searchInput}
+                      onChange={e => setSearchInput(e.target.value)}
+                      placeholder="Search: rug, lighting, mirror, vase..."
+                      className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-10 text-base md:text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                      aria-label="Search products by name or category"
+                    />
+                    {searchInput.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchInput('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                        aria-label="Clear search"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-gray-600">
+                  {debouncedSearch
+                    ? `${filteredProducts.length} result${filteredProducts.length !== 1 ? 's' : ''} for "${debouncedSearch}"`
+                    : `Showing ${filteredProducts.length} product${filteredProducts.length !== 1 ? 's' : ''}`}
+                </p>
+
+                {/* Room filter */}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="sr-only">Room</span>
                   <button
-                    key={room}
                     type="button"
-                    onClick={() => setRoomFilter(room)}
+                    onClick={() => setRoomFilter(null)}
                     className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs md:text-sm font-medium transition-colors ${
-                      roomFilter === room ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                      roomFilter === null ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    {room}
+                    All rooms
                   </button>
-                ))}
-              </div>
-            </div>
+                  {rooms.map(room => (
+                    <button
+                      key={room}
+                      type="button"
+                      onClick={() => setRoomFilter(room)}
+                      className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs md:text-sm font-medium transition-colors ${
+                        roomFilter === room ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {room}
+                    </button>
+                  ))}
+                </div>
 
-            {/* Category filter */}
-            <div className="mt-4">
-              <span className="text-xs font-medium text-gray-600">Category</span>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCategoryFilter(null)}
-                  className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs md:text-sm font-medium transition-colors ${
-                    categoryFilter === null ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  All
-                </button>
-                {categories.map(cat => (
+                {/* Category filter */}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="sr-only">Category</span>
                   <button
-                    key={cat}
                     type="button"
-                    onClick={() => setCategoryFilter(cat)}
+                    onClick={() => setCategoryFilter(null)}
                     className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs md:text-sm font-medium transition-colors ${
-                      categoryFilter === cat ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                      categoryFilter === null ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    {cat}
+                    All
                   </button>
-                ))}
-              </div>
-            </div>
+                  {categories.map(cat => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setCategoryFilter(cat)}
+                      className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs md:text-sm font-medium transition-colors ${
+                        categoryFilter === cat ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
 
-            {/* Price range */}
-            <div className="mt-4 max-w-xs">
-              <label className="text-xs font-medium text-gray-600">Price range</label>
-              <div className="flex items-center gap-2 mt-1">
-                <input
-                  type="range"
-                  min={priceBounds[0]}
-                  max={priceBounds[1]}
-                  value={priceRange[0]}
-                  onChange={e => {
-                    const v = Number(e.target.value);
-                    setPriceRange([v, Math.max(v, priceRange[1])]);
-                  }}
-                  className="flex-1 h-2 rounded-full accent-gray-900"
-                />
-                <input
-                  type="range"
-                  min={priceBounds[0]}
-                  max={priceBounds[1]}
-                  value={priceRange[1]}
-                  onChange={e => {
-                    const v = Number(e.target.value);
-                    setPriceRange([Math.min(v, priceRange[0]), v]);
-                  }}
-                  className="flex-1 h-2 rounded-full accent-gray-900"
-                />
-              </div>
-              <div className="mt-2 flex items-center justify-between text-[11px] text-gray-600 gap-2">
-                <span>Min: ₦{priceRange[0].toLocaleString()}</span>
-                <span>Max: ₦{priceRange[1].toLocaleString()}</span>
-                <button
-                  type="button"
-                  onClick={() => setPriceRange(priceBounds)}
-                  className="ml-2 text-gray-500 hover:text-gray-900 underline-offset-2 hover:underline"
-                >
-                  Reset
-                </button>
+                {/* Price pills (match carpenter storefront style) */}
+                <div className="mt-4">
+                  <span className="text-xs font-medium text-gray-600">Price</span>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {[
+                      { label: 'Under ₦50k', getRange: () => [15000, 50000] as const },
+                      { label: '₦50k – ₦75k', getRange: () => [50000, 75000] as const },
+                      { label: '₦75k+', getRange: () => [75000, 85000] as const },
+                    ].map(({ label, getRange }) => {
+                      const [min, max] = getRange();
+                      const isActive = priceRange[0] === min && priceRange[1] === max;
+                      return (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() => setPriceRange([min, max])}
+                          className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs md:text-sm font-medium transition-colors ${
+                            isActive ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => setPriceRange(priceBounds)}
+                      className="inline-flex items-center rounded-full px-3 py-1.5 text-xs md:text-sm font-medium text-gray-500 hover:text-gray-900 hover:underline underline-offset-2"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
