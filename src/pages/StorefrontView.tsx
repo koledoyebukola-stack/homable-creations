@@ -462,7 +462,7 @@ function StorefrontActive({
                       onChange={e => setSearchInput(e.target.value)}
                       onFocus={() => setIsSearchFocused(true)}
                       onBlur={() => setIsSearchFocused(false)}
-                      placeholder="Search: bed, wardrobe, L-shape sofa, TV stand"
+                      placeholder="What are you looking for?"
                       className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-10 text-base md:text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
                       aria-label="Search products by name or category"
                     />
