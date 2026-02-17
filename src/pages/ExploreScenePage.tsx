@@ -360,7 +360,7 @@ export default function ExploreScenePage() {
                           )}
                           <div className="absolute top-2 left-2">
                             <Badge className="bg-gray-900 text-white text-[10px] font-medium border-0 shadow-sm px-2 py-1 rounded-full">
-                              Custom order
+                              Sold by {item.storefront?.name ? item.storefront.name.split(' ').slice(0, 2).join(' ') : 'vendor'}
                             </Badge>
                           </div>
                         </div>
@@ -413,7 +413,7 @@ export default function ExploreScenePage() {
                           )}
                           <div className="absolute top-2 left-2">
                             <Badge className="bg-gray-900 text-white text-[10px] font-medium border-0 shadow-sm px-2 py-1 rounded-full">
-                              Custom order
+                              Sold by {item.storefront?.name ? item.storefront.name.split(' ').slice(0, 2).join(' ') : 'vendor'}
                             </Badge>
                           </div>
                         </div>
