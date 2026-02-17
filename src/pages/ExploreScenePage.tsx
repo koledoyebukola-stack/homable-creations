@@ -324,7 +324,7 @@ export default function ExploreScenePage() {
           <section className="mb-10">
             <h3 className="text-lg font-semibold text-[#111111] mb-4 flex items-center gap-2">
               <ShoppingBag className="w-5 h-5" />
-              Available on Homable
+              Shop This Look on Homable
             </h3>
 
             {furnitureItems.length > 0 && (
@@ -474,7 +474,7 @@ export default function ExploreScenePage() {
           <section className="mb-10">
             <h2 className="text-xl font-semibold text-[#111111] mb-4 flex items-center gap-2">
               <Instagram className="w-5 h-5" />
-              Styling & Decor
+              Find the Rest on Instagram
             </h2>
             <p className="text-sm text-gray-600 mb-4">
               These items are available from trusted Instagram vendors. Contact them directly for pricing and availability.
