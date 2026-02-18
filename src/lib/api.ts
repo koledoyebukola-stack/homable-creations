@@ -1741,7 +1741,8 @@ function computeCatalogBudgetFromItems(
 }
 
 /**
- * Fetch published explore scenes for a location, ordered by sort_order.
+ * Fetch published explore scenes for a location.
+ * Ordered by display_order ASC (nulls last), then created_at DESC for items without display_order.
  * catalog_budget_ngn is computed from related vendor_products (not the stored column).
  */
 export async function getExploreScenes(
@@ -1753,7 +1754,8 @@ export async function getExploreScenes(
     .select('*')
     .eq('status', 'published')
     .eq('location', location)
-    .order('sort_order', { ascending: true });
+    .order('display_order', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: false });
 
   if (limit != null) {
     query = query.limit(limit);
