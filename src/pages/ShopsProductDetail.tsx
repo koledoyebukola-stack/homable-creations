@@ -5,8 +5,8 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Store, ArrowLeft, MessageCircle } from 'lucide-react';
-import { getProductBySlug, getOtherVendorProducts } from '@/lib/api';
-import type { Storefront, VendorProduct } from '@/lib/types';
+import { getProductBySlug, getOtherVendorProducts, getInspirationsByProduct } from '@/lib/api';
+import type { Storefront, VendorProduct, ExploreScene } from '@/lib/types';
 
 function formatPrice(min: number | null, max: number | null): string {
   if (min != null && max != null && min !== max) return `₦${min.toLocaleString()} – ₦${max.toLocaleString()}`;
@@ -25,6 +25,7 @@ export default function ShopsProductDetail() {
   const navigate = useNavigate();
   const [data, setData] = useState<{ storefront: Storefront; product: VendorProduct } | null | undefined>(undefined);
   const [moreProducts, setMoreProducts] = useState<VendorProduct[]>([]);
+  const [inspirations, setInspirations] = useState<ExploreScene[]>([]);
   const [isImageOpen, setIsImageOpen] = useState(false);
 
   useEffect(() => {
@@ -47,6 +48,15 @@ export default function ShopsProductDetail() {
       return;
     }
     getOtherVendorProducts(data.storefront.id, data.product.id, 4).then(setMoreProducts);
+  }, [data]);
+
+  // Load inspirations where this product appears
+  useEffect(() => {
+    if (!data || data.storefront.status !== 'active') {
+      setInspirations([]);
+      return;
+    }
+    getInspirationsByProduct(data.product.id).then(setInspirations);
   }, [data]);
 
   // Redirect for not found or paused storefront
@@ -189,15 +199,25 @@ export default function ShopsProductDetail() {
                     {storefront.description && (
                       <p className="text-xs md:text-sm text-gray-600 mt-2">{storefront.description}</p>
                     )}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/stores/${storefront.slug}`)}
-                      className="mt-3 rounded-full border-gray-300 text-gray-900 hover:bg-gray-50 hover:border-gray-900"
-                    >
-                      View all products
-                    </Button>
+                    <div className="mt-3 flex flex-col sm:flex-row gap-3">
+                      <Button
+                        type="button"
+                        onClick={handleWhatsAppClick}
+                        className="flex-1 bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-full font-semibold py-2.5 shadow-md"
+                      >
+                        <MessageCircle className="mr-2 h-4 w-4" />
+                        💬 Buy on WhatsApp
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/stores/${storefront.slug}`)}
+                        className="flex-1 sm:flex-initial rounded-full border-gray-300 text-gray-900 hover:bg-gray-50 hover:border-gray-900"
+                      >
+                        View all products
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Product Details */}
@@ -232,13 +252,59 @@ export default function ShopsProductDetail() {
                     className="w-full bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-full font-semibold py-3 shadow-md"
                   >
                     <MessageCircle className="mr-2 h-5 w-5" />
-                    Discuss on WhatsApp
+                    💬 Buy on WhatsApp
                   </Button>
                 </div>
               </div>
             </div>
           </div>
         </section>
+
+        {/* See How to Style - inspirations where this product appears */}
+        {inspirations.length > 0 && (
+          <section className="pb-8 md:pb-10">
+            <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8">
+              <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3">
+                See how to style this {product.name}
+              </h2>
+              <div className="overflow-x-auto pb-1 scroll-pills-hide-scrollbar md:overflow-visible">
+                <div className="flex gap-4 md:grid md:grid-cols-2 md:gap-6 min-w-full">
+                  {inspirations.map((scene) => (
+                    <button
+                      key={scene.id}
+                      type="button"
+                      onClick={() => navigate(`/explore/${scene.slug}`)}
+                      className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer min-w-[280px] md:min-w-0 flex flex-col"
+                    >
+                      <div className="aspect-[4/3] w-full bg-gray-100 relative overflow-hidden flex-shrink-0">
+                        {scene.hero_image_url ? (
+                          <img
+                            src={scene.hero_image_url}
+                            alt={scene.title}
+                            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">
+                            No image
+                          </div>
+                        )}
+                      </div>
+                      <div className="px-3 pt-3 pb-4">
+                        <h3 className="text-sm md:text-base font-semibold text-gray-900 leading-snug line-clamp-2">
+                          {scene.title}
+                        </h3>
+                        <p className="text-xs text-gray-600 mt-1.5">
+                          From ₦{scene.catalog_budget_ngn.toLocaleString()}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
       </main>
 
       {/* More from this vendor */}
@@ -321,12 +387,58 @@ export default function ShopsProductDetail() {
             className="w-full bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-full font-semibold py-5 shadow-md"
           >
             <MessageCircle className="mr-2 h-5 w-5" />
-            Discuss on WhatsApp
+            Buy on WhatsApp
           </Button>
         </div>
       </div>
 
-      <Footer />
+      {/* See How to Style - inspirations where this product appears */}
+      {inspirations.length > 0 && (
+        <section className="pb-8 md:pb-10">
+          <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8">
+            <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3">
+              See how to style this {product.name}
+            </h2>
+            <div className="overflow-x-auto pb-1 scroll-pills-hide-scrollbar md:overflow-visible">
+              <div className="flex gap-4 md:grid md:grid-cols-2 md:gap-6 min-w-full">
+                {inspirations.map((scene) => (
+                  <button
+                    key={scene.id}
+                    type="button"
+                    onClick={() => navigate(`/explore/${scene.slug}`)}
+                    className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer min-w-[280px] md:min-w-0 flex flex-col"
+                  >
+                    <div className="aspect-[4/3] w-full bg-gray-100 relative overflow-hidden flex-shrink-0">
+                      {scene.hero_image_url ? (
+                        <img
+                          src={scene.hero_image_url}
+                          alt={scene.title}
+                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">
+                          No image
+                        </div>
+                      )}
+                    </div>
+                    <div className="px-3 pt-3 pb-4">
+                      <h3 className="text-sm md:text-base font-semibold text-gray-900 leading-snug line-clamp-2">
+                        {scene.title}
+                      </h3>
+                      <p className="text-xs text-gray-600 mt-1.5">
+                        From ₦{scene.catalog_budget_ngn.toLocaleString()}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* More from this vendor */}
     </div>
   );
 }

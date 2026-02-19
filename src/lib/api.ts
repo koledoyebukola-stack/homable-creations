@@ -1934,3 +1934,79 @@ export async function getExploreSceneBySlug(slug: string): Promise<{
     items: itemsWithProduct,
   };
 }
+
+/**
+ * Get inspirations (explore scenes) where a specific vendor product appears.
+ * Returns up to 4 inspirations ordered by display_order ASC (nulls last), then created_at DESC.
+ * Only returns published scenes.
+ */
+export async function getInspirationsByProduct(productId: string): Promise<ExploreScene[]> {
+  // Find all explore_scene_items that reference this product
+  const { data: sceneItems, error: itemsError } = await supabase
+    .from('explore_scene_items')
+    .select('scene_id')
+    .eq('vendor_product_id', productId)
+    .eq('item_type', 'catalog_product');
+
+  if (itemsError || !sceneItems || sceneItems.length === 0) {
+    return [];
+  }
+
+  const sceneIds = [...new Set(sceneItems.map((i) => i.scene_id))];
+
+  // Fetch the scenes (only published)
+  const { data: scenes, error: scenesError } = await supabase
+    .from('explore_scenes')
+    .select('id, slug, title, hero_image_url, catalog_budget_ngn, display_order, created_at')
+    .in('id', sceneIds)
+    .eq('status', 'published')
+    .order('display_order', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: false })
+    .limit(4);
+
+  if (scenesError || !scenes) {
+    console.error('Failed to fetch inspirations by product:', scenesError);
+    return [];
+  }
+
+  // Compute catalog_budget_ngn dynamically (same as getExploreScenes)
+  const sceneList = (scenes || []) as (ExploreScene & { display_order?: number | null })[];
+  if (sceneList.length === 0) return [];
+
+  const sceneIdsForBudget = sceneList.map((s) => s.id);
+  const { data: sceneItemsForBudget } = await supabase
+    .from('explore_scene_items')
+    .select('scene_id, vendor_product_id')
+    .in('scene_id', sceneIdsForBudget)
+    .eq('item_type', 'catalog_product')
+    .not('vendor_product_id', 'is', null);
+
+  const itemsList = (sceneItemsForBudget || []) as { scene_id: string; vendor_product_id: string }[];
+  const productIds = [...new Set(itemsList.map((i) => i.vendor_product_id))];
+  
+  if (productIds.length > 0) {
+    const { data: products } = await supabase
+      .from('vendor_products')
+      .select('id, price_min, price_max')
+      .in('id', productIds);
+    const productPriceMap = new Map(
+      (products || []).map((p: { id: string; price_min?: number | null; price_max?: number | null }) => [
+        p.id,
+        p.price_min != null ? p.price_min : (p.price_max != null ? p.price_max : 0),
+      ])
+    );
+
+    const budgetByScene: Record<string, number> = {};
+    for (const item of itemsList) {
+      const price = productPriceMap.get(item.vendor_product_id) ?? 0;
+      budgetByScene[item.scene_id] = (budgetByScene[item.scene_id] ?? 0) + price;
+    }
+
+    return sceneList.map((s) => ({
+      ...s,
+      catalog_budget_ngn: budgetByScene[s.id] ?? 0,
+    }));
+  }
+
+  return sceneList.map((s) => ({ ...s, catalog_budget_ngn: 0 }));
+}
