@@ -206,7 +206,7 @@ export default function ShopsProductDetail() {
                         className="flex-1 bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-full font-semibold py-2.5 shadow-md"
                       >
                         <MessageCircle className="mr-2 h-4 w-4" />
-                        💬 Buy on WhatsApp
+                        Buy on WhatsApp
                       </Button>
                       <Button
                         type="button"
@@ -252,7 +252,7 @@ export default function ShopsProductDetail() {
                     className="w-full bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-full font-semibold py-3 shadow-md"
                   >
                     <MessageCircle className="mr-2 h-5 w-5" />
-                    💬 Buy on WhatsApp
+                    Buy on WhatsApp
                   </Button>
                 </div>
               </div>
