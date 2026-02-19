@@ -393,52 +393,6 @@ export default function ShopsProductDetail() {
         </div>
       </div>
 
-      {/* See How to Style - inspirations where this product appears */}
-      {inspirations.length > 0 && (
-        <section className="pb-8 md:pb-10">
-          <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8">
-            <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3">
-              See how to style this {product.name}
-            </h2>
-            <div className="overflow-x-auto pb-1 scroll-pills-hide-scrollbar md:overflow-visible">
-              <div className="flex gap-4 md:grid md:grid-cols-2 md:gap-6 min-w-full">
-                {inspirations.map((scene) => (
-                  <button
-                    key={scene.id}
-                    type="button"
-                    onClick={() => navigate(`/explore/${scene.slug}`)}
-                    className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer min-w-[280px] md:min-w-0 flex flex-col"
-                  >
-                    <div className="aspect-[4/3] w-full bg-gray-100 relative overflow-hidden flex-shrink-0">
-                      {scene.hero_image_url ? (
-                        <img
-                          src={scene.hero_image_url}
-                          alt={scene.title}
-                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">
-                          No image
-                        </div>
-                      )}
-                    </div>
-                    <div className="px-3 pt-3 pb-4">
-                      <h3 className="text-sm md:text-base font-semibold text-gray-900 leading-snug line-clamp-2">
-                        {scene.title}
-                      </h3>
-                      <p className="text-xs text-gray-600 mt-1.5">
-                        From ₦{scene.catalog_budget_ngn.toLocaleString()}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* More from this vendor */}
     </div>
   );
