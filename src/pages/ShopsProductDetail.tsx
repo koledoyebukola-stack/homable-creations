@@ -213,7 +213,7 @@ export default function ShopsProductDetail() {
                         variant="outline"
                         size="sm"
                         onClick={() => navigate(`/stores/${storefront.slug}`)}
-                        className="flex-1 md:flex-initial rounded-full border-gray-300 text-gray-900 hover:bg-gray-50 hover:border-gray-900"
+                        className="flex-initial rounded-full border-gray-300 text-gray-900 hover:bg-gray-50 hover:border-gray-900 py-2 px-3 text-xs md:py-2 md:px-4 md:text-sm"
                       >
                         View all products
                       </Button>
