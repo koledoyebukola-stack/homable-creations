@@ -199,21 +199,22 @@ export default function ShopsProductDetail() {
                     {storefront.description && (
                       <p className="text-xs md:text-sm text-gray-600 mt-2">{storefront.description}</p>
                     )}
-                    <div className="mt-3 flex flex-col sm:flex-row gap-3 items-center sm:items-stretch">
+                    <div className="mt-3 flex flex-row gap-3 items-center">
                       <Button
                         type="button"
                         onClick={handleWhatsAppClick}
-                        className="w-11 h-11 sm:w-11 sm:h-11 flex-shrink-0 rounded-full bg-[#25D366] hover:bg-[#20BA5A] text-white p-0 shadow-md"
+                        className="w-12 h-12 md:w-auto md:h-auto md:px-4 md:py-2.5 flex-shrink-0 rounded-full bg-[#25D366] hover:bg-[#20BA5A] text-white p-0 md:p-0 shadow-md font-semibold"
                         aria-label="Buy on WhatsApp"
                       >
-                        <MessageCircle className="h-5 w-5" />
+                        <MessageCircle className="h-6 w-6 md:h-4 md:w-4 md:mr-2" />
+                        <span className="hidden md:inline">Buy on WhatsApp</span>
                       </Button>
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => navigate(`/stores/${storefront.slug}`)}
-                        className="flex-1 sm:flex-initial rounded-full border-gray-300 text-gray-900 hover:bg-gray-50 hover:border-gray-900"
+                        className="flex-1 md:flex-initial rounded-full border-gray-300 text-gray-900 hover:bg-gray-50 hover:border-gray-900"
                       >
                         View all products
                       </Button>
