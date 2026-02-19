@@ -203,7 +203,7 @@ export default function ShopsProductDetail() {
                       <Button
                         type="button"
                         onClick={handleWhatsAppClick}
-                        className="w-12 h-12 md:w-auto md:h-auto md:px-4 md:py-2.5 flex-shrink-0 rounded-full bg-[#25D366] hover:bg-[#20BA5A] text-white p-0 md:p-0 shadow-md font-semibold"
+                        className="w-12 h-12 md:w-auto md:h-auto md:px-4 md:py-2.5 flex-shrink-0 rounded-full bg-[#25D366] hover:bg-[#20BA5A] text-white p-0 md:p-0 flex items-center justify-center shadow-md font-semibold"
                         aria-label="Buy on WhatsApp"
                       >
                         <MessageCircle className="h-6 w-6 md:h-4 md:w-4 md:mr-2" />
