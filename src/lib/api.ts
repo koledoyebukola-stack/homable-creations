@@ -1969,8 +1969,9 @@ export async function getInspirationsByProduct(productId: string): Promise<Explo
     return [];
   }
 
-  // Compute catalog_budget_ngn dynamically (same as getExploreScenes)
-  const sceneList = (scenes || []) as (ExploreScene & { display_order?: number | null })[];
+  // Deduplicate by id (same scene can appear multiple times if product is linked in multiple items)
+  const sceneListRaw = (scenes || []) as (ExploreScene & { display_order?: number | null })[];
+  const sceneList = Array.from(new Map(sceneListRaw.map((s) => [s.id, s])).values());
   if (sceneList.length === 0) return [];
 
   const sceneIdsForBudget = sceneList.map((s) => s.id);

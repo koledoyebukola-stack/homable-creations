@@ -199,14 +199,14 @@ export default function ShopsProductDetail() {
                     {storefront.description && (
                       <p className="text-xs md:text-sm text-gray-600 mt-2">{storefront.description}</p>
                     )}
-                    <div className="mt-3 flex flex-col sm:flex-row gap-3">
+                    <div className="mt-3 flex flex-col sm:flex-row gap-3 items-center sm:items-stretch">
                       <Button
                         type="button"
                         onClick={handleWhatsAppClick}
-                        className="flex-1 bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-full font-semibold py-2.5 shadow-md"
+                        className="w-11 h-11 sm:w-11 sm:h-11 flex-shrink-0 rounded-full bg-[#25D366] hover:bg-[#20BA5A] text-white p-0 shadow-md"
+                        aria-label="Buy on WhatsApp"
                       >
-                        <MessageCircle className="mr-2 h-4 w-4" />
-                        Buy on WhatsApp
+                        <MessageCircle className="h-5 w-5" />
                       </Button>
                       <Button
                         type="button"
@@ -246,13 +246,13 @@ export default function ShopsProductDetail() {
                   </div>
                 </div>
 
-                <div className="mt-6 hidden md:block">
+                <div className="mt-6 hidden md:flex md:justify-center">
                   <Button
                     onClick={handleWhatsAppClick}
-                    className="w-full bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-full font-semibold py-3 shadow-md"
+                    className="w-12 h-12 rounded-full bg-[#25D366] hover:bg-[#20BA5A] text-white p-0 shadow-md"
+                    aria-label="Buy on WhatsApp"
                   >
-                    <MessageCircle className="mr-2 h-5 w-5" />
-                    Buy on WhatsApp
+                    <MessageCircle className="h-6 w-6" />
                   </Button>
                 </div>
               </div>
