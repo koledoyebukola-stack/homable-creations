@@ -298,6 +298,9 @@ export default function ShopsProductDetail() {
                         <p className="text-xs text-gray-600 mt-1.5">
                           From ₦{scene.catalog_budget_ngn.toLocaleString()}
                         </p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Tap to view details →
+                        </p>
                       </div>
                     </button>
                   ))}
