@@ -210,8 +210,10 @@ export interface ExploreScene {
   room_type: string | null;
   hero_image_url: string | null;
   location: string | null;
-  /** Sum of catalog (vendor_products) items — shown on scene cards as "From ₦X" */
+  /** Sum of catalog (vendor_products) items — shown on scene cards as "Complete room from ₦X" */
   catalog_budget_ngn: number;
+  /** Minimum price_min from all vendor_products linked to this scene — shown as "Items from ₦X" */
+  minimum_item_price_ngn: number;
   status: string;
   sort_order: number;
   /** Manual order for homepage Explore gallery; lower first, nulls last (then created_at DESC). */

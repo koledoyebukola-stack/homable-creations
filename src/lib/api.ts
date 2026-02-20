@@ -1782,7 +1782,7 @@ export async function getExploreScenes(
   const itemsList = (sceneItems || []) as { scene_id: string; vendor_product_id: string }[];
   const productIds = [...new Set(itemsList.map((i) => i.vendor_product_id))];
   if (productIds.length === 0) {
-    return sceneList.map((s) => ({ ...s, catalog_budget_ngn: 0 }));
+    return sceneList.map((s) => ({ ...s, catalog_budget_ngn: 0, minimum_item_price_ngn: 0 }));
   }
 
   const { data: products } = await supabase
@@ -1795,17 +1795,37 @@ export async function getExploreScenes(
       p.price_min != null ? p.price_min : (p.price_max != null ? p.price_max : 0),
     ])
   );
+  const productPriceMinMap = new Map(
+    (products || []).map((p: { id: string; price_min?: number | null; price_max?: number | null }) => [
+      p.id,
+      p.price_min != null ? p.price_min : (p.price_max != null ? p.price_max : 0),
+    ])
+  );
 
   const budgetByScene: Record<string, number> = {};
+  const minPriceByScene: Record<string, number[]> = {};
   for (const item of itemsList) {
     const price = productPriceMap.get(item.vendor_product_id) ?? 0;
     budgetByScene[item.scene_id] = (budgetByScene[item.scene_id] ?? 0) + price;
+    
+    const priceMin = productPriceMinMap.get(item.vendor_product_id) ?? 0;
+    if (!minPriceByScene[item.scene_id]) {
+      minPriceByScene[item.scene_id] = [];
+    }
+    if (priceMin > 0) {
+      minPriceByScene[item.scene_id].push(priceMin);
+    }
   }
 
-  return sceneList.map((s) => ({
-    ...s,
-    catalog_budget_ngn: budgetByScene[s.id] ?? 0,
-  }));
+  return sceneList.map((s) => {
+    const minPrices = minPriceByScene[s.id] || [];
+    const minimumItemPrice = minPrices.length > 0 ? Math.min(...minPrices) : 0;
+    return {
+      ...s,
+      catalog_budget_ngn: budgetByScene[s.id] ?? 0,
+      minimum_item_price_ngn: minimumItemPrice,
+    };
+  });
 }
 
 /**
@@ -1927,7 +1947,21 @@ export async function getExploreSceneBySlug(slug: string): Promise<{
   });
 
   const catalogBudgetNgn = computeCatalogBudgetFromItems(itemsWithProduct);
-  const sceneWithBudget: ExploreScene = { ...(scene as ExploreScene), catalog_budget_ngn: catalogBudgetNgn };
+  const catalogItems = itemsWithProduct.filter((i) => i.vendor_product);
+  const minPrices = catalogItems
+    .map((i) => {
+      const p = i.vendor_product;
+      if (!p) return null;
+      return p.price_min != null ? p.price_min : (p.price_max != null ? p.price_max : null);
+    })
+    .filter((p): p is number => p != null && p > 0);
+  const minimumItemPriceNgn = minPrices.length > 0 ? Math.min(...minPrices) : 0;
+  
+  const sceneWithBudget: ExploreScene = {
+    ...(scene as ExploreScene),
+    catalog_budget_ngn: catalogBudgetNgn,
+    minimum_item_price_ngn: minimumItemPriceNgn,
+  };
 
   return {
     scene: sceneWithBudget,
@@ -1996,18 +2030,38 @@ export async function getInspirationsByProduct(productId: string): Promise<Explo
         p.price_min != null ? p.price_min : (p.price_max != null ? p.price_max : 0),
       ])
     );
+    const productPriceMinMap = new Map(
+      (products || []).map((p: { id: string; price_min?: number | null; price_max?: number | null }) => [
+        p.id,
+        p.price_min != null ? p.price_min : (p.price_max != null ? p.price_max : 0),
+      ])
+    );
 
     const budgetByScene: Record<string, number> = {};
+    const minPriceByScene: Record<string, number[]> = {};
     for (const item of itemsList) {
       const price = productPriceMap.get(item.vendor_product_id) ?? 0;
       budgetByScene[item.scene_id] = (budgetByScene[item.scene_id] ?? 0) + price;
+      
+      const priceMin = productPriceMinMap.get(item.vendor_product_id) ?? 0;
+      if (!minPriceByScene[item.scene_id]) {
+        minPriceByScene[item.scene_id] = [];
+      }
+      if (priceMin > 0) {
+        minPriceByScene[item.scene_id].push(priceMin);
+      }
     }
 
-    return sceneList.map((s) => ({
-      ...s,
-      catalog_budget_ngn: budgetByScene[s.id] ?? 0,
-    }));
+    return sceneList.map((s) => {
+      const minPrices = minPriceByScene[s.id] || [];
+      const minimumItemPrice = minPrices.length > 0 ? Math.min(...minPrices) : 0;
+      return {
+        ...s,
+        catalog_budget_ngn: budgetByScene[s.id] ?? 0,
+        minimum_item_price_ngn: minimumItemPrice,
+      };
+    });
   }
 
-  return sceneList.map((s) => ({ ...s, catalog_budget_ngn: 0 }));
+  return sceneList.map((s) => ({ ...s, catalog_budget_ngn: 0, minimum_item_price_ngn: 0 }));
 }

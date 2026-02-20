@@ -7,6 +7,7 @@ interface ExploreSceneCardProps {
 
 export default function ExploreSceneCard({ scene, onSelect }: ExploreSceneCardProps) {
   const catalogBudget = Number(scene.catalog_budget_ngn) || 0;
+  const minimumItemPrice = Number(scene.minimum_item_price_ngn) || 0;
 
   return (
     <button
@@ -22,10 +23,17 @@ export default function ExploreSceneCard({ scene, onSelect }: ExploreSceneCardPr
         />
       </div>
       <div className="p-4">
-        <h3 className="font-semibold text-[#111111] mb-2 line-clamp-2">{scene.title}</h3>
-        <p className="text-sm text-[#555555] mb-2">
-          From ₦{catalogBudget.toLocaleString('en-NG')}
-        </p>
+        <h3 className="text-xl md:text-2xl font-bold text-[#111111] mb-2 line-clamp-2">{scene.title}</h3>
+        {minimumItemPrice > 0 && (
+          <p className="text-base font-semibold text-[#111111] mb-1">
+            Items from ₦{minimumItemPrice.toLocaleString('en-NG')}
+          </p>
+        )}
+        {catalogBudget > 0 && (
+          <p className="text-sm text-gray-500 mb-2">
+            Complete room from ₦{catalogBudget.toLocaleString('en-NG')}
+          </p>
+        )}
         {catalogBudget > 0 && (
           <span className="inline-block text-xs font-medium px-2.5 py-1 rounded-full bg-blue-100 text-blue-800">
             Available on Homable
