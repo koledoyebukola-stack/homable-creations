@@ -235,7 +235,7 @@ export default function ExploreScenePage() {
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 md:px-6 py-8 md:py-12">
         {/* Hero: full-bleed tall image on mobile (Pinterest-style), 16/9 on desktop */}
         <section className="mb-10">
-          <div className="relative -mx-4 md:mx-0 w-[calc(100%+2rem)] md:w-full aspect-[3/4] md:aspect-[16/9] rounded-none md:rounded-2xl overflow-hidden bg-gray-200 mb-6">
+          <div className="relative -mx-4 md:mx-0 w-[calc(100%+2rem)] md:w-full aspect-[1/1] md:aspect-[16/9] rounded-none md:rounded-2xl overflow-hidden bg-gray-200 mb-6">
             <img
               src={scene.hero_image_url || 'https://placehold.co/1200x675/f5f5f5/999?text=Room'}
               alt={scene.title}
