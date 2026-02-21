@@ -214,7 +214,7 @@ export default function ExploreScenePage() {
     custom_build: items.filter(i => i.item_type === 'custom_build').length,
     instagram_link: items.filter(i => i.item_type === 'instagram_link').length,
   });
-  
+
   const catalogItems = items.filter((i) => i.item_type === 'catalog_product');
   const customBuildItems = items.filter((i) => i.item_type === 'custom_build');
   const decorItems = items.filter((i) => i.item_type === 'instagram_link');
@@ -233,13 +233,13 @@ export default function ExploreScenePage() {
       <Header />
 
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 md:px-6 py-8 md:py-12">
-        {/* Hero: full-bleed tall image on mobile (Pinterest-style), 16/9 on desktop */}
+        {/* Hero: full-bleed on mobile, 16/9 on desktop */}
         <section className="mb-10">
-          <div className="relative -mx-4 md:mx-0 w-[calc(100%+2rem)] md:w-full aspect-[1/1] md:aspect-[16/9] rounded-none md:rounded-2xl overflow-hidden bg-gray-100 mb-6">
+          <div className="relative -mx-4 md:mx-0 w-[calc(100%+2rem)] md:w-full aspect-[16/10] md:aspect-[16/9] rounded-none md:rounded-2xl overflow-hidden mb-6">
             <img
               src={scene.hero_image_url || 'https://placehold.co/1200x675/f5f5f5/999?text=Room'}
               alt={scene.title}
-              className="w-full h-full object-contain md:object-cover object-center"
+              className="w-full h-full object-cover object-center"
             />
           </div>
           <h1 className="text-3xl md:text-4xl font-bold text-[#111111] mb-2">{scene.title}</h1>
