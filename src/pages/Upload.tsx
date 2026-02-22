@@ -599,7 +599,7 @@ export default function Upload() {
               {/* Scenes grid */}
               <div className="min-h-[200px]">
                 {loadingExploreScenes ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 md:gap-8">
                     {[1, 2, 3, 4, 5, 6].map((i) => (
                       <div key={i} className="aspect-[4/3] rounded-xl bg-gray-200 animate-pulse" />
                     ))}
@@ -631,7 +631,7 @@ export default function Upload() {
                     );
                   }
                   return (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 md:gap-8">
                       {filteredScenes.map((scene) => (
                         <ExploreSceneCard
                           key={scene.id}

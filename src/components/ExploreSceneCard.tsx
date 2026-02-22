@@ -1,9 +1,9 @@
 import type { ExploreScene } from '@/lib/types';
 
 function formatViewCount(count: number): string {
-  if (count < 1000) return `${count} views`;
-  if (count < 10000) return `${(count / 1000).toFixed(1)}k`;
-  return `${Math.round(count / 1000)}k`;
+  if (count < 1000) return count === 1 ? '1 view' : `${count} views`;
+  if (count < 10000) return `${(count / 1000).toFixed(1)}k views`;
+  return `${Math.round(count / 1000)}k views`;
 }
 
 interface ExploreSceneCardProps {
@@ -19,12 +19,8 @@ export default function ExploreSceneCard({ scene, onSelect, viewCount = 0, isTre
   const catalogBudget = Number(scene.catalog_budget_ngn) || 0;
   const minimumItemPrice = Number(scene.minimum_item_price_ngn) || 0;
   const showBadgeOrViews = catalogBudget > 0 || viewCount > 0;
-  const viewLabel =
-    viewCount < 1000
-      ? (isTrending ? `🔥 Trending: ${viewCount} views` : `👁️ ${viewCount} views`)
-      : isTrending
-        ? `🔥 Trending: ${formatViewCount(viewCount)}`
-        : `👁️ ${formatViewCount(viewCount)}`;
+  const viewText = formatViewCount(viewCount);
+  const viewLabel = isTrending ? `🔥 Trending: ${viewText}` : `👁️ ${viewText}`;
 
   return (
     <button

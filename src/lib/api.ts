@@ -1754,6 +1754,7 @@ export async function getExploreScenes(
     .select('*')
     .eq('status', 'published')
     .eq('location', location)
+    .order('view_count', { ascending: false, nullsFirst: false })
     .order('display_order', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: false });
 
