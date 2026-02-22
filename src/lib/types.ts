@@ -218,6 +218,8 @@ export interface ExploreScene {
   sort_order: number;
   /** Manual order for homepage Explore gallery; lower first, nulls last (then created_at DESC). */
   display_order?: number | null;
+  /** Total views (from explore_scene_views), shown on cards. */
+  view_count?: number;
   created_at: string;
   updated_at: string;
 }

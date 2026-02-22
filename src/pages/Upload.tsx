@@ -613,6 +613,10 @@ export default function Upload() {
                     const catalogBudget = Number(s.catalog_budget_ngn) || 0;
                     return matchesExplorePriceFilter(catalogBudget, explorePriceFilter);
                   });
+                  const maxViewCount =
+                    filteredScenes.length > 0
+                      ? Math.max(0, ...filteredScenes.map((s) => s.view_count ?? 0))
+                      : 0;
                   if (filteredScenes.length === 0) {
                     const categoryLabel =
                       exploreRoomTypeFilter === 'all'
@@ -633,6 +637,10 @@ export default function Upload() {
                           key={scene.id}
                           scene={scene}
                           onSelect={(slug) => navigate(`/explore/${slug}`)}
+                          viewCount={scene.view_count ?? 0}
+                          isTrending={
+                            (scene.view_count ?? 0) === maxViewCount && maxViewCount > 0
+                          }
                         />
                       ))}
                     </div>

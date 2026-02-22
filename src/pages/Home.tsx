@@ -279,6 +279,10 @@ export default function Home() {
                       const matchPrice = matchesExplorePriceFilter(catalogBudget, explorePriceFilter);
                       return matchCategory && matchPrice;
                     });
+                  const maxViewCount =
+                    filtered.length > 0
+                      ? Math.max(0, ...filtered.map((s) => s.view_count ?? 0))
+                      : 0;
                   if (filtered.length > 0) {
                     return (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
@@ -287,6 +291,10 @@ export default function Home() {
                             key={scene.id}
                             scene={scene}
                             onSelect={(slug) => navigate(`/explore/${slug}`)}
+                            viewCount={scene.view_count ?? 0}
+                            isTrending={
+                              (scene.view_count ?? 0) === maxViewCount && maxViewCount > 0
+                            }
                           />
                         ))}
                       </div>

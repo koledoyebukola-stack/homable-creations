@@ -1,13 +1,30 @@
 import type { ExploreScene } from '@/lib/types';
 
+function formatViewCount(count: number): string {
+  if (count < 1000) return `${count} views`;
+  if (count < 10000) return `${(count / 1000).toFixed(1)}k`;
+  return `${Math.round(count / 1000)}k`;
+}
+
 interface ExploreSceneCardProps {
   scene: ExploreScene;
   onSelect: (slug: string) => void;
+  /** Total view count for this scene (from explore_scenes.view_count) */
+  viewCount?: number;
+  /** True when this scene has the highest view count in the list (shows "Trending") */
+  isTrending?: boolean;
 }
 
-export default function ExploreSceneCard({ scene, onSelect }: ExploreSceneCardProps) {
+export default function ExploreSceneCard({ scene, onSelect, viewCount = 0, isTrending = false }: ExploreSceneCardProps) {
   const catalogBudget = Number(scene.catalog_budget_ngn) || 0;
   const minimumItemPrice = Number(scene.minimum_item_price_ngn) || 0;
+  const showBadgeOrViews = catalogBudget > 0 || viewCount > 0;
+  const viewLabel =
+    viewCount < 1000
+      ? (isTrending ? `🔥 Trending: ${viewCount} views` : `👁️ ${viewCount} views`)
+      : isTrending
+        ? `🔥 Trending: ${formatViewCount(viewCount)}`
+        : `👁️ ${formatViewCount(viewCount)}`;
 
   return (
     <button
@@ -34,10 +51,21 @@ export default function ExploreSceneCard({ scene, onSelect }: ExploreSceneCardPr
             Complete room from ₦{catalogBudget.toLocaleString('en-NG')}
           </p>
         )}
-        {catalogBudget > 0 && (
-          <span className="inline-block text-xs font-medium px-2.5 py-1 rounded-full bg-blue-100 text-blue-800">
-            Available on Homable
-          </span>
+        {showBadgeOrViews && (
+          <div className="flex items-center justify-between mt-3">
+            {catalogBudget > 0 ? (
+              <span className="inline-block text-xs font-medium px-2.5 py-1 rounded-full bg-blue-100 text-blue-800">
+                Available on Homable
+              </span>
+            ) : (
+              <span />
+            )}
+            {viewCount > 0 && (
+              <span className="text-xs text-gray-500 font-medium">
+                {viewLabel}
+              </span>
+            )}
+          </div>
         )}
       </div>
     </button>
