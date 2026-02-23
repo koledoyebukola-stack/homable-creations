@@ -20,7 +20,7 @@ export default function ExploreSceneCard({ scene, onSelect, viewCount = 0, isTre
   const minimumItemPrice = Number(scene.minimum_item_price_ngn) || 0;
   const showBadgeOrViews = catalogBudget > 0 || viewCount > 0;
   const viewText = formatViewCount(viewCount);
-  const viewLabel = isTrending ? `🔥 Trending: ${viewText}` : `👁️ ${viewText}`;
+  const viewLabel = isTrending ? `🔥 Trending: ${viewText}` : viewText;
 
   return (
     <button
