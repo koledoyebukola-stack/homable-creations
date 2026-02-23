@@ -1668,6 +1668,40 @@ export async function getActiveStorefrontsByLocation(
 }
 
 /**
+ * Fetch up to 5 random artwork products from active storefronts (for "Complete This Look with Artwork" section).
+ * Used when an explore scene has no artwork items linked.
+ */
+export async function getRandomArtworkProducts(location: string = 'NG', limit: number = 5): Promise<VendorProduct[]> {
+  const { data: storefronts, error: storefrontsError } = await supabase
+    .from('storefronts')
+    .select('id')
+    .eq('status', 'active')
+    .eq('location', location);
+
+  if (storefrontsError || !storefronts || storefronts.length === 0) {
+    return [];
+  }
+
+  const storefrontIds = storefronts.map((s: { id: string }) => s.id);
+
+  const { data: products, error: productsError } = await supabase
+    .from('vendor_products')
+    .select('*')
+    .in('storefront_id', storefrontIds)
+    .eq('category', 'artwork')
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (productsError || !products || products.length === 0) {
+    return [];
+  }
+
+  const list = products as VendorProduct[];
+  const shuffled = [...list].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, limit);
+}
+
+/**
  * Fetch a vendor product by its globally-unique slug, including parent storefront.
  * Returns null if not found or storefront missing.
  */

@@ -5,7 +5,7 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import AuthModal from '@/components/AuthModal';
-import { getExploreSceneBySlug, createChecklist, getChecklistByExploreSceneId } from '@/lib/api';
+import { getExploreSceneBySlug, createChecklist, getChecklistByExploreSceneId, getRandomArtworkProducts } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import type { ExploreScene, ExploreSceneItemWithProduct, VendorProduct, Storefront, Checklist } from '@/lib/types';
 import type { User } from '@supabase/supabase-js';
@@ -40,6 +40,7 @@ export default function ExploreScenePage() {
   const lastIncrementedSceneIdRef = useRef<string | null>(null);
   const [savingChecklist, setSavingChecklist] = useState(false);
   const [existingChecklist, setExistingChecklist] = useState<Checklist | null>(null);
+  const [randomArtworkProducts, setRandomArtworkProducts] = useState<VendorProduct[]>([]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user: u } }) => {
@@ -113,6 +114,18 @@ export default function ExploreScenePage() {
     if (!user || !data || !('scene' in data)) return;
     getChecklistByExploreSceneId(data.scene.id).then(setExistingChecklist);
   }, [user, data]);
+
+  // When scene has no artwork items, fetch 5 random artwork products for "Complete This Look with Artwork" section
+  useEffect(() => {
+    if (!data || !('scene' in data)) return;
+    const catalogItems = data.items.filter((i) => i.item_type === 'catalog_product');
+    const hasArtwork = catalogItems.some((i) => i.vendor_product?.category === 'artwork');
+    if (!hasArtwork) {
+      getRandomArtworkProducts('NG', 5).then(setRandomArtworkProducts);
+    } else {
+      setRandomArtworkProducts([]);
+    }
+  }, [data]);
 
   // Track explore scene view in history
   const trackExploreSceneView = async (
@@ -234,6 +247,9 @@ export default function ExploreScenePage() {
   /** Split catalog items by vendor_type for "Available on Homable": Furniture (carpenter) first, Decorative Items (decor_store) second. */
   const furnitureItems = catalogItems.filter((i) => i.storefront?.vendor_type !== 'decor_store');
   const decorativeItems = catalogItems.filter((i) => i.storefront?.vendor_type === 'decor_store');
+
+  /** True if this scene has at least one catalog product with category = 'artwork' */
+  const hasArtworkInScene = catalogItems.some((i) => i.vendor_product?.category === 'artwork');
 
   const hasSavableItems = items.some((i) =>
     i.item_type === 'catalog_product' ? !!i.vendor_product?.name : !!i.name
@@ -478,6 +494,52 @@ export default function ExploreScenePage() {
                 </li>
               ))}
             </ul>
+          </section>
+        )}
+
+        {/* Complete This Look with Artwork — only when scene has no artwork items */}
+        {!hasArtworkInScene && randomArtworkProducts.length > 0 && (
+          <section className="mb-10">
+            <h2 className="text-xl font-semibold text-[#111111] mb-2">Complete This Look with Artwork</h2>
+            <p className="text-sm text-gray-600 mb-4">Choose from our curated collection</p>
+            <div className="overflow-x-auto pb-1 scroll-pills-hide-scrollbar md:overflow-visible">
+              <div className="flex gap-4 md:grid md:grid-cols-5 min-w-0 md:min-w-full">
+                {randomArtworkProducts.map((product) => (
+                  <div
+                    key={product.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(`/shops/products/${product.slug}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        navigate(`/shops/products/${product.slug}`);
+                      }
+                    }}
+                    className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer border border-[#e5e5e5] flex flex-col flex-shrink-0 w-[calc(50%-0.5rem)] min-w-[140px] md:w-full md:min-w-0"
+                  >
+                    <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
+                      {product.image_url ? (
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[#999] text-sm">No image</div>
+                      )}
+                    </div>
+                    <div className="px-2.5 pt-2.5 pb-3 md:px-3 md:pt-3">
+                      <h3 className="text-[13px] md:text-sm font-semibold text-gray-900 leading-snug line-clamp-2">
+                        {product.name}
+                      </h3>
+                      <p className="text-xs text-gray-600 mt-1">{formatVendorPrice(product)}</p>
+                      <p className="text-sm text-gray-500 mt-1.5">View details →</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </section>
         )}
 
