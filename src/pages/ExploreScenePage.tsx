@@ -37,6 +37,7 @@ export default function ExploreScenePage() {
   const [authChecked, setAuthChecked] = useState(false);
   const [showAuthGate, setShowAuthGate] = useState(false);
   const scrollGateTriggered = useRef(false);
+  const lastIncrementedSceneIdRef = useRef<string | null>(null);
   const [savingChecklist, setSavingChecklist] = useState(false);
   const [existingChecklist, setExistingChecklist] = useState<Checklist | null>(null);
 
@@ -89,7 +90,18 @@ export default function ExploreScenePage() {
     });
   }, [slug]);
 
-  // Track explore scene view when user is authenticated and scene is loaded
+  // Increment view_count for ALL visitors (signed-in + anonymous) — once per detail page load per scene
+  useEffect(() => {
+    if (!data || !('scene' in data)) return;
+    const sceneId = data.scene.id;
+    if (lastIncrementedSceneIdRef.current === sceneId) return;
+    lastIncrementedSceneIdRef.current = sceneId;
+    supabase.rpc('increment_explore_scene_view_count', { p_scene_id: sceneId }).then(({ error }) => {
+      if (error) console.error('[ExploreScenePage] Failed to increment view count:', error);
+    });
+  }, [data]);
+
+  // Track explore scene view for signed-in users (History / analytics) — per-user record
   useEffect(() => {
     if (user && data && 'scene' in data) {
       trackExploreSceneView(data.scene.id, data.scene.slug, data.scene.title, data.scene.hero_image_url);
