@@ -148,7 +148,7 @@ export default function Home() {
                     onClick={() => exploreSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}
                     className="w-full md:flex-1 h-[56px] md:h-[60px] flex items-center justify-center rounded-xl bg-[#000000] text-white text-base md:text-[18px] font-semibold hover:bg-[#1a1a1a] hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-all duration-200"
                   >
-                    Explore Styles & Ideas
+                    Explore Curated Rooms
                   </button>
                   <button
                     type="button"
