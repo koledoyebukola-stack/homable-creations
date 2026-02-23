@@ -501,7 +501,8 @@ export default function ExploreScenePage() {
         {!hasArtworkInScene && randomArtworkProducts.length > 0 && (
           <section className="mb-10">
             <h2 className="text-xl font-semibold text-[#111111] mb-2">Complete This Look with Artwork</h2>
-            <p className="text-sm text-gray-600 mb-4">Choose from our curated collection</p>
+            <p className="text-sm text-gray-600 mb-1">Choose from our curated collection</p>
+            <p className="text-sm text-gray-500 mb-4">Swipe to see more →</p>
             <div className="overflow-x-auto pb-1 scroll-pills-hide-scrollbar md:overflow-visible">
               <div className="flex gap-4 md:grid md:grid-cols-5 min-w-0 md:min-w-full">
                 {randomArtworkProducts.map((product) => (
