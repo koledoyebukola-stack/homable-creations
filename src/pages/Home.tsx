@@ -105,7 +105,7 @@ export default function Home() {
       return;
     }
     setLoadingExplore(true);
-    getExploreScenes('NG', 8)
+    getExploreScenes('NG')
       .then(setExploreScenes)
       .finally(() => setLoadingExplore(false));
   }, [country]);
