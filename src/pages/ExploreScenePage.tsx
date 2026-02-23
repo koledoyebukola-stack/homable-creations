@@ -41,6 +41,7 @@ export default function ExploreScenePage() {
   const [savingChecklist, setSavingChecklist] = useState(false);
   const [existingChecklist, setExistingChecklist] = useState<Checklist | null>(null);
   const [randomArtworkProducts, setRandomArtworkProducts] = useState<VendorProduct[]>([]);
+  const [isHeroImageOpen, setIsHeroImageOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user: u } }) => {
@@ -74,6 +75,18 @@ export default function ExploreScenePage() {
       document.body.style.overflow = '';
     };
   }, [showAuthGate]);
+
+  // Close hero image overlay on ESC key
+  useEffect(() => {
+    if (!isHeroImageOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsHeroImageOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isHeroImageOpen]);
 
   useEffect(() => {
     if (!slug) return;
@@ -261,9 +274,16 @@ export default function ExploreScenePage() {
       <Header />
 
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 md:px-6 py-8 md:py-12">
-        {/* Hero: full-bleed on mobile, 16/9 on desktop */}
+        {/* Hero: full-bleed on mobile, 16/9 on desktop (click to enlarge) */}
         <section className="mb-10">
-          <div className="relative -mx-4 md:mx-0 w-[calc(100%+2rem)] md:w-full aspect-[16/10] md:aspect-[16/9] rounded-none md:rounded-2xl overflow-hidden mb-6">
+          <div
+            className="relative -mx-4 md:mx-0 w-[calc(100%+2rem)] md:w-full aspect-[16/10] md:aspect-[16/9] rounded-none md:rounded-2xl overflow-hidden mb-6 cursor-zoom-in"
+            onClick={() => {
+              if (scene.hero_image_url) {
+                setIsHeroImageOpen(true);
+              }
+            }}
+          >
             <img
               src={scene.hero_image_url || 'https://placehold.co/1200x675/f5f5f5/999?text=Room'}
               alt={scene.title}
@@ -585,6 +605,32 @@ export default function ExploreScenePage() {
         )}
 
       </main>
+
+      {/* Full-screen hero image overlay */}
+      {isHeroImageOpen && scene.hero_image_url && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 md:p-8 transition-opacity"
+          onClick={() => setIsHeroImageOpen(false)}
+        >
+          <div
+            className="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center"
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setIsHeroImageOpen(false)}
+              className="absolute top-3 right-3 rounded-full bg-black/60 hover:bg-black text-white p-2 text-xs md:text-sm"
+            >
+              ×
+            </button>
+            <img
+              src={scene.hero_image_url}
+              alt={scene.title}
+              className="w-full h-full object-contain object-center rounded-xl shadow-2xl"
+            />
+          </div>
+        </div>
+      )}
 
       <Footer />
 
