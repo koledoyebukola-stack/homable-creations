@@ -387,11 +387,25 @@ export default function ExploreScenePage() {
                         key={item.id}
                         role="button"
                         tabIndex={0}
-                        onClick={() => navigate(`/shops/products/${product.slug}`)}
+                        onClick={() =>
+                          navigate(
+                            `/shops/products/${product.slug}${
+                              scene.hero_image_url
+                                ? `?fromSceneImage=${encodeURIComponent(scene.hero_image_url)}`
+                                : ''
+                            }`,
+                          )
+                        }
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            navigate(`/shops/products/${product.slug}`);
+                            navigate(
+                              `/shops/products/${product.slug}${
+                                scene.hero_image_url
+                                  ? `?fromSceneImage=${encodeURIComponent(scene.hero_image_url)}`
+                                  : ''
+                              }`,
+                            );
                           }
                         }}
                         className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer border border-[#e5e5e5] flex flex-col"
@@ -440,11 +454,25 @@ export default function ExploreScenePage() {
                         key={item.id}
                         role="button"
                         tabIndex={0}
-                        onClick={() => navigate(`/shops/products/${product.slug}`)}
+                        onClick={() =>
+                          navigate(
+                            `/shops/products/${product.slug}${
+                              scene.hero_image_url
+                                ? `?fromSceneImage=${encodeURIComponent(scene.hero_image_url)}`
+                                : ''
+                            }`,
+                          )
+                        }
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            navigate(`/shops/products/${product.slug}`);
+                            navigate(
+                              `/shops/products/${product.slug}${
+                                scene.hero_image_url
+                                  ? `?fromSceneImage=${encodeURIComponent(scene.hero_image_url)}`
+                                  : ''
+                              }`,
+                            );
                           }
                         }}
                         className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer border border-[#e5e5e5] flex flex-col"
@@ -530,11 +558,25 @@ export default function ExploreScenePage() {
                     key={product.id}
                     role="button"
                     tabIndex={0}
-                    onClick={() => navigate(`/shops/products/${product.slug}`)}
+                    onClick={() =>
+                      navigate(
+                        `/shops/products/${product.slug}${
+                          scene.hero_image_url
+                            ? `?fromSceneImage=${encodeURIComponent(scene.hero_image_url)}`
+                            : ''
+                        }`,
+                      )
+                    }
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        navigate(`/shops/products/${product.slug}`);
+                        navigate(
+                          `/shops/products/${product.slug}${
+                            scene.hero_image_url
+                              ? `?fromSceneImage=${encodeURIComponent(scene.hero_image_url)}`
+                              : ''
+                          }`,
+                        );
                       }
                     }}
                     className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer border border-[#e5e5e5] flex flex-col flex-shrink-0 w-[calc(50%-0.5rem)] min-w-[140px] md:w-full md:min-w-0"

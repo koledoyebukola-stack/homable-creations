@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ function whatsappUrl(number: string): string {
 export default function ShopsProductDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [data, setData] = useState<{ storefront: Storefront; product: VendorProduct } | null | undefined>(undefined);
   const [moreProducts, setMoreProducts] = useState<VendorProduct[]>([]);
   const [inspirations, setInspirations] = useState<ExploreScene[]>([]);
@@ -107,10 +108,15 @@ export default function ShopsProductDetail() {
 
   const { storefront, product } = data;
   const whatsappBase = whatsappUrl(storefront.whatsapp_number);
+  const searchParams = new URLSearchParams(location.search);
+  const fromSceneImage = searchParams.get('fromSceneImage');
 
   const handleWhatsAppClick = () => {
     const currentUrl = window.location.href;
-    const message = `Hi, I'm interested in the ${product.name}.\n\n${currentUrl}`;
+    let message = `Hi, I'm interested in the ${product.name}.\n\n${currentUrl}`;
+    if (fromSceneImage) {
+      message += `\n\nRoom inspiration: ${fromSceneImage}\nI'd like it made to match the color and style shown in the room image.`;
+    }
     const url = `${whatsappBase}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
