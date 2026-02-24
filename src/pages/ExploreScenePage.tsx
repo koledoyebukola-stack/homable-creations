@@ -389,22 +389,14 @@ export default function ExploreScenePage() {
                         tabIndex={0}
                         onClick={() =>
                           navigate(
-                            `/shops/products/${product.slug}${
-                              scene.hero_image_url
-                                ? `?fromSceneImage=${encodeURIComponent(scene.hero_image_url)}`
-                                : ''
-                            }`,
+                            `/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
                           )
                         }
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
                             navigate(
-                              `/shops/products/${product.slug}${
-                                scene.hero_image_url
-                                  ? `?fromSceneImage=${encodeURIComponent(scene.hero_image_url)}`
-                                  : ''
-                              }`,
+                              `/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
                             );
                           }
                         }}
@@ -456,22 +448,14 @@ export default function ExploreScenePage() {
                         tabIndex={0}
                         onClick={() =>
                           navigate(
-                            `/shops/products/${product.slug}${
-                              scene.hero_image_url
-                                ? `?fromSceneImage=${encodeURIComponent(scene.hero_image_url)}`
-                                : ''
-                            }`,
+                            `/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
                           )
                         }
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
                             navigate(
-                              `/shops/products/${product.slug}${
-                                scene.hero_image_url
-                                  ? `?fromSceneImage=${encodeURIComponent(scene.hero_image_url)}`
-                                  : ''
-                              }`,
+                              `/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
                             );
                           }
                         }}
@@ -560,22 +544,14 @@ export default function ExploreScenePage() {
                     tabIndex={0}
                     onClick={() =>
                       navigate(
-                        `/shops/products/${product.slug}${
-                          scene.hero_image_url
-                            ? `?fromSceneImage=${encodeURIComponent(scene.hero_image_url)}`
-                            : ''
-                        }`,
+                        `/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
                       )
                     }
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         navigate(
-                          `/shops/products/${product.slug}${
-                            scene.hero_image_url
-                              ? `?fromSceneImage=${encodeURIComponent(scene.hero_image_url)}`
-                              : ''
-                          }`,
+                          `/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
                         );
                       }
                     }}

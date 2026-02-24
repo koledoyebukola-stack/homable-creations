@@ -5,7 +5,7 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Store, ArrowLeft, MessageCircle } from 'lucide-react';
-import { getProductBySlug, getOtherVendorProducts, getInspirationsByProduct } from '@/lib/api';
+import { getProductBySlug, getOtherVendorProducts, getInspirationsByProduct, getExploreSceneBySlug } from '@/lib/api';
 import type { Storefront, VendorProduct, ExploreScene } from '@/lib/types';
 
 function formatPrice(min: number | null, max: number | null): string {
@@ -28,6 +28,7 @@ export default function ShopsProductDetail() {
   const [moreProducts, setMoreProducts] = useState<VendorProduct[]>([]);
   const [inspirations, setInspirations] = useState<ExploreScene[]>([]);
   const [isImageOpen, setIsImageOpen] = useState(false);
+  const [sceneHeroImageUrl, setSceneHeroImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!slug) {
@@ -59,6 +60,23 @@ export default function ShopsProductDetail() {
     }
     getInspirationsByProduct(data.product.id).then(setInspirations);
   }, [data]);
+
+  // If user came from an explore scene, fetch that scene to get its hero_image_url for WhatsApp prefill
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const fromSceneSlug = searchParams.get('fromSceneSlug');
+    if (!fromSceneSlug) {
+      setSceneHeroImageUrl(null);
+      return;
+    }
+    getExploreSceneBySlug(fromSceneSlug).then((result) => {
+      if (result && result.scene && result.scene.hero_image_url) {
+        setSceneHeroImageUrl(result.scene.hero_image_url);
+      } else {
+        setSceneHeroImageUrl(null);
+      }
+    });
+  }, [location.search]);
 
   // Redirect for not found or paused storefront
   useEffect(() => {
@@ -108,14 +126,13 @@ export default function ShopsProductDetail() {
 
   const { storefront, product } = data;
   const whatsappBase = whatsappUrl(storefront.whatsapp_number);
-  const searchParams = new URLSearchParams(location.search);
-  const fromSceneImage = searchParams.get('fromSceneImage');
 
   const handleWhatsAppClick = () => {
-    const currentUrl = window.location.href;
-    let message = `Hi, I'm interested in the ${product.name}.\n\n${currentUrl}`;
-    if (fromSceneImage) {
-      message += `\n\nRoom inspiration: ${fromSceneImage}\nI'd like it made to match the color and style shown in the room image.`;
+    const origin = window.location.origin;
+    const productUrl = `${origin}/shops/products/${product.slug}`;
+    let message = `Hi, I'm interested in the ${product.name}.\n\n${productUrl}`;
+    if (sceneHeroImageUrl) {
+      message += `\n\nRoom inspiration: ${sceneHeroImageUrl}\nI'd like it made to match the color and style shown in the room image.`;
     }
     const url = `${whatsappBase}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
