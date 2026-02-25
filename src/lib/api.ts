@@ -474,14 +474,19 @@ export async function logAnalysis(
   }
 }
 
+/** Item for checklist creation: name only, or name + Nigerian Explore link fields */
+export type CreateChecklistItemInput =
+  | string
+  | { item_name: string; vendor_product_slug?: string; instagram_handle?: string };
+
 export async function createChecklist(
   name: string,
   boardId: string | undefined,
-  items: string[],
+  items: CreateChecklistItemInput[],
   options?: { sourceImageUrl?: string; exploreSceneId?: string }
 ): Promise<Checklist> {
   const { data: { user } } = await supabase.auth.getUser();
-  
+
   if (!user) {
     throw new Error('User must be authenticated to create checklists');
   }
@@ -510,12 +515,20 @@ export async function createChecklist(
   }
 
   if (items.length > 0) {
-    const checklistItems = items.map((itemName, index) => ({
-      checklist_id: checklist.id,
-      item_name: itemName,
-      is_completed: false,
-      sort_order: index,
-    }));
+    const checklistItems = items.map((item, index) => {
+      const itemName = typeof item === 'string' ? item : item.item_name;
+      const row: Record<string, unknown> = {
+        checklist_id: checklist.id,
+        item_name: itemName,
+        is_completed: false,
+        sort_order: index,
+      };
+      if (typeof item === 'object') {
+        if (item.vendor_product_slug) row.vendor_product_slug = item.vendor_product_slug;
+        if (item.instagram_handle) row.instagram_handle = item.instagram_handle;
+      }
+      return row;
+    });
 
     const { error: itemsError } = await supabase
       .from('app_8574c59127_checklist_items')

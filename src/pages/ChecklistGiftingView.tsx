@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getChecklistByGiftingToken, claimChecklistItem, updateClaim, unclaimItem, linkClaimToUser } from '@/lib/api';
-import { ChecklistWithItems } from '@/lib/types';
+import { ChecklistWithItems, ChecklistItem } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -23,7 +23,8 @@ import {
   Search,
   ExternalLink,
   Instagram,
-  Pencil
+  Pencil,
+  ChevronDown
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -262,6 +263,98 @@ export default function ChecklistGiftingView() {
   const completedItems = checklist.items.filter(item => 
     item.status === 'completed' || item.is_completed
   );
+
+  const isNigerianExplore = !!checklist.explore_scene_id;
+
+  const renderItemActions = (item: ChecklistItem) => {
+    const openGoogle = () => window.open(`https://www.google.com/search?q=${encodeURIComponent(item.item_name)}`, '_blank');
+    const googleItem = (
+      <DropdownMenuItem onClick={openGoogle}>
+        <Search className="mr-2 h-4 w-4" />
+        Search on Google
+      </DropdownMenuItem>
+    );
+    if (isNigerianExplore) {
+      if (item.vendor_product_slug) {
+        return (
+          <div className="flex gap-0 shrink-0">
+            <Button size="sm" variant="outline" onClick={() => navigate(`/shops/products/${item.vendor_product_slug}`)} className="rounded-r-none border-r-0">
+              View Product
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" className="px-2 rounded-l-none">
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {googleItem}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      }
+      if (item.instagram_handle) {
+        const handle = String(item.instagram_handle).replace(/^@/, '');
+        return (
+          <div className="flex gap-0 shrink-0">
+            <Button size="sm" variant="outline" onClick={() => window.open(`https://instagram.com/${handle}`, '_blank')} className="rounded-r-none border-r-0">
+              View on Instagram
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" className="px-2 rounded-l-none">
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {googleItem}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      }
+      return (
+        <div className="flex gap-0 shrink-0">
+          <Button size="sm" variant="outline" onClick={openGoogle} className="rounded-r-none border-r-0">
+            <Search className="h-4 w-4 mr-1" />
+            Search
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline" className="px-2 rounded-l-none">
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {googleItem}
+              <DropdownMenuItem onClick={() => window.open(getInstagramSearchUrl(item.item_name), '_blank')}>
+                <Instagram className="mr-2 h-4 w-4" />
+                Instagram Search
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      );
+    }
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm" variant="outline">
+            <Search className="h-4 w-4 mr-1" />
+            Search
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          {googleItem}
+          <DropdownMenuItem onClick={() => window.open(getInstagramSearchUrl(item.item_name), '_blank')}>
+            <Instagram className="mr-2 h-4 w-4" />
+            Instagram Search
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
   
   // Progress calculation: only completed items count
   const progressPercent = checklist.total_count > 0
@@ -358,14 +451,17 @@ export default function ChecklistGiftingView() {
                           {item.item_name}
                         </p>
                       </div>
-                      <Button
-                        onClick={() => handleClaimClick(item.id, item.item_name)}
-                        className="bg-[#111111] hover:bg-[#333333] text-white shrink-0"
-                        size="sm"
-                      >
-                        <Gift className="h-4 w-4 mr-1" />
-                        Claim
-                      </Button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {renderItemActions(item)}
+                        <Button
+                          onClick={() => handleClaimClick(item.id, item.item_name)}
+                          className="bg-[#111111] hover:bg-[#333333] text-white"
+                          size="sm"
+                        >
+                          <Gift className="h-4 w-4 mr-1" />
+                          Claim
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -420,27 +516,7 @@ export default function ChecklistGiftingView() {
                           <Pencil className="h-4 w-4 mr-1" />
                           Edit
                         </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                            >
-                              <Search className="h-4 w-4 mr-1" />
-                              Search
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(item.item_name)}`, '_blank')}>
-                              <Search className="mr-2 h-4 w-4" />
-                              Google Search
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => window.open(getInstagramSearchUrl(item.item_name), '_blank')}>
-                              <Instagram className="mr-2 h-4 w-4" />
-                              Instagram Search
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        {renderItemActions(item)}
                       </div>
                     </div>
                   </div>

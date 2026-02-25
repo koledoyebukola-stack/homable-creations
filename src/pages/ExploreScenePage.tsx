@@ -185,15 +185,23 @@ export default function ExploreScenePage() {
       return;
     }
 
-    // Build names from all item types in scene order: catalog_product, custom_build, instagram_link
-    const itemNames = items
+    // Build item payloads with names and link fields for Nigerian Explore list (View Product / View on Instagram)
+    const checklistItemInputs = items
       .map((item) => {
-        if (item.item_type === 'catalog_product') return item.vendor_product?.name ?? null;
-        return item.name ?? null;
+        const itemName =
+          item.item_type === 'catalog_product' ? item.vendor_product?.name ?? null : item.name ?? null;
+        if (!itemName) return null;
+        if (item.item_type === 'catalog_product' && item.vendor_product?.slug) {
+          return { item_name: itemName, vendor_product_slug: item.vendor_product.slug };
+        }
+        if (item.item_type === 'instagram_link' && item.instagram_handle) {
+          return { item_name: itemName, instagram_handle: item.instagram_handle.replace(/^@/, '') };
+        }
+        return { item_name: itemName };
       })
-      .filter((name): name is string => !!name);
+      .filter((x): x is NonNullable<typeof x> => !!x);
 
-    if (itemNames.length === 0) {
+    if (checklistItemInputs.length === 0) {
       toast.error('No items available to save');
       return;
     }
@@ -203,7 +211,7 @@ export default function ExploreScenePage() {
       const checklist = await createChecklist(
         `${scene.title} - Shopping List`,
         undefined, // No board_id for explore scenes
-        itemNames,
+        checklistItemInputs,
         { sourceImageUrl: scene.hero_image_url ?? undefined, exploreSceneId: scene.id }
       );
 

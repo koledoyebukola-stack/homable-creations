@@ -130,6 +130,10 @@ export interface ChecklistItem {
   gift_note?: string;
   sort_order: number;
   created_at: string;
+  /** When set (Nigerian Explore list), link to /shops/products/{slug} */
+  vendor_product_slug?: string | null;
+  /** When set (Nigerian Explore list), link to instagram.com/{handle} */
+  instagram_handle?: string | null;
 }
 
 export interface ChecklistWithItems extends Checklist {

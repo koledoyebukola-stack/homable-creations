@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getChecklistById, updateChecklistItem, updateChecklistName, deleteChecklist, getBoards, enableGifting, addChecklistItem, deleteChecklistItem } from '@/lib/api';
-import { ChecklistWithItems, Board } from '@/lib/types';
+import { ChecklistWithItems, Board, ChecklistItem } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -39,7 +39,9 @@ import {
   User,
   Copy,
   CheckCircle2,
-  Plus
+  Plus,
+  ChevronDown,
+  Instagram
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -203,6 +205,103 @@ export default function ChecklistDetail() {
   const handleGoogleSearch = (itemName: string) => {
     const searchQuery = encodeURIComponent(itemName);
     window.open(`https://www.google.com/search?q=${searchQuery}`, '_blank');
+  };
+
+  const isNigerianExplore = !!checklist?.explore_scene_id;
+
+  const renderItemActions = (item: ChecklistItem) => {
+    const openGoogle = () => handleGoogleSearch(item.item_name);
+    const googleItem = (
+      <DropdownMenuItem key="google" onClick={openGoogle}>
+        <Search className="mr-2 h-4 w-4" />
+        Search on Google
+      </DropdownMenuItem>
+    );
+    if (isNigerianExplore) {
+      if (item.vendor_product_slug) {
+        return (
+          <div className="flex gap-0 shrink-0">
+            <Button size="sm" variant="outline" onClick={() => navigate(`/shops/products/${item.vendor_product_slug}`)} className="rounded-r-none border-r-0">
+              View Product
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" className="px-2 rounded-l-none">
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {googleItem}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      }
+      if (item.instagram_handle) {
+        const handle = String(item.instagram_handle).replace(/^@/, '');
+        return (
+          <div className="flex gap-0 shrink-0">
+            <Button size="sm" variant="outline" onClick={() => window.open(`https://instagram.com/${handle}`, '_blank')} className="rounded-r-none border-r-0">
+              View on Instagram
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" className="px-2 rounded-l-none">
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {googleItem}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      }
+      return (
+        <div className="flex gap-0 shrink-0">
+          <Button size="sm" variant="outline" onClick={openGoogle} className="rounded-r-none border-r-0">
+            <Search className="h-4 w-4 mr-1" />
+            Search
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline" className="px-2 rounded-l-none">
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {googleItem}
+              <DropdownMenuItem onClick={() => window.open(`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(item.item_name)}`, '_blank')}>
+                <Instagram className="mr-2 h-4 w-4" />
+                Instagram Search
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      );
+    }
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm" variant="outline">
+            <Search className="h-4 w-4 mr-1" />
+            Search
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          {googleItem}
+          {retailers.map((retailer) => (
+            <DropdownMenuItem
+              key={retailer.name}
+              onClick={() => window.open(`${retailer.url}${encodeURIComponent(item.item_name)}`, '_blank')}
+            >
+              <ExternalLink className={`mr-2 h-4 w-4 ${retailer.color}`} />
+              {retailer.name}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
   };
 
   const handleEnableGifting = async () => {
@@ -530,7 +629,7 @@ export default function ChecklistDetail() {
                 </div>
               )}
               
-              {/* Let friends help button */}
+              {/* Create Home Registry / Let friends help button */}
               {!checklist.gifting_enabled && (
                 <Button
                   onClick={handleEnableGifting}
@@ -545,7 +644,7 @@ export default function ChecklistDetail() {
                   ) : (
                     <>
                       <Users className="h-4 w-4 mr-2" />
-                      Let friends help
+                      {checklist.explore_scene_id ? 'Create Home Registry' : 'Let friends help'}
                     </>
                   )}
                 </Button>
@@ -652,32 +751,7 @@ export default function ChecklistDetail() {
                             <X className="h-4 w-4" />
                           )}
                         </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                            >
-                              <Search className="h-4 w-4 mr-1" />
-                              Search
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem onClick={() => handleGoogleSearch(item.item_name)}>
-                              <Search className="mr-2 h-4 w-4" />
-                              Google Search
-                            </DropdownMenuItem>
-                            {retailers.map((retailer) => (
-                              <DropdownMenuItem 
-                                key={retailer.name}
-                                onClick={() => window.open(`${retailer.url}${encodeURIComponent(item.item_name)}`, '_blank')}
-                              >
-                                <ExternalLink className={`mr-2 h-4 w-4 ${retailer.color}`} />
-                                {retailer.name}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        {renderItemActions(item)}
                       </div>
                     </div>
                   </div>
@@ -732,33 +806,7 @@ export default function ChecklistDetail() {
                           )}
                         </div>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="shrink-0"
-                          >
-                            <Search className="h-4 w-4 mr-1" />
-                            Search
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem onClick={() => handleGoogleSearch(item.item_name)}>
-                            <Search className="mr-2 h-4 w-4" />
-                            Google Search
-                          </DropdownMenuItem>
-                          {retailers.map((retailer) => (
-                            <DropdownMenuItem 
-                              key={retailer.name}
-                              onClick={() => window.open(`${retailer.url}${encodeURIComponent(item.item_name)}`, '_blank')}
-                            >
-                              <ExternalLink className={`mr-2 h-4 w-4 ${retailer.color}`} />
-                              {retailer.name}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {renderItemActions(item)}
                     </div>
                   </div>
                 ))}
@@ -801,33 +849,7 @@ export default function ChecklistDetail() {
                           </p>
                         )}
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="shrink-0"
-                          >
-                            <Search className="h-4 w-4 mr-1" />
-                            Search
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem onClick={() => handleGoogleSearch(item.item_name)}>
-                            <Search className="mr-2 h-4 w-4" />
-                            Google Search
-                          </DropdownMenuItem>
-                          {retailers.map((retailer) => (
-                            <DropdownMenuItem 
-                              key={retailer.name}
-                              onClick={() => window.open(`${retailer.url}${encodeURIComponent(item.item_name)}`, '_blank')}
-                            >
-                              <ExternalLink className={`mr-2 h-4 w-4 ${retailer.color}`} />
-                              {retailer.name}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {renderItemActions(item)}
                     </div>
                   </div>
                 ))}
@@ -851,7 +873,7 @@ export default function ChecklistDetail() {
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold text-[#111111] flex items-center gap-2">
                 <Gift className="h-6 w-6 text-[#C89F7A]" />
-                Let friends help ✨
+                {checklist.explore_scene_id ? 'Create Home Registry ✨' : 'Let friends help ✨'}
               </DialogTitle>
             </DialogHeader>
             
