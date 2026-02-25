@@ -195,22 +195,14 @@ export default function Upload() {
   const [explorePriceFilter, setExplorePriceFilter] = useState<ExplorePriceFilter>('all');
 
   // Country: state so we re-render when location changes (same pattern as Home)
-  const [countryState, setCountryState] = useState<string>(() => {
-    const c = getSelectedCountry();
-    console.log('[Upload] initial state getSelectedCountry() =>', c);
-    return c;
-  });
+  const [countryState, setCountryState] = useState<string>(() => getSelectedCountry());
   const testCountry = searchParams.get('test_country');
   const country = testCountry || countryState;
   const isNigeria = country === 'NG';
 
   // Sync country when user changes location in header
   useEffect(() => {
-    const handleLocationChange = () => {
-      const c = getSelectedCountry();
-      console.log('[Upload] locationChanged received, getSelectedCountry() =>', c);
-      setCountryState(c);
-    };
+    const handleLocationChange = () => setCountryState(getSelectedCountry());
     window.addEventListener('locationChanged', handleLocationChange as EventListener);
     return () => window.removeEventListener('locationChanged', handleLocationChange as EventListener);
   }, []);
@@ -220,21 +212,9 @@ export default function Upload() {
     trackPageView(EVENTS.HOMEPAGE_VIEWED);
   }, []);
 
-  // Read tab from URL query parameter on mount; redirect international users from explore to inspiration
+  // Read tab from URL query parameter on mount
   useEffect(() => {
     const mode = searchParams.get('mode');
-    const redirectCondition = !isNigeria && (mode === 'explore' || mode === 'design');
-    console.log('[Upload] effect (tab from URL): mode=', mode, 'country=', country, 'countryState=', countryState, 'isNigeria=', isNigeria, 'redirectCondition=', redirectCondition, 'activeTab=', activeTab);
-
-    // International: Explore tab = Nigerian curated rooms only; redirect to analyze flow (inspiration)
-    if (redirectCondition) {
-      console.log('[Upload] REDIRECT: setting tab to inspiration and URL to mode=inspiration');
-      setActiveTab('inspiration');
-      const newParams = new URLSearchParams(searchParams);
-      newParams.set('mode', 'inspiration');
-      window.history.replaceState({}, '', `${window.location.pathname}?${newParams}`);
-      return;
-    }
     // Nigerian experience: hide "Start with what fits" (mode=find); redirect to explore
     if (isNigeria && mode === 'find') {
       setActiveTab('explore');
@@ -253,24 +233,10 @@ export default function Upload() {
     }
   }, [searchParams, isNigeria]);
 
-  // Defensive: if we're on Explore tab but not Nigeria, redirect to inspiration (handles late geo-detection / race)
-  useEffect(() => {
-    if (activeTab === 'explore' && !isNigeria) {
-      console.log('[Upload] DEFENSIVE REDIRECT: activeTab=explore but isNigeria=false, forcing inspiration');
-      setActiveTab('inspiration');
-      const newParams = new URLSearchParams(searchParams);
-      newParams.set('mode', 'inspiration');
-      window.history.replaceState({}, '', `${window.location.pathname}?${newParams}`);
-    }
-  }, [activeTab, isNigeria, searchParams]);
-
-  // Fetch Nigerian explore scenes only when Explore tab is active and country is NG
+  // Fetch Nigerian explore scenes when Explore tab is active and country is NG
   useEffect(() => {
     if (activeTab !== 'explore' || country !== 'NG') {
-      if (country !== 'NG') {
-        setExploreScenes([]);
-        setLoadingExploreScenes(false);
-      }
+      if (country !== 'NG') setExploreScenes([]);
       return;
     }
     setLoadingExploreScenes(true);
@@ -591,108 +557,145 @@ export default function Upload() {
           </div>
 
           {/* Tab Content */}
-          {/* Explore Tab - Curated rooms from DB (Nigeria) */}
+          {/* Explore Tab: Nigeria = curated rooms from DB; International = styles by room (DESIGN_STYLES_BY_ROOM) */}
           {activeTab === 'explore' && (
-            <div className="space-y-8 max-w-6xl mx-auto w-full">
-              {/* Page Header */}
-              <div className="text-center">
-                <h1 className="text-3xl md:text-4xl font-bold text-[#111111] mb-2">
-                  Explore Curated Rooms
-                </h1>
-                <p className="text-lg text-[#555555] max-w-xl mx-auto">
-                  Professionally designed rooms you can recreate with local vendors
-                </p>
-              </div>
-
-              {/* Category filter pills - horizontal scroll on mobile, wrap on desktop */}
-              <div className="flex gap-2 overflow-x-auto pb-2 md:overflow-visible md:flex-wrap md:justify-center scroll-pills-hide-scrollbar">
-                {EXPLORE_CATEGORY_PILLS.map(({ value, label }) => (
-                  <button
-                    key={value}
-                    onClick={() => setExploreRoomTypeFilter(value)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                      exploreRoomTypeFilter === value
-                        ? 'bg-[#111111] text-white'
-                        : 'bg-white text-[#555555] hover:bg-gray-100 border border-[#e0e0e0]'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Price filters */}
-              <div className="mt-4 mb-6">
-                <p className="text-xs font-medium text-[#666666] mb-2">Price</p>
-                <div className="flex gap-2 overflow-x-auto pb-2 md:overflow-visible md:flex-wrap scroll-pills-hide-scrollbar">
-                  {EXPLORE_PRICE_PILLS.map(({ value, label }) => (
-                    <button
-                      key={value}
-                      onClick={() => setExplorePriceFilter(value)}
-                      className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                        explorePriceFilter === value
-                          ? 'bg-[#111111] text-white'
-                          : 'bg-white text-[#555555] hover:bg-gray-100 border border-[#e0e0e0]'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Scenes grid */}
-              <div className="min-h-[200px]">
-                {loadingExploreScenes ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 md:gap-8">
-                    {[1, 2, 3, 4, 5, 6].map((i) => (
-                      <div key={i} className="aspect-[4/3] rounded-xl bg-gray-200 animate-pulse" />
+            <>
+              {isNigeria ? (
+                <div className="space-y-8 max-w-6xl mx-auto w-full">
+                  <div className="text-center">
+                    <h1 className="text-3xl md:text-4xl font-bold text-[#111111] mb-2">
+                      Explore Curated Rooms
+                    </h1>
+                    <p className="text-lg text-[#555555] max-w-xl mx-auto">
+                      Professionally designed rooms you can recreate with local vendors
+                    </p>
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-2 md:overflow-visible md:flex-wrap md:justify-center scroll-pills-hide-scrollbar">
+                    {EXPLORE_CATEGORY_PILLS.map(({ value, label }) => (
+                      <button
+                        key={value}
+                        onClick={() => setExploreRoomTypeFilter(value)}
+                        className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                          exploreRoomTypeFilter === value
+                            ? 'bg-[#111111] text-white'
+                            : 'bg-white text-[#555555] hover:bg-gray-100 border border-[#e0e0e0]'
+                        }`}
+                      >
+                        {label}
+                      </button>
                     ))}
                   </div>
-                ) : (() => {
-                  const byCategory =
-                    exploreRoomTypeFilter === 'all'
-                      ? exploreScenes
-                      : exploreScenes.filter((s) => s.room_type === exploreRoomTypeFilter);
-                  const filteredScenes = byCategory.filter((s) => {
-                    const catalogBudget = Number(s.catalog_budget_ngn) || 0;
-                    return matchesExplorePriceFilter(catalogBudget, explorePriceFilter);
-                  });
-                  const maxViewCount =
-                    filteredScenes.length > 0
-                      ? Math.max(0, ...filteredScenes.map((s) => s.view_count ?? 0))
-                      : 0;
-                  if (filteredScenes.length === 0) {
-                    const categoryLabel =
-                      exploreRoomTypeFilter === 'all'
-                        ? ''
-                        : EXPLORE_CATEGORY_PILLS.find((p) => p.value === exploreRoomTypeFilter)?.label ?? '';
-                    return (
-                      <div className="text-center py-16 px-4 bg-white rounded-2xl border border-[#e5e5e5]">
-                        <p className="text-[#555555] text-lg">
-                          No {categoryLabel ? `${categoryLabel} ` : ''}designs yet. Check back soon!
-                        </p>
-                      </div>
-                    );
-                  }
-                  return (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 md:gap-8">
-                      {filteredScenes.map((scene) => (
-                        <ExploreSceneCard
-                          key={scene.id}
-                          scene={scene}
-                          onSelect={(slug) => navigate(`/explore/${slug}`)}
-                          viewCount={scene.view_count ?? 0}
-                          isTrending={
-                            (scene.view_count ?? 0) === maxViewCount && maxViewCount > 0
-                          }
-                        />
+                  <div className="mt-4 mb-6">
+                    <p className="text-xs font-medium text-[#666666] mb-2">Price</p>
+                    <div className="flex gap-2 overflow-x-auto pb-2 md:overflow-visible md:flex-wrap scroll-pills-hide-scrollbar">
+                      {EXPLORE_PRICE_PILLS.map(({ value, label }) => (
+                        <button
+                          key={value}
+                          onClick={() => setExplorePriceFilter(value)}
+                          className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                            explorePriceFilter === value
+                              ? 'bg-[#111111] text-white'
+                              : 'bg-white text-[#555555] hover:bg-gray-100 border border-[#e0e0e0]'
+                          }`}
+                        >
+                          {label}
+                        </button>
                       ))}
                     </div>
-                  );
-                })()}
-              </div>
-            </div>
+                  </div>
+                  <div className="min-h-[200px]">
+                    {loadingExploreScenes ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 md:gap-8">
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                          <div key={i} className="aspect-[4/3] rounded-xl bg-gray-200 animate-pulse" />
+                        ))}
+                      </div>
+                    ) : (() => {
+                      const byCategory =
+                        exploreRoomTypeFilter === 'all'
+                          ? exploreScenes
+                          : exploreScenes.filter((s) => s.room_type === exploreRoomTypeFilter);
+                      const filteredScenes = byCategory.filter((s) => {
+                        const catalogBudget = Number(s.catalog_budget_ngn) || 0;
+                        return matchesExplorePriceFilter(catalogBudget, explorePriceFilter);
+                      });
+                      const maxViewCount =
+                        filteredScenes.length > 0
+                          ? Math.max(0, ...filteredScenes.map((s) => s.view_count ?? 0))
+                          : 0;
+                      if (filteredScenes.length === 0) {
+                        const categoryLabel =
+                          exploreRoomTypeFilter === 'all'
+                            ? ''
+                            : EXPLORE_CATEGORY_PILLS.find((p) => p.value === exploreRoomTypeFilter)?.label ?? '';
+                        return (
+                          <div className="text-center py-16 px-4 bg-white rounded-2xl border border-[#e5e5e5]">
+                            <p className="text-[#555555] text-lg">
+                              No {categoryLabel ? `${categoryLabel} ` : ''}designs yet. Check back soon!
+                            </p>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 md:gap-8">
+                          {filteredScenes.map((scene) => (
+                            <ExploreSceneCard
+                              key={scene.id}
+                              scene={scene}
+                              onSelect={(slug) => navigate(`/explore/${slug}`)}
+                              viewCount={scene.view_count ?? 0}
+                              isTrending={
+                                (scene.view_count ?? 0) === maxViewCount && maxViewCount > 0
+                              }
+                            />
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              ) : (
+                /* International Explore: styles by room type – click to open modal and analyze */
+                <div className="space-y-10 max-w-6xl mx-auto w-full">
+                  <div className="text-center">
+                    <h1 className="text-3xl md:text-4xl font-bold text-[#111111] mb-2">
+                      Explore Styles & Ideas
+                    </h1>
+                    <p className="text-lg text-[#555555] max-w-xl mx-auto">
+                      Browse styles by room. Click a look to analyze and get a shopping list.
+                    </p>
+                  </div>
+                  <div className="space-y-12">
+                    {Object.entries(DESIGN_STYLES_BY_ROOM).map(([roomType, styles]) => (
+                      <div key={roomType}>
+                        <h2 className="text-xl font-semibold text-[#111111] mb-4">{roomType}</h2>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                          {styles.map((style) => (
+                            <Card
+                              key={style.name}
+                              className="overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-[1.02] rounded-2xl border-0"
+                              onClick={() => !uploading && handleStyleClick(style.name, style.image)}
+                            >
+                              <div className="aspect-[4/3] overflow-hidden">
+                                <img
+                                  src={style.image}
+                                  alt={style.name}
+                                  className="w-full h-full object-cover"
+                                  loading="lazy"
+                                />
+                              </div>
+                              <p className="p-2 text-sm font-medium text-[#333333] truncate text-center">
+                                {style.name}
+                              </p>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {/* Start with Inspiration Tab */}
