@@ -47,16 +47,17 @@ export default function LocationSelector() {
       const response = await fetch('https://ipapi.co/json/');
       const data = await response.json();
       const countryCode = data.country_code;
-      
+
       const location = LOCATIONS.find(loc => loc.code === countryCode);
       if (location) {
         setSelectedLocation(location);
         localStorage.setItem(STORAGE_KEY, location.code);
+        window.dispatchEvent(new CustomEvent('locationChanged', { detail: { country: location.code } }));
       }
     } catch (error) {
       console.error('[LocationSelector] Failed to detect location:', error);
-      // Default to Nigeria
       localStorage.setItem(STORAGE_KEY, 'NG');
+      window.dispatchEvent(new CustomEvent('locationChanged', { detail: { country: 'NG' } }));
     }
   };
 
