@@ -47,16 +47,21 @@ export default function LocationSelector() {
       const response = await fetch('https://ipapi.co/json/');
       const data = await response.json();
       const countryCode = data.country_code;
+      console.log('[LocationSelector] detectLocation: ipapi returned', countryCode);
 
       const location = LOCATIONS.find(loc => loc.code === countryCode);
       if (location) {
         setSelectedLocation(location);
         localStorage.setItem(STORAGE_KEY, location.code);
+        console.log('[LocationSelector] detectLocation: dispatching locationChanged', location.code);
         window.dispatchEvent(new CustomEvent('locationChanged', { detail: { country: location.code } }));
+      } else {
+        console.log('[LocationSelector] detectLocation: no LOCATIONS match for', countryCode, '- not dispatching');
       }
     } catch (error) {
       console.error('[LocationSelector] Failed to detect location:', error);
       localStorage.setItem(STORAGE_KEY, 'NG');
+      console.log('[LocationSelector] detectLocation (catch): dispatching locationChanged NG');
       window.dispatchEvent(new CustomEvent('locationChanged', { detail: { country: 'NG' } }));
     }
   };
@@ -65,10 +70,9 @@ export default function LocationSelector() {
     setSelectedLocation(location);
     localStorage.setItem(STORAGE_KEY, location.code);
     setIsOpen(false);
-    
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(new CustomEvent('locationChanged', { 
-      detail: { country: location.code } 
+    console.log('[LocationSelector] handleLocationSelect: dispatching locationChanged', location.code);
+    window.dispatchEvent(new CustomEvent('locationChanged', {
+      detail: { country: location.code }
     }));
   };
 

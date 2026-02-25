@@ -195,14 +195,22 @@ export default function Upload() {
   const [explorePriceFilter, setExplorePriceFilter] = useState<ExplorePriceFilter>('all');
 
   // Country: state so we re-render when location changes (same pattern as Home)
-  const [countryState, setCountryState] = useState<string>(() => getSelectedCountry());
+  const [countryState, setCountryState] = useState<string>(() => {
+    const c = getSelectedCountry();
+    console.log('[Upload] initial state getSelectedCountry() =>', c);
+    return c;
+  });
   const testCountry = searchParams.get('test_country');
   const country = testCountry || countryState;
   const isNigeria = country === 'NG';
 
   // Sync country when user changes location in header
   useEffect(() => {
-    const handleLocationChange = () => setCountryState(getSelectedCountry());
+    const handleLocationChange = () => {
+      const c = getSelectedCountry();
+      console.log('[Upload] locationChanged received, getSelectedCountry() =>', c);
+      setCountryState(c);
+    };
     window.addEventListener('locationChanged', handleLocationChange as EventListener);
     return () => window.removeEventListener('locationChanged', handleLocationChange as EventListener);
   }, []);
@@ -215,8 +223,12 @@ export default function Upload() {
   // Read tab from URL query parameter on mount; redirect international users from explore to inspiration
   useEffect(() => {
     const mode = searchParams.get('mode');
+    const redirectCondition = !isNigeria && (mode === 'explore' || mode === 'design');
+    console.log('[Upload] effect (tab from URL): mode=', mode, 'country=', country, 'countryState=', countryState, 'isNigeria=', isNigeria, 'redirectCondition=', redirectCondition, 'activeTab=', activeTab);
+
     // International: Explore tab = Nigerian curated rooms only; redirect to analyze flow (inspiration)
-    if (!isNigeria && (mode === 'explore' || mode === 'design')) {
+    if (redirectCondition) {
+      console.log('[Upload] REDIRECT: setting tab to inspiration and URL to mode=inspiration');
       setActiveTab('inspiration');
       const newParams = new URLSearchParams(searchParams);
       newParams.set('mode', 'inspiration');
@@ -240,6 +252,17 @@ export default function Upload() {
       setActiveTab('specs');
     }
   }, [searchParams, isNigeria]);
+
+  // Defensive: if we're on Explore tab but not Nigeria, redirect to inspiration (handles late geo-detection / race)
+  useEffect(() => {
+    if (activeTab === 'explore' && !isNigeria) {
+      console.log('[Upload] DEFENSIVE REDIRECT: activeTab=explore but isNigeria=false, forcing inspiration');
+      setActiveTab('inspiration');
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('mode', 'inspiration');
+      window.history.replaceState({}, '', `${window.location.pathname}?${newParams}`);
+    }
+  }, [activeTab, isNigeria, searchParams]);
 
   // Fetch Nigerian explore scenes only when Explore tab is active and country is NG
   useEffect(() => {
