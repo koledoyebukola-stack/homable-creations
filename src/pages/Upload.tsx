@@ -194,19 +194,35 @@ export default function Upload() {
   const [exploreRoomTypeFilter, setExploreRoomTypeFilter] = useState<ExploreRoomTypeFilter>('all');
   const [explorePriceFilter, setExplorePriceFilter] = useState<ExplorePriceFilter>('all');
 
-  // Test country parameter for testing from different locations
+  // Country: state so we re-render when location changes (same pattern as Home)
+  const [countryState, setCountryState] = useState<string>(() => getSelectedCountry());
   const testCountry = searchParams.get('test_country');
-  const country = testCountry || getSelectedCountry();
+  const country = testCountry || countryState;
   const isNigeria = country === 'NG';
+
+  // Sync country when user changes location in header
+  useEffect(() => {
+    const handleLocationChange = () => setCountryState(getSelectedCountry());
+    window.addEventListener('locationChanged', handleLocationChange as EventListener);
+    return () => window.removeEventListener('locationChanged', handleLocationChange as EventListener);
+  }, []);
 
   // Track homepage view on mount
   useEffect(() => {
     trackPageView(EVENTS.HOMEPAGE_VIEWED);
   }, []);
 
-  // Read tab from URL query parameter on mount
+  // Read tab from URL query parameter on mount; redirect international users from explore to inspiration
   useEffect(() => {
     const mode = searchParams.get('mode');
+    // International: Explore tab = Nigerian curated rooms only; redirect to analyze flow (inspiration)
+    if (!isNigeria && (mode === 'explore' || mode === 'design')) {
+      setActiveTab('inspiration');
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('mode', 'inspiration');
+      window.history.replaceState({}, '', `${window.location.pathname}?${newParams}`);
+      return;
+    }
     // Nigerian experience: hide "Start with what fits" (mode=find); redirect to explore
     if (isNigeria && mode === 'find') {
       setActiveTab('explore');
@@ -225,14 +241,20 @@ export default function Upload() {
     }
   }, [searchParams, isNigeria]);
 
-  // Fetch all published explore scenes for NG when on Explore tab
+  // Fetch Nigerian explore scenes only when Explore tab is active and country is NG
   useEffect(() => {
-    if (activeTab !== 'explore') return;
+    if (activeTab !== 'explore' || country !== 'NG') {
+      if (country !== 'NG') {
+        setExploreScenes([]);
+        setLoadingExploreScenes(false);
+      }
+      return;
+    }
     setLoadingExploreScenes(true);
     getExploreScenes('NG')
       .then(setExploreScenes)
       .finally(() => setLoadingExploreScenes(false));
-  }, [activeTab]);
+  }, [activeTab, country]);
 
   const handleImageSelect = (file: File) => {
     console.log('Image selected:', file.name, file.type, file.size);
