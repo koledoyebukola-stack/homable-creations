@@ -1746,6 +1746,108 @@ export async function getProductBySlug(slug: string): Promise<{ storefront: Stor
 }
 
 /**
+ * Fetch a vendor product by id, including parent storefront.
+ * Used for History "Products I Contacted" (events store product_id).
+ */
+export async function getProductById(productId: string): Promise<{ storefront: Storefront; product: VendorProduct } | null> {
+  const { data: product, error: productError } = await supabase
+    .from('vendor_products')
+    .select('*')
+    .eq('id', productId)
+    .maybeSingle();
+
+  if (productError || !product) {
+    return null;
+  }
+
+  const { data: storefront, error: storeError } = await supabase
+    .from('storefronts')
+    .select('*')
+    .eq('id', (product as VendorProduct).storefront_id)
+    .maybeSingle();
+
+  if (storeError || !storefront) {
+    return null;
+  }
+
+  return {
+    storefront: storefront as Storefront,
+    product: product as VendorProduct,
+  };
+}
+
+/**
+ * Batch fetch vendor products by ids with their storefronts.
+ * Returns array of { product, storefront } in same order as ids (null for missing).
+ */
+export async function getProductsByIds(productIds: string[]): Promise<Array<{ storefront: Storefront; product: VendorProduct } | null>> {
+  if (productIds.length === 0) return [];
+  const uniq = [...new Set(productIds)];
+  const { data: products, error: productsError } = await supabase
+    .from('vendor_products')
+    .select('*')
+    .in('id', uniq);
+
+  if (productsError || !products?.length) {
+    return productIds.map(() => null);
+  }
+  const storefrontIds = [...new Set((products as VendorProduct[]).map((p) => p.storefront_id))];
+  const { data: storefronts, error: storeError } = await supabase
+    .from('storefronts')
+    .select('*')
+    .in('id', storefrontIds);
+
+  const storefrontMap = new Map<string, Storefront>();
+  if (!storeError && storefronts) {
+    storefronts.forEach((s) => storefrontMap.set((s as Storefront).id, s as Storefront));
+  }
+  const productMap = new Map<string, { storefront: Storefront; product: VendorProduct }>();
+  (products as VendorProduct[]).forEach((p) => {
+    const sf = storefrontMap.get(p.storefront_id);
+    if (sf) productMap.set(p.id, { storefront: sf, product: p });
+  });
+  return productIds.map((id) => productMap.get(id) ?? null);
+}
+
+/** WhatsApp redirect event row from analytics (metadata has product_id, vendor_id, from_scene_slug). */
+export interface WhatsAppRedirectProductEvent {
+  id: string;
+  created_at: string;
+  metadata: { product_id?: string; vendor_id?: string; from_scene_slug?: string };
+}
+
+/**
+ * Fetch WHATSAPP_REDIRECT events for the current user where metadata contains product_id.
+ * Ordered by created_at DESC. Used for History "Products I Contacted" section.
+ */
+export async function getWhatsAppRedirectProductEvents(limit?: number): Promise<WhatsAppRedirectProductEvent[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  let q = supabase
+    .from('app_8574c59127_analytics_events')
+    .select('id, created_at, metadata')
+    .eq('event_name', 'WHATSAPP_REDIRECT')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
+
+  if (limit != null) {
+    q = q.limit(Math.min(500, Math.max(limit * 2, 50))); // fetch extra so after filtering by product_id we have enough
+  } else {
+    q = q.limit(500); // cap when loading "all" for History page
+  }
+  const { data, error } = await q;
+
+  if (error) {
+    console.error('Failed to fetch WhatsApp redirect events:', error);
+    return [];
+  }
+  const rows = (data || []) as WhatsAppRedirectProductEvent[];
+  const withProduct = rows.filter((r) => r.metadata && r.metadata.product_id != null);
+  return limit != null ? withProduct.slice(0, limit) : withProduct;
+}
+
+/**
  * Fetch up to `limit` other products from the same storefront, excluding a given product ID.
  */
 export async function getOtherVendorProducts(
