@@ -79,7 +79,7 @@ const HERO_CAROUSEL_IMAGES = [
 ];
 
 const HERO_DESCRIPTION_NG =
-  'Turn decor inspiration into a clear plan. Explore curated styles and upload a room photo to get an instant shopping list, visualize your space in 3D, and invite friends and family to help finish the room.';
+  'Turn decor inspiration into a clear plan. Explore curated styles to get an instant shopping list, and invite friends and family to help finish the room.';
 const HERO_DESCRIPTION_DEFAULT =
   'Turn decor inspiration into a clear plan. Upload a room photo to get an instant shopping list, explore curated styles, visualize your space in 3D, and invite friends and family to help finish the room.';
 
