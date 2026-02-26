@@ -73,3 +73,37 @@ export function trackNgEvent(eventName: NgEventName, eventData?: NgEventData): v
       });
   });
 }
+
+/**
+ * Track "product contacted via WhatsApp" for ALL signed-in users (no country gate).
+ * Used so the History page "Products I Contacted on Whatsapp" section works for everyone.
+ * Same table and event_name (WHATSAPP_REDIRECT); country is set from selector or null.
+ */
+export function trackProductContactedOnWhatsApp(data: {
+  vendor_id: string;
+  product_id: string;
+  source?: string;
+  from_scene_slug?: string;
+}): void {
+  getCurrentUserId().then((userId) => {
+    if (!userId) return;
+    const country = getSelectedCountry();
+    const payload = {
+      event_name: 'WHATSAPP_REDIRECT' as const,
+      metadata: {
+        ...cleanEventData(data),
+        timestamp: new Date().toISOString(),
+        ...(typeof document !== 'undefined' && document.referrer ? { referrer: document.referrer } : {}),
+      },
+      user_id: userId,
+      country: country ?? null,
+      created_at: new Date().toISOString(),
+    };
+    supabase
+      .from('app_8574c59127_analytics_events')
+      .insert(payload)
+      .then(({ error }) => {
+        if (error) console.warn('[Analytics] Failed to track product WhatsApp contact:', error);
+      });
+  });
+}
