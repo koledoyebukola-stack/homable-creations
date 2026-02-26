@@ -818,10 +818,10 @@ export async function getCombinedHistory(): Promise<HistoryItem[]> {
     console.error('Failed to fetch specs history:', specsError);
   }
 
-  // Fetch explore scene views
+  // Fetch explore scene views with current hero_image_url from explore_scenes (avoids broken images when Storage URLs change)
   const { data: exploreViews, error: exploreError } = await supabase
     .from('explore_scene_views')
-    .select('*')
+    .select('id, scene_id, scene_slug, scene_title, scene_image_url, viewed_at, explore_scenes(hero_image_url)')
     .eq('user_id', user.id)
     .order('viewed_at', { ascending: false });
 
@@ -860,15 +860,25 @@ export async function getCombinedHistory(): Promise<HistoryItem[]> {
     });
   }
 
-  // Convert explore scene views to history items
+  // Convert explore scene views to history items (use current hero from explore_scenes; fallback to stored URL)
   if (exploreViews) {
-    exploreViews.forEach((view: { id: string; scene_slug: string; scene_title: string; scene_image_url: string | null; viewed_at: string }) => {
+    exploreViews.forEach((view: {
+      id: string;
+      scene_slug: string;
+      scene_title: string;
+      scene_image_url: string | null;
+      viewed_at: string;
+      explore_scenes?: { hero_image_url: string | null } | null | { hero_image_url: string | null }[];
+    }) => {
+      const scene = Array.isArray(view.explore_scenes) ? view.explore_scenes[0] : view.explore_scenes;
+      const currentHero = scene?.hero_image_url ?? null;
+      const imageUrl = (currentHero || view.scene_image_url) ?? undefined;
       historyItems.push({
         id: view.id,
         type: 'explore',
         title: view.scene_title,
         created_at: view.viewed_at,
-        image_url: view.scene_image_url || undefined,
+        image_url: imageUrl,
         scene_slug: view.scene_slug,
       });
     });
