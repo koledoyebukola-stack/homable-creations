@@ -82,6 +82,9 @@ const HERO_DESCRIPTION_NG =
 const HERO_DESCRIPTION_DEFAULT =
   'Turn decor inspiration into a clear plan. Upload a room photo to get an instant shopping list, explore curated styles, visualize your space in 3D, and invite friends and family to help finish the room.';
 
+// TEMP: Hidden for Nigerian launch - re-enable once supply is sufficient (50+ vendors). Set to true to show "Upload Your Inspiration" for Nigeria.
+const SHOW_UPLOAD_INSPIRATION_FOR_NIGERIA = false;
+
 export default function Home() {
   const navigate = useNavigate();
   const [carouselSlide, setCarouselSlide] = useState(0);
@@ -139,7 +142,7 @@ export default function Home() {
               {country === 'NG' ? HERO_DESCRIPTION_NG : HERO_DESCRIPTION_DEFAULT}
             </p>
 
-            {/* CTAs: Nigeria = Explore primary, Upload secondary; rest = Upload primary, Explore secondary */}
+            {/* CTAs: Nigeria = Explore only (upload hidden for launch); rest = Upload primary, Explore secondary */}
             <div className="flex flex-col md:flex-row md:gap-3 gap-4">
               {country === 'NG' ? (
                 <>
@@ -150,13 +153,16 @@ export default function Home() {
                   >
                     Explore Curated Rooms
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate('/upload?mode=inspiration')}
-                    className="w-full md:flex-1 h-12 md:h-[60px] flex items-center justify-center rounded-xl bg-white text-black text-[15px] md:text-base font-medium border-[1.5px] border-[#e0e0e0] hover:border-black hover:bg-[#fafafa] transition-colors"
-                  >
-                    Upload Your Inspiration
-                  </button>
+                  {/* TEMP: Hidden for Nigerian launch - re-enable once supply is sufficient (50+ vendors) */}
+                  {SHOW_UPLOAD_INSPIRATION_FOR_NIGERIA && (
+                    <button
+                      type="button"
+                      onClick={() => navigate('/upload?mode=inspiration')}
+                      className="w-full md:flex-1 h-12 md:h-[60px] flex items-center justify-center rounded-xl bg-white text-black text-[15px] md:text-base font-medium border-[1.5px] border-[#e0e0e0] hover:border-black hover:bg-[#fafafa] transition-colors"
+                    >
+                      Upload Your Inspiration
+                    </button>
+                  )}
                 </>
               ) : (
                 <>

@@ -11,11 +11,20 @@ import {
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { Upload, History, LogOut, LogIn, UserPlus, ShoppingCart, Store } from 'lucide-react';
-import LocationSelector from './LocationSelector';
+import LocationSelector, { getSelectedCountry } from './LocationSelector';
 
 export default function Header() {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
+  // TEMP: Used to hide Upload Inspiration for Nigerian launch - re-enable once supply is sufficient (50+ vendors)
+  const [country, setCountry] = useState<string>(() => getSelectedCountry());
+  const isNigeria = country === 'NG';
+
+  useEffect(() => {
+    const handleLocationChange = () => setCountry(getSelectedCountry());
+    window.addEventListener('locationChanged', handleLocationChange as EventListener);
+    return () => window.removeEventListener('locationChanged', handleLocationChange as EventListener);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -140,10 +149,13 @@ export default function Header() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => navigate('/upload')}>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Upload Inspiration
-                  </DropdownMenuItem>
+                  {/* TEMP: Hidden for Nigerian launch - re-enable once supply is sufficient (50+ vendors) */}
+                  {!isNigeria && (
+                    <DropdownMenuItem onClick={() => navigate('/upload')}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Inspiration
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={() => navigate('/shops')}>
                     <Store className="mr-2 h-4 w-4" />
                     Local Shops
@@ -185,10 +197,13 @@ export default function Header() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => navigate('/upload')}>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Upload Inspiration
-                  </DropdownMenuItem>
+                  {/* TEMP: Hidden for Nigerian launch - re-enable once supply is sufficient (50+ vendors) */}
+                  {!isNigeria && (
+                    <DropdownMenuItem onClick={() => navigate('/upload')}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Inspiration
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={() => navigate('/shops')}>
                     <Store className="mr-2 h-4 w-4" />
                     Local Shops

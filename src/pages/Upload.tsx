@@ -215,6 +215,14 @@ export default function Upload() {
   // Read tab from URL query parameter on mount
   useEffect(() => {
     const mode = searchParams.get('mode');
+    // TEMP: Nigerian launch - redirect inspiration/replicate/no-mode to explore (upload flow hidden until supply sufficient)
+    if (isNigeria && mode !== 'explore' && mode !== 'design') {
+      setActiveTab('explore');
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('mode', 'explore');
+      window.history.replaceState({}, '', `${window.location.pathname}?${newParams}`);
+      return;
+    }
     // Nigerian experience: hide "Start with what fits" (mode=find); redirect to explore
     if (isNigeria && mode === 'find') {
       setActiveTab('explore');
@@ -518,30 +526,31 @@ export default function Upload() {
             </p>
           </div>
 
-          {/* Tab Selector: two tabs for Nigeria (Explore + Inspiration), three for others */}
-          <div className="flex justify-center mb-12">
-            <div className="inline-flex bg-white rounded-full p-1 shadow-md border border-gray-200">
-              <button
-                onClick={() => handleTabChange('explore')}
-                className={`px-3 sm:px-6 py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
-                  activeTab === 'explore'
-                    ? 'bg-[#111111] text-white'
-                    : 'text-[#555555] hover:text-[#111111]'
-                }`}
-              >
-                Explore styles
-              </button>
-              <button
-                onClick={() => handleTabChange('inspiration')}
-                className={`px-3 sm:px-6 py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
-                  activeTab === 'inspiration'
-                    ? 'bg-[#111111] text-white'
-                    : 'text-[#555555] hover:text-[#111111]'
-                }`}
-              >
-                Start with inspiration
-              </button>
-              {!isNigeria && (
+          {/* Tab Selector: Nigeria = Explore only (switcher hidden); International = Explore + Inspiration + Specs */}
+          {/* TEMP: Hide tab switcher for Nigeria (single tab) - re-enable inspiration tab once supply is sufficient (50+ vendors) */}
+          {!isNigeria && (
+            <div className="flex justify-center mb-12">
+              <div className="inline-flex bg-white rounded-full p-1 shadow-md border border-gray-200">
+                <button
+                  onClick={() => handleTabChange('explore')}
+                  className={`px-3 sm:px-6 py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
+                    activeTab === 'explore'
+                      ? 'bg-[#111111] text-white'
+                      : 'text-[#555555] hover:text-[#111111]'
+                  }`}
+                >
+                  Explore styles
+                </button>
+                <button
+                  onClick={() => handleTabChange('inspiration')}
+                  className={`px-3 sm:px-6 py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
+                    activeTab === 'inspiration'
+                      ? 'bg-[#111111] text-white'
+                      : 'text-[#555555] hover:text-[#111111]'
+                  }`}
+                >
+                  Start with inspiration
+                </button>
                 <button
                   onClick={() => handleTabChange('specs')}
                   className={`px-3 sm:px-6 py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
@@ -552,9 +561,9 @@ export default function Upload() {
                 >
                   Start with what fits
                 </button>
-              )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Tab Content */}
           {/* Explore Tab: Nigeria = curated rooms from DB; International = styles by room (DESIGN_STYLES_BY_ROOM) */}
