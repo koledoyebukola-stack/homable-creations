@@ -1816,13 +1816,29 @@ export interface WhatsAppRedirectProductEvent {
   metadata: { product_id?: string; vendor_id?: string; from_scene_slug?: string };
 }
 
+const DEBUG_WHATSAPP_EVENTS = true; // set false to disable History query logging
+
 /**
  * Fetch WHATSAPP_REDIRECT events for the current user where metadata contains product_id.
  * Ordered by created_at DESC. Used for History "Products I Contacted" section.
  */
 export async function getWhatsAppRedirectProductEvents(limit?: number): Promise<WhatsAppRedirectProductEvent[]> {
+  const logPrefix = '[getWhatsAppRedirectProductEvents]';
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
+
+  if (DEBUG_WHATSAPP_EVENTS) {
+    console.log(logPrefix, '1. Current user_id:', user?.id ?? '(null - not signed in)');
+  }
+  if (!user) {
+    if (DEBUG_WHATSAPP_EVENTS) console.log(logPrefix, 'Aborting: no user');
+    return [];
+  }
+
+  const limitVal = limit != null ? Math.min(500, Math.max(limit * 2, 50)) : 500;
+  const queryDesc = `table=app_8574c59127_analytics_events, event_name=WHATSAPP_REDIRECT, user_id=${user.id}, order=created_at DESC, limit=${limitVal}`;
+  if (DEBUG_WHATSAPP_EVENTS) {
+    console.log(logPrefix, '2. Query:', queryDesc);
+  }
 
   let q = supabase
     .from('app_8574c59127_analytics_events')
@@ -1831,19 +1847,34 @@ export async function getWhatsAppRedirectProductEvents(limit?: number): Promise<
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
-  if (limit != null) {
-    q = q.limit(Math.min(500, Math.max(limit * 2, 50))); // fetch extra so after filtering by product_id we have enough
-  } else {
-    q = q.limit(500); // cap when loading "all" for History page
-  }
+  q = limit != null ? q.limit(limitVal) : q.limit(500);
   const { data, error } = await q;
 
+  if (DEBUG_WHATSAPP_EVENTS) {
+    if (error) {
+      console.error(logPrefix, '3. SELECT ERROR:', error);
+      console.error(logPrefix, '   code:', error.code, 'message:', error.message, 'details:', error.details);
+    } else {
+      console.log(logPrefix, '3. SELECT SUCCESS. Raw row count:', (data || []).length);
+      console.log(logPrefix, '4. Raw rows (first 5):', JSON.stringify((data || []).slice(0, 5), null, 2));
+    }
+  }
   if (error) {
-    console.error('Failed to fetch WhatsApp redirect events:', error);
+    console.error('[getWhatsAppRedirectProductEvents] Failed to fetch:', error);
     return [];
   }
+
   const rows = (data || []) as WhatsAppRedirectProductEvent[];
-  const withProduct = rows.filter((r) => r.metadata && r.metadata.product_id != null);
+  const withProduct = rows.filter((r) => {
+    const hasProductId = r.metadata && (r.metadata as Record<string, unknown>).product_id != null;
+    if (DEBUG_WHATSAPP_EVENTS && rows.length > 0 && !hasProductId && r.metadata) {
+      console.log(logPrefix, '   Row metadata (no product_id):', JSON.stringify(r.metadata));
+    }
+    return hasProductId;
+  });
+  if (DEBUG_WHATSAPP_EVENTS) {
+    console.log(logPrefix, '5. After filter metadata.product_id: count=', withProduct.length, 'sample metadata:', withProduct[0]?.metadata);
+  }
   return limit != null ? withProduct.slice(0, limit) : withProduct;
 }
 

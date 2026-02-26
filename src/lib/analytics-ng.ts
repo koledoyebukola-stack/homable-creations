@@ -85,8 +85,15 @@ export function trackProductContactedOnWhatsApp(data: {
   source?: string;
   from_scene_slug?: string;
 }): void {
+  const logPrefix = '[trackProductContactedOnWhatsApp]';
+  console.log(logPrefix, '1. Function called with data:', JSON.stringify(data, null, 2));
+
   getCurrentUserId().then((userId) => {
-    if (!userId) return;
+    console.log(logPrefix, '2. user_id from getCurrentUserId():', userId ?? '(null - user not signed in)');
+    if (!userId) {
+      console.warn(logPrefix, 'Aborting: no user_id');
+      return;
+    }
     const country = getSelectedCountry();
     const payload = {
       event_name: 'WHATSAPP_REDIRECT' as const,
@@ -99,11 +106,19 @@ export function trackProductContactedOnWhatsApp(data: {
       country: country ?? null,
       created_at: new Date().toISOString(),
     };
+    console.log(logPrefix, '3. Payload being sent to Supabase:', JSON.stringify(payload, null, 2));
+    console.log(logPrefix, '   Table: app_8574c59127_analytics_events');
+
     supabase
       .from('app_8574c59127_analytics_events')
       .insert(payload)
-      .then(({ error }) => {
-        if (error) console.warn('[Analytics] Failed to track product WhatsApp contact:', error);
+      .then(({ data: insertData, error }) => {
+        if (error) {
+          console.error(logPrefix, '4. INSERT ERROR:', error);
+          console.error(logPrefix, '   code:', error.code, 'message:', error.message, 'details:', error.details);
+        } else {
+          console.log(logPrefix, '4. INSERT SUCCESS. Response data:', insertData);
+        }
       });
   });
 }

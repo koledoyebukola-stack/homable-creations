@@ -6,6 +6,7 @@ import {
   getProductsByIds,
   getExploreSceneBySlug,
 } from '@/lib/api';
+import { trackProductContactedOnWhatsApp } from '@/lib/analytics-ng';
 import type { WhatsAppRedirectProductEvent } from '@/lib/api';
 import { HistoryItem } from '@/lib/types';
 import type { Storefront, VendorProduct } from '@/lib/types';
@@ -83,18 +84,25 @@ export default function History() {
   }, []);
 
   const loadHistory = async () => {
+    const logPrefix = '[History loadHistory]';
     try {
       setLoading(true);
       setError(null);
+      console.log(logPrefix, '1. Fetching getCombinedHistory() and getWhatsAppRedirectProductEvents()...');
       const [data, events] = await Promise.all([
         getCombinedHistory(),
         getWhatsAppRedirectProductEvents(), // no limit: load all for "View all" expand
       ]);
+      console.log(logPrefix, '2. getCombinedHistory() count:', data.length);
+      console.log(logPrefix, '3. getWhatsAppRedirectProductEvents() raw count:', events.length);
+      console.log(logPrefix, '4. Events sample (first 2):', JSON.stringify(events.slice(0, 2), null, 2));
       setHistoryItems(data);
 
       // Build product contact cards: only events with product_id in metadata
-      const eventsWithProduct = events.filter((e) => e.metadata?.product_id);
+      const eventsWithProduct = events.filter((e) => e.metadata && (e.metadata as Record<string, unknown>).product_id != null);
+      console.log(logPrefix, '5. eventsWithProduct (metadata has product_id) count:', eventsWithProduct.length);
       if (eventsWithProduct.length === 0) {
+        console.log(logPrefix, '6. No product events -> productContacts set to []');
         setProductContacts([]);
         return;
       }
@@ -119,9 +127,10 @@ export default function History() {
           sceneTitle: event.metadata?.from_scene_slug ? sceneTitleBySlug[event.metadata.from_scene_slug] ?? null : null,
         });
       });
+      console.log(logPrefix, '7. Built product contact cards count:', cards.length);
       setProductContacts(cards);
     } catch (err: unknown) {
-      console.error('Failed to load history:', err);
+      console.error('[History loadHistory] Failed to load history:', err);
       setError(err instanceof Error ? err.message : 'Failed to load history');
     } finally {
       setLoading(false);
@@ -203,6 +212,33 @@ export default function History() {
           <p className="text-gray-600">
             Your saved inspirations and specifications
           </p>
+          {/* Debug: test insert + refetch to verify event flow (check console for logs) */}
+          <div className="mt-3 flex flex-wrap gap-2 items-center">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-xs text-amber-700 border-amber-300"
+              onClick={() => {
+                console.log('[History] Test: Inserting dummy WHATSAPP_REDIRECT event...');
+                trackProductContactedOnWhatsApp({
+                  vendor_id: '00000000-0000-0000-0000-000000000001',
+                  product_id: '00000000-0000-0000-0000-000000000002',
+                  source: 'test_button',
+                  from_scene_slug: undefined,
+                });
+                setTimeout(() => {
+                  console.log('[History] Test: Refetching in 2s...');
+                  loadHistory();
+                }, 2000);
+              }}
+            >
+              Test: Insert WhatsApp event (see console)
+            </Button>
+            <Button type="button" variant="ghost" size="sm" className="text-xs text-gray-500" onClick={loadHistory}>
+              Refresh history
+            </Button>
+          </div>
         </div>
 
         {productContacts.length === 0 && historyItems.length === 0 ? (
