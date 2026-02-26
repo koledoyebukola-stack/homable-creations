@@ -20,6 +20,7 @@ import {
 import { AlertCircle, Info, ChevronLeft, ChevronRight, TestTube } from 'lucide-react';
 import SpecsCategorySelection from '@/components/specs/SpecsCategorySelection';
 import { trackPageView, trackAction, EVENTS } from '@/lib/analytics';
+import { trackNgEvent, NG_EVENTS } from '@/lib/analytics-ng';
 import { getSelectedCountry } from '@/components/LocationSelector';
 
 // Sample images organized by category - REMOVED HOLIDAY LOOKS
@@ -252,6 +253,13 @@ export default function Upload() {
       .then(setExploreScenes)
       .finally(() => setLoadingExploreScenes(false));
   }, [activeTab, country]);
+
+  // Nigerian journey: track Explore curated rooms view on upload page
+  useEffect(() => {
+    if (country === 'NG' && activeTab === 'explore') {
+      trackNgEvent(NG_EVENTS.EXPLORE_CURATED_ROOMS_VIEW, { location: 'upload_page' });
+    }
+  }, [country, activeTab]);
 
   const handleImageSelect = (file: File) => {
     console.log('Image selected:', file.name, file.type, file.size);

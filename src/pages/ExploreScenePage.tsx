@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import AuthModal from '@/components/AuthModal';
 import { getExploreSceneBySlug, createChecklist, getChecklistByExploreSceneId, getRandomArtworkProducts } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
+import { trackNgEvent, NG_EVENTS } from '@/lib/analytics-ng';
 import type { ExploreScene, ExploreSceneItemWithProduct, VendorProduct, Storefront, Checklist } from '@/lib/types';
 import type { User } from '@supabase/supabase-js';
 import { ExternalLink, ShoppingBag, Wrench, Instagram, ListChecks, Upload } from 'lucide-react';
@@ -122,6 +123,18 @@ export default function ExploreScenePage() {
     }
   }, [user, data]);
 
+  // Nigerian journey: room selection (user clicked a room card and is viewing this room)
+  useEffect(() => {
+    if (data && 'scene' in data) {
+      const { scene: s } = data;
+      trackNgEvent(NG_EVENTS.ROOM_SELECTION, {
+        scene_id: s.id,
+        scene_title: s.title,
+        scene_slug: s.slug,
+      });
+    }
+  }, [data]);
+
   // Fetch existing checklist for this scene when user and scene are loaded (for "View Shopping List" attached state)
   useEffect(() => {
     if (!user || !data || !('scene' in data)) return;
@@ -217,6 +230,12 @@ export default function ExploreScenePage() {
 
       setExistingChecklist(checklist);
       toast.success('Shopping list saved!');
+      trackNgEvent(NG_EVENTS.SHOPPING_LIST_CREATED, {
+        checklist_id: checklist.id,
+        explore_scene_id: scene.id,
+        item_count: checklistItemInputs.length,
+        total_budget: catalogBudget,
+      });
       navigate(`/checklists/${checklist.id}`);
     } catch (error) {
       console.error('Failed to save shopping list:', error);
@@ -395,14 +414,26 @@ export default function ExploreScenePage() {
                         key={item.id}
                         role="button"
                         tabIndex={0}
-                        onClick={() =>
+                        onClick={() => {
+                          trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
+                            product_id: product.id,
+                            product_name: product.name,
+                            vendor_id: item.storefront?.id ?? undefined,
+                            explore_scene_id: scene.id,
+                          });
                           navigate(
                             `/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
-                          )
-                        }
+                          );
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
+                            trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
+                              product_id: product.id,
+                              product_name: product.name,
+                              vendor_id: item.storefront?.id ?? undefined,
+                              explore_scene_id: scene.id,
+                            });
                             navigate(
                               `/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
                             );
@@ -454,14 +485,26 @@ export default function ExploreScenePage() {
                         key={item.id}
                         role="button"
                         tabIndex={0}
-                        onClick={() =>
+                        onClick={() => {
+                          trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
+                            product_id: product.id,
+                            product_name: product.name,
+                            vendor_id: item.storefront?.id ?? undefined,
+                            explore_scene_id: scene.id,
+                          });
                           navigate(
                             `/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
-                          )
-                        }
+                          );
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
+                            trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
+                              product_id: product.id,
+                              product_name: product.name,
+                              vendor_id: item.storefront?.id ?? undefined,
+                              explore_scene_id: scene.id,
+                            });
                             navigate(
                               `/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
                             );
@@ -618,6 +661,13 @@ export default function ExploreScenePage() {
                       href={item.external_link}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={() => {
+                        trackNgEvent(NG_EVENTS.VIEW_ON_INSTAGRAM_CLICKED, {
+                          instagram_handle: item.instagram_handle ?? undefined,
+                          item_name: item.name ?? undefined,
+                          explore_scene_id: scene.id,
+                        });
+                      }}
                       className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-[#111111] text-white px-3 py-2 text-sm font-medium hover:bg-[#333] border-0"
                     >
                       <ExternalLink className="w-4 h-4 shrink-0" />

@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { X } from 'lucide-react';
+import { trackNgEvent, NG_EVENTS } from '@/lib/analytics-ng';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -56,6 +57,7 @@ export default function Auth() {
 
         if (error) throw error;
 
+        trackNgEvent(NG_EVENTS.SIGNUP, { signup_method: 'email' });
         toast.success('Account created successfully!');
         navigate(redirectPath);
       } else {
@@ -66,6 +68,7 @@ export default function Auth() {
 
         if (error) throw error;
 
+        trackNgEvent(NG_EVENTS.SIGNIN, { signin_method: 'email' });
         toast.success('Welcome back!');
         navigate(redirectPath);
       }

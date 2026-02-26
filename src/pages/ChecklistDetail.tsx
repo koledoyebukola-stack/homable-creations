@@ -47,6 +47,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ShareModal from '@/components/ShareModal';
 import { toast } from 'sonner';
+import { trackNgEvent, NG_EVENTS } from '@/lib/analytics-ng';
 
 // Detect user location and return appropriate retailer domains
 function getLocalizedRetailers() {
@@ -312,7 +313,11 @@ export default function ChecklistDetail() {
       const result = await enableGifting(checklist.id);
       setGiftingUrl(result.gifting_url);
       setShowGiftingModal(true);
-      
+      if (checklist.explore_scene_id) {
+        trackNgEvent(NG_EVENTS.HOME_REGISTRY_SHARED, {
+          checklist_id: checklist.id,
+        });
+      }
       // Update local state
       setChecklist({
         ...checklist,

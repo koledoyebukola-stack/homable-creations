@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Instagram, MessageCircle, Store, Search, X } from 'lucide-react';
 import { getStorefrontBySlug, getStorefrontProductsPage } from '@/lib/api';
 import type { Storefront, VendorProduct } from '@/lib/types';
+import { trackNgEvent, NG_EVENTS } from '@/lib/analytics-ng';
 
 /** Debounce delay for search input (ms). */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -710,7 +711,13 @@ function StorefrontActive({
 
       <div className="hidden md:flex fixed bottom-6 right-6 z-40">
         <Button
-          onClick={() => window.open(whatsapp, '_blank')}
+          onClick={() => {
+            trackNgEvent(NG_EVENTS.WHATSAPP_REDIRECT, {
+              storefront_id: storefront.id,
+              source: 'storefront',
+            });
+            window.open(whatsapp, '_blank');
+          }}
           className="bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-full px-6 py-5 text-sm font-semibold shadow-[0_12px_35px_rgba(0,0,0,0.5)]"
         >
           <MessageCircle className="mr-2 h-5 w-5" />
@@ -723,7 +730,13 @@ function StorefrontActive({
         <div className="md:hidden fixed left-0 right-0 bottom-0 w-full z-40 border-t border-gray-200 bg-white/95 backdrop-blur-sm">
           <div className="px-4 py-3 pb-[env(safe-area-inset-bottom,0)]">
             <Button
-              onClick={() => window.open(whatsapp, '_blank')}
+              onClick={() => {
+                trackNgEvent(NG_EVENTS.WHATSAPP_REDIRECT, {
+                  storefront_id: storefront.id,
+                  source: 'storefront',
+                });
+                window.open(whatsapp, '_blank');
+              }}
               className="w-full bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-full font-semibold py-5 shadow-md"
             >
               <MessageCircle className="mr-2 h-5 w-5" />

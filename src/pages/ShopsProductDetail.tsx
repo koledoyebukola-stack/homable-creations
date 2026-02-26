@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Store, ArrowLeft, MessageCircle } from 'lucide-react';
 import { getProductBySlug, getOtherVendorProducts, getInspirationsByProduct, getExploreSceneBySlug } from '@/lib/api';
 import type { Storefront, VendorProduct, ExploreScene } from '@/lib/types';
+import { trackNgEvent, NG_EVENTS } from '@/lib/analytics-ng';
 
 function formatPrice(min: number | null, max: number | null): string {
   if (min != null && max != null && min !== max) return `₦${min.toLocaleString()} – ₦${max.toLocaleString()}`;
@@ -135,6 +136,14 @@ export default function ShopsProductDetail() {
       message += `\n\nRoom inspiration: ${sceneHeroImageUrl}\nI'd like it made to match the color and style shown in the room image.`;
     }
     const url = `${whatsappBase}?text=${encodeURIComponent(message)}`;
+    const searchParams = new URLSearchParams(location.search);
+    const fromSceneSlug = searchParams.get('fromSceneSlug');
+    trackNgEvent(NG_EVENTS.WHATSAPP_REDIRECT, {
+      vendor_id: storefront.id,
+      product_id: product.id,
+      source: fromSceneSlug ? 'explore_detail' : 'product_detail',
+      from_scene_slug: fromSceneSlug ?? undefined,
+    });
     window.open(url, '_blank');
   };
 

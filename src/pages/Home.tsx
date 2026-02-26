@@ -15,6 +15,7 @@ import {
   type ExploreRoomTypeFilter,
   type ExplorePriceFilter,
 } from '@/lib/explore-filters';
+import { trackNgEvent, NG_EVENTS } from '@/lib/analytics-ng';
 
 // Carousel examples showing inspiration photo → checklist
 const CAROUSEL_EXAMPLES = [
@@ -112,6 +113,35 @@ export default function Home() {
       .then(setExploreScenes)
       .finally(() => setLoadingExplore(false));
   }, [country]);
+
+  // Nigerian journey: track homepage landing (NG only)
+  useEffect(() => {
+    if (country === 'NG') {
+      trackNgEvent(NG_EVENTS.HOMEPAGE_LANDING, {
+        referrer: typeof document !== 'undefined' ? document.referrer || undefined : undefined,
+      });
+    }
+  }, [country]);
+
+  // Nigerian journey: track when Explore curated rooms section is visible on homepage
+  useEffect(() => {
+    if (country !== 'NG') return;
+    const el = exploreSectionRef.current;
+    if (!el) return;
+    let fired = false;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (fired) return;
+        if (entries[0]?.isIntersecting) {
+          fired = true;
+          trackNgEvent(NG_EVENTS.EXPLORE_CURATED_ROOMS_VIEW, { location: 'homepage' });
+        }
+      },
+      { threshold: 0.2 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [country, loadingExplore]);
 
   const nextCarousel = () => {
     setCarouselSlide((prev) => (prev + 1) % CAROUSEL_EXAMPLES.length);
