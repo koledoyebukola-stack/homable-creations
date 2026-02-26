@@ -6,7 +6,6 @@ import {
   getProductsByIds,
   getExploreSceneBySlug,
 } from '@/lib/api';
-import { trackProductContactedOnWhatsApp } from '@/lib/analytics-ng';
 import type { WhatsAppRedirectProductEvent } from '@/lib/api';
 import { HistoryItem } from '@/lib/types';
 import type { Storefront, VendorProduct } from '@/lib/types';
@@ -212,33 +211,6 @@ export default function History() {
           <p className="text-gray-600">
             Your saved inspirations and specifications
           </p>
-          {/* Debug: test insert + refetch to verify event flow (check console for logs) */}
-          <div className="mt-3 flex flex-wrap gap-2 items-center">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="text-xs text-amber-700 border-amber-300"
-              onClick={() => {
-                console.log('[History] Test: Inserting dummy WHATSAPP_REDIRECT event...');
-                trackProductContactedOnWhatsApp({
-                  vendor_id: '00000000-0000-0000-0000-000000000001',
-                  product_id: '00000000-0000-0000-0000-000000000002',
-                  source: 'test_button',
-                  from_scene_slug: undefined,
-                });
-                setTimeout(() => {
-                  console.log('[History] Test: Refetching in 2s...');
-                  loadHistory();
-                }, 2000);
-              }}
-            >
-              Test: Insert WhatsApp event (see console)
-            </Button>
-            <Button type="button" variant="ghost" size="sm" className="text-xs text-gray-500" onClick={loadHistory}>
-              Refresh history
-            </Button>
-          </div>
         </div>
 
         {productContacts.length === 0 && historyItems.length === 0 ? (
