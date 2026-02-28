@@ -1,11 +1,29 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+const ALLOWED_ORIGINS = [
+  'https://homablecreations.com',
+  'https://www.homablecreations.com',
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
+const baseCorsHeaders = {
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type, x-supabase-auth',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Credentials': 'true',
 };
+
+function getCorsHeaders(req: Request): HeadersInit {
+  const origin = req.headers.get('origin') ?? '';
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : '*';
+
+  return {
+    ...baseCorsHeaders,
+    'Access-Control-Allow-Origin': allowedOrigin,
+    Vary: 'Origin',
+  };
+}
 
 type DetectedItemRow = {
   id: string;
@@ -271,7 +289,13 @@ function computeMatchScore(item: DetectedItemRow, product: AffiliateProductRow):
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] match_affiliate_products request:`, req.method, req.url);
+  const corsHeaders = getCorsHeaders(req);
+
+  console.log(
+    `[${requestId}] match_affiliate_products request:`,
+    req.method,
+    req.url,
+  );
 
   if (req.method === 'OPTIONS') {
     return new Response(null, {
