@@ -633,10 +633,6 @@ Deno.serve(async (req) => {
           `[${requestId}] Lexical fallback selected ${scored.length} matches for item ${rawItem.id}`,
         );
       }
-
-      console.log(
-        `[${requestId}] Selected ${scored.length} affiliate matches for item ${rawItem.id}`,
-      );
     }
 
     if (allMatches.length > 0) {
