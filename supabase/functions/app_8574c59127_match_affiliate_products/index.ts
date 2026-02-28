@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import OpenAI from 'npm:openai';
 
 const ALLOWED_ORIGINS = [
   'https://homablecreations.com',
@@ -287,6 +288,154 @@ function computeMatchScore(item: DetectedItemRow, product: AffiliateProductRow):
   return score;
 }
 
+function normaliseScore(raw: number): number {
+  if (!Number.isFinite(raw) || raw <= 0) return 0;
+  // Cap to a 0–10 range so we never store thousands.
+  return Math.min(10, raw);
+}
+
+type GptRankingEntry = {
+  index: number;
+  score: number;
+};
+
+async function rankWithGpt(
+  requestId: string,
+  item: DetectedItemRow,
+  candidates: AffiliateProductRow[],
+): Promise<GptRankingEntry[] | null> {
+  const apiKey = Deno.env.get('OPENAI_API_KEY');
+  if (!apiKey) {
+    console.warn(`[${requestId}] OPENAI_API_KEY not set – skipping GPT re-rank`);
+    return null;
+  }
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  const openai = new OpenAI({ apiKey });
+
+  const limitedCandidates = candidates.slice(0, 20);
+
+  const itemSummary = {
+    name: item.item_name,
+    category: item.category,
+    style: item.style,
+    color: item.dominant_color,
+    description: item.description,
+    tags: item.tags,
+  };
+
+  const candidatePayload = limitedCandidates.map((p, index) => ({
+    index,
+    product_name: p.product_name,
+    subcategory: p.subcategory,
+    color: p.color,
+    brand: p.brand,
+    description: p.description,
+    price: p.sale_price ?? p.price,
+  }));
+
+  const prompt = `
+You are helping match a detected decor item from a room photo to affiliate catalog products.
+
+The detected item:
+${JSON.stringify(itemSummary, null, 2)}
+
+The candidate products (from Ashley and TOV):
+${JSON.stringify(candidatePayload, null, 2)}
+
+TASK:
+- Rank the candidates by how well they visually and stylistically match the detected item.
+- Consider, in order of importance:
+  1) SHAPE and structure (L-shaped vs straight sofa; round vs rectangular table; low vs high back, etc.).
+     IMPORTANT: If the detected item is rectangular (e.g. a rectangular coffee table), a ROUND coffee table must NOT
+     rank above a rectangular one unless all rectangular options are clearly terrible matches.
+  2) COLOR accuracy (primary color should be as close as possible).
+  3) STYLE match (e.g. bohemian vs modern vs farmhouse vs glam).
+  4) MATERIAL where visible (e.g. linen vs leather, wood vs metal vs glass).
+
+SCORING:
+- For each returned product, assign a score from 0 to 10 (10 = excellent visual match, 0 = completely wrong).
+- Use the full 0–10 range; do not exceed 10.
+
+OUTPUT:
+- Return a JSON array ONLY, no extra text, no comments:
+  [
+    { "index": <candidate_index>, "score": <0-10 number> },
+    ...
+  ]
+- The array MUST contain at most 3 entries (top 3 matches).
+- "index" MUST correspond to the "index" of the candidate in the candidateProducts list above.
+`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      temperature: 0.2,
+      max_tokens: 300,
+    });
+
+    const content =
+      completion.choices[0]?.message?.content?.trim() ?? '[]';
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(content);
+    } catch (jsonError) {
+      console.error(
+        `[${requestId}] Failed to parse GPT ranking JSON:`,
+        jsonError,
+        'content=',
+        content,
+      );
+      return null;
+    }
+
+    if (!Array.isArray(parsed)) {
+      console.error(
+        `[${requestId}] GPT ranking output is not an array:`,
+        parsed,
+      );
+      return null;
+    }
+
+    const results: GptRankingEntry[] = [];
+    for (const entry of parsed) {
+      if (
+        entry &&
+        typeof entry.index === 'number' &&
+        entry.index >= 0 &&
+        entry.index < limitedCandidates.length &&
+        typeof entry.score === 'number'
+      ) {
+        const clampedScore = normaliseScore(entry.score);
+        results.push({ index: entry.index, score: clampedScore });
+      }
+    }
+
+    if (results.length === 0) {
+      console.warn(`[${requestId}] GPT ranking returned no valid entries`);
+      return null;
+    }
+
+    return results.slice(0, 3);
+  } catch (e) {
+    console.error(
+      `[${requestId}] GPT re-ranking failed, falling back to lexical scores:`,
+      e,
+    );
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
   const corsHeaders = getCorsHeaders(req);
@@ -411,7 +560,7 @@ Deno.serve(async (req) => {
         .eq('category', target.category)
         .eq('subcategory', target.subcategory)
         .eq('availability', 'in stock')
-        .limit(200);
+        .limit(20);
 
       if (candidatesError) {
         console.error(
@@ -428,31 +577,62 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const scored = (candidates as AffiliateProductRow[])
-        .map((product) => ({
-          product,
-          score: computeMatchScore(rawItem, product),
-        }))
-        .filter((entry) => entry.score >= 3)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 3);
+      const candidateRows = candidates as AffiliateProductRow[];
 
-      if (scored.length === 0) {
-        console.log(
-          `[${requestId}] No sufficiently strong affiliate matches for item ${rawItem.id}`,
-        );
-        continue;
-      }
+      // Stage 2: GPT re-ranking
+      const gptRanking = await rankWithGpt(requestId, rawItem, candidateRows);
 
-      scored.forEach((entry, index) => {
-        allMatches.push({
-          detected_item_id: rawItem.id,
-          affiliate_product_id: entry.product.id,
-          match_score: entry.score,
-          is_top_pick: index === 0,
-          rank: index + 1,
+      if (gptRanking && gptRanking.length > 0) {
+        gptRanking.forEach((entry, index) => {
+          const product = candidateRows[entry.index];
+          if (!product) return;
+          allMatches.push({
+            detected_item_id: rawItem.id,
+            affiliate_product_id: product.id,
+            match_score: normaliseScore(entry.score),
+            is_top_pick: index === 0,
+            rank: index + 1,
+          });
         });
-      });
+        console.log(
+          `[${requestId}] GPT re-ranked ${gptRanking.length} matches for item ${rawItem.id}`,
+        );
+      } else {
+        // Fallback: lexical scoring only
+        const scored = candidateRows
+          .map((product) => {
+            const rawScore = computeMatchScore(rawItem, product);
+            return {
+              product,
+              rawScore,
+              score: normaliseScore(rawScore),
+            };
+          })
+          .filter((entry) => entry.score >= 3)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 3);
+
+        if (scored.length === 0) {
+          console.log(
+            `[${requestId}] No sufficiently strong affiliate matches for item ${rawItem.id} (lexical fallback)`,
+          );
+          continue;
+        }
+
+        scored.forEach((entry, index) => {
+          allMatches.push({
+            detected_item_id: rawItem.id,
+            affiliate_product_id: entry.product.id,
+            match_score: entry.score,
+            is_top_pick: index === 0,
+            rank: index + 1,
+          });
+        });
+
+        console.log(
+          `[${requestId}] Lexical fallback selected ${scored.length} matches for item ${rawItem.id}`,
+        );
+      }
 
       console.log(
         `[${requestId}] Selected ${scored.length} affiliate matches for item ${rawItem.id}`,
