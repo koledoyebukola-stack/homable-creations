@@ -14,7 +14,7 @@ import CarpenterSpecModal from '@/components/CarpenterSpecModal';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getDetectedItems, getBoardById, getBoards, searchProducts, getProductsForItem, getRandomSeedProducts, logAnalysis, createChecklist, getChecklistByBoardId, seeMoreItems, generateCarpenterSpec, attachBoardToUser } from '@/lib/api';
+import { getDetectedItems, getBoardById, getBoards, searchProducts, getProductsForItem, getRandomSeedProducts, logAnalysis, createChecklist, getChecklistByBoardId, seeMoreItems, generateCarpenterSpec, attachBoardToUser, getAffiliateProductsForItem, matchAffiliateProductsForBoard } from '@/lib/api';
 import { DetectedItem, Product, Board, Checklist, CarpenterSpec } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -382,54 +382,134 @@ export default function ItemDetection() {
 
           setLoadingProducts(true);
           const productsMap: Record<string, ItemProductResult> = {};
-          
-          for (const item of detectedItems) {
-            try {
-              // 1. First try to get existing products (returns Product[])
-              const productsFromCache = await getProductsForItem(item.id);
-              let result: ItemProductResult = { products: productsFromCache, message: null, message_category_context: null };
-              
-              // 2. If no products exist, trigger search (returns SearchResponse object)
-              if (result.products.length === 0) {
-                const searchResult = await searchProducts(item.id);
-                result = searchResult;
-              }
-              
-              // 3. If there is no message AND still no products, try to get category-matched seed products
-              if (!result.message && result.products.length === 0) {
-                const categorySeeds = await getRandomSeedProducts(item.item_name, item.category);
-                result.products = categorySeeds.slice(0, 3);
-              }
-              
-              // 4. Filter products and store the final result
-              if (!result.message) {
-                result.products = result.products.filter(p => isValidProductUrl(p.product_url));
-              }
 
-              productsMap[item.id] = result;
-            } catch (error) {
-              console.error(`Failed to load products for item ${item.id}:`, error);
-              productsMap[item.id] = { products: [], message: null, message_category_context: null };
+          if (effectiveCountry === 'CA' && boardId) {
+            // Canada: use affiliate_products first, then fall back to existing search + seed products.
+            await matchAffiliateProductsForBoard(boardId);
+
+            for (const item of detectedItems) {
+              try {
+                const affiliateProducts = await getAffiliateProductsForItem(item.id);
+                let result: ItemProductResult = {
+                  products: [],
+                  message: null,
+                  message_category_context: null,
+                };
+
+                if (affiliateProducts.length > 0) {
+                  result.products = affiliateProducts;
+                } else {
+                  // No affiliate matches for this item: fall back to existing Wayfair/Amazon flow
+                  const searchResult = await searchProducts(item.id);
+                  result = searchResult;
+
+                  if (!result.message && result.products.length === 0) {
+                    const categorySeeds = await getRandomSeedProducts(
+                      item.item_name,
+                      item.category
+                    );
+                    result.products = categorySeeds.slice(0, 3);
+                  }
+
+                  if (!result.message) {
+                    result.products = result.products.filter((p) =>
+                      isValidProductUrl(p.product_url)
+                    );
+                  }
+                }
+
+                productsMap[item.id] = result;
+              } catch (error) {
+                console.error(
+                  `[CA] Failed to load products for item ${item.id}:`,
+                  error
+                );
+                productsMap[item.id] = {
+                  products: [],
+                  message: null,
+                  message_category_context: null,
+                };
+              }
+            }
+          } else {
+            // Nigeria + other markets: existing Amazon/seed product matching
+            for (const item of detectedItems) {
+              try {
+                // 1. First try to get existing products (returns Product[])
+                const productsFromCache = await getProductsForItem(item.id);
+                let result: ItemProductResult = {
+                  products: productsFromCache,
+                  message: null,
+                  message_category_context: null,
+                };
+
+                // 2. If no products exist, trigger search (returns SearchResponse object)
+                if (result.products.length === 0) {
+                  const searchResult = await searchProducts(item.id);
+                  result = searchResult;
+                }
+
+                // 3. If there is no message AND still no products, try to get category-matched seed products
+                if (!result.message && result.products.length === 0) {
+                  const categorySeeds = await getRandomSeedProducts(
+                    item.item_name,
+                    item.category
+                  );
+                  result.products = categorySeeds.slice(0, 3);
+                }
+
+                // 4. Filter products and store the final result
+                if (!result.message) {
+                  result.products = result.products.filter((p) =>
+                    isValidProductUrl(p.product_url)
+                  );
+                }
+
+                productsMap[item.id] = result;
+              } catch (error) {
+                console.error(
+                  `Failed to load products for item ${item.id}:`,
+                  error
+                );
+                productsMap[item.id] = {
+                  products: [],
+                  message: null,
+                  message_category_context: null,
+                };
+              }
             }
           }
-          
+
           setProducts(productsMap);
           setLoadingProducts(false);
 
           // Log analysis metrics
           const numberOfItemsDetected = detectedItems.length;
-          const numberOfItemsWithProducts = Object.values(productsMap).filter(r => !r.message && r.products.length > 0).length;
-          const numberOfProductsShown = Object.values(productsMap).filter(r => !r.message).flatMap(r => r.products).length;
-          
-          await logAnalysis(boardId, numberOfItemsDetected, numberOfItemsWithProducts, numberOfProductsShown);
+          const numberOfItemsWithProducts = Object.values(productsMap).filter(
+            (r) => !r.message && r.products.length > 0
+          ).length;
+          const numberOfProductsShown = Object.values(productsMap)
+            .filter((r) => !r.message)
+            .flatMap((r) => r.products).length;
+
+          await logAnalysis(
+            boardId,
+            numberOfItemsDetected,
+            numberOfItemsWithProducts,
+            numberOfProductsShown
+          );
 
           // Check if any items have no products AND no message, then load additional seed products
-          const hasItemsWithoutProducts = Object.values(productsMap).some(r => !r.message && r.products.length === 0);
+          const hasItemsWithoutProducts = Object.values(productsMap).some(
+            (r) => !r.message && r.products.length === 0
+          );
           if (hasItemsWithoutProducts) {
             setLoadingSeedProducts(true);
             try {
               const randomSeeds = await getRandomSeedProducts();
-              const validSeedProducts = randomSeeds.filter(p => isValidProductUrl(p.product_url));
+              const validSeedProducts = randomSeeds.filter((p) =>
+                isValidProductUrl(p.product_url)
+              );
               setSeedProducts(validSeedProducts);
             } catch (error) {
               console.error('Failed to load seed products:', error);
@@ -442,14 +522,14 @@ export default function ItemDetection() {
           try {
             const matchedProductIds = new Set(
               Object.values(productsMap)
-                .filter(r => !r.message)
-                .flatMap(r => r.products)
-                .map(p => p.id)
+                .filter((r) => !r.message)
+                .flatMap((r) => r.products)
+                .map((p) => p.id)
             );
 
             const allSeedProducts = await getRandomSeedProducts();
             const uniqueAdditionalProducts = allSeedProducts.filter(
-              p => !matchedProductIds.has(p.id) && isValidProductUrl(p.product_url)
+              (p) => !matchedProductIds.has(p.id) && isValidProductUrl(p.product_url)
             );
 
             setAdditionalProducts(uniqueAdditionalProducts.slice(0, 10));
@@ -486,53 +566,132 @@ export default function ItemDetection() {
     if (items.length > 0) {
       setLoadingProducts(true);
       const productsMap: Record<string, ItemProductResult> = {};
-      
-      for (const item of items) {
-        try {
-          const productsFromCache = await getProductsForItem(item.id);
-          let result: ItemProductResult = { products: productsFromCache, message: null, message_category_context: null };
 
-          if (result.products.length === 0) {
-            const searchResult = await searchProducts(item.id);
-            result = searchResult;
+      if (effectiveCountry === 'CA' && boardId) {
+        // Canada: affiliate first, then fallback to existing search + seeds
+        await matchAffiliateProductsForBoard(boardId);
+
+        for (const item of items) {
+          try {
+            const affiliateProducts = await getAffiliateProductsForItem(item.id);
+            let result: ItemProductResult = {
+              products: [],
+              message: null,
+              message_category_context: null,
+            };
+
+            if (affiliateProducts.length > 0) {
+              result.products = affiliateProducts;
+            } else {
+              const searchResult = await searchProducts(item.id);
+              result = searchResult;
+
+              if (!result.message && result.products.length === 0) {
+                const categorySeeds = await getRandomSeedProducts(
+                  item.item_name,
+                  item.category
+                );
+                result.products = categorySeeds.slice(0, 3);
+              }
+
+              if (!result.message) {
+                result.products = result.products.filter((p) =>
+                  isValidProductUrl(p.product_url)
+                );
+              }
+            }
+
+            productsMap[item.id] = result;
+          } catch (error) {
+            console.error(
+              `[CA] Failed to load products for item ${item.id}:`,
+              error
+            );
+            productsMap[item.id] = {
+              products: [],
+              message: null,
+              message_category_context: null,
+            };
           }
-          
-          if (!result.message && result.products.length === 0) {
-            const categorySeeds = await getRandomSeedProducts(item.item_name, item.category);
-            result.products = categorySeeds.slice(0, 3);
+        }
+      } else {
+        // Existing flow for non-CA markets
+        for (const item of items) {
+          try {
+            const productsFromCache = await getProductsForItem(item.id);
+            let result: ItemProductResult = {
+              products: productsFromCache,
+              message: null,
+              message_category_context: null,
+            };
+
+            if (result.products.length === 0) {
+              const searchResult = await searchProducts(item.id);
+              result = searchResult;
+            }
+
+            if (!result.message && result.products.length === 0) {
+              const categorySeeds = await getRandomSeedProducts(
+                item.item_name,
+                item.category
+              );
+              result.products = categorySeeds.slice(0, 3);
+            }
+
+            if (!result.message) {
+              result.products = result.products.filter((p) =>
+                isValidProductUrl(p.product_url)
+              );
+            }
+
+            productsMap[item.id] = result;
+          } catch (error) {
+            console.error(
+              `Failed to load products for item ${item.id}:`,
+              error
+            );
+            productsMap[item.id] = {
+              products: [],
+              message: null,
+              message_category_context: null,
+            };
           }
-          
-          if (!result.message) {
-            result.products = result.products.filter(p => isValidProductUrl(p.product_url));
-          }
-          
-          productsMap[item.id] = result;
-        } catch (error) {
-          console.error(`Failed to load products for item ${item.id}:`, error);
-          productsMap[item.id] = { products: [], message: null, message_category_context: null };
         }
       }
-      
+
       setProducts(productsMap);
       setLoadingProducts(false);
 
       if (boardId) {
         const numberOfItemsDetected = items.length;
-        const numberOfItemsWithProducts = Object.values(productsMap).filter(r => !r.message && r.products.length > 0).length;
-        const numberOfProductsShown = Object.values(productsMap).filter(r => !r.message).flatMap(r => r.products).length;
+        const numberOfItemsWithProducts = Object.values(productsMap).filter(
+          (r) => !r.message && r.products.length > 0
+        ).length;
+        const numberOfProductsShown = Object.values(productsMap)
+          .filter((r) => !r.message)
+          .flatMap((r) => r.products).length;
 
-      // Track inspiration results viewed after auth
-      trackPageView(EVENTS.INSPIRATION_RESULTS_VIEWED);
-        
-        await logAnalysis(boardId, numberOfItemsDetected, numberOfItemsWithProducts, numberOfProductsShown);
+        // Track inspiration results viewed after auth
+        trackPageView(EVENTS.INSPIRATION_RESULTS_VIEWED);
+
+        await logAnalysis(
+          boardId,
+          numberOfItemsDetected,
+          numberOfItemsWithProducts,
+          numberOfProductsShown
+        );
       }
 
-      const hasItemsWithoutProducts = Object.values(productsMap).some(r => !r.message && r.products.length === 0);
+      const hasItemsWithoutProducts = Object.values(productsMap).some(
+        (r) => !r.message && r.products.length === 0
+      );
       if (hasItemsWithoutProducts) {
         setLoadingSeedProducts(true);
         try {
           const randomSeeds = await getRandomSeedProducts();
-          const validSeedProducts = randomSeeds.filter(p => isValidProductUrl(p.product_url));
+          const validSeedProducts = randomSeeds.filter((p) =>
+            isValidProductUrl(p.product_url)
+          );
           setSeedProducts(validSeedProducts);
         } catch (error) {
           console.error('Failed to load seed products:', error);
@@ -544,14 +703,14 @@ export default function ItemDetection() {
       try {
         const matchedProductIds = new Set(
           Object.values(productsMap)
-            .filter(r => !r.message)
-            .flatMap(r => r.products)
-            .map(p => p.id)
+            .filter((r) => !r.message)
+            .flatMap((r) => r.products)
+            .map((p) => p.id)
         );
 
         const allSeedProducts = await getRandomSeedProducts();
         const uniqueAdditionalProducts = allSeedProducts.filter(
-          p => !matchedProductIds.has(p.id) && isValidProductUrl(p.product_url)
+          (p) => !matchedProductIds.has(p.id) && isValidProductUrl(p.product_url)
         );
 
         setAdditionalProducts(uniqueAdditionalProducts.slice(0, 10));

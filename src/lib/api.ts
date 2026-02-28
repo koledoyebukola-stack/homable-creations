@@ -367,6 +367,63 @@ export async function getProductsForItem(itemId: string): Promise<Product[]> {
   return products;
 }
 
+// Canada: affiliate matches from Rakuten-backed affiliate_products table
+export async function getAffiliateProductsForItem(itemId: string): Promise<Product[]> {
+  const { data, error } = await supabase
+    .from('item_affiliate_matches')
+    .select(`
+      match_score,
+      is_top_pick,
+      affiliate_products (*)
+    `)
+    .eq('detected_item_id', itemId)
+    .order('match_score', { ascending: false });
+
+  if (error) throw error;
+
+  const rows = (data || []) as Array<{
+    match_score: number;
+    is_top_pick: boolean;
+    affiliate_products: any;
+  }>;
+
+  const products: Product[] = rows.map((row) => {
+    const p = row.affiliate_products || {};
+
+    // Map affiliate_products shape into the existing Product type so the UI can reuse cards/budget logic.
+    const price =
+      typeof p.sale_price === 'number' && p.sale_price > 0
+        ? p.sale_price
+        : typeof p.price === 'number'
+        ? p.price
+        : 0;
+
+    return {
+      id: p.id,
+      external_id: p.sku ?? undefined,
+      merchant: p.retailer || 'affiliate',
+      product_name: p.product_name,
+      category: p.category || undefined,
+      price,
+      currency: p.currency || 'CAD',
+      product_url: p.affiliate_url,
+      image_url: p.image_url || undefined,
+      description: p.description || undefined,
+      color: p.color || undefined,
+      materials: undefined,
+      style: undefined,
+      tags: undefined,
+      rating: undefined,
+      review_count: undefined,
+      match_score: row.match_score,
+      is_top_pick: row.is_top_pick,
+      created_at: p.created_at || new Date().toISOString(),
+    };
+  });
+
+  return products;
+}
+
 export async function searchProducts(itemId: string): Promise<SearchResponse> {
   const { data: item, error: itemError } = await supabase
     .from('detected_items')
@@ -400,6 +457,20 @@ export async function searchProducts(itemId: string): Promise<SearchResponse> {
 
   const products = await getProductsForItem(itemId);
   return { products };
+}
+
+// Canada: trigger affiliate matching for all detected items on a board (idempotent)
+export async function matchAffiliateProductsForBoard(boardId: string): Promise<void> {
+  const { error } = await supabase.functions.invoke('app_8574c59127_match_affiliate_products', {
+    body: {
+      board_id: boardId,
+    },
+  });
+
+  if (error) {
+    console.error('Affiliate matching error:', error);
+    // Do not throw — the UI can fall back to existing search buttons.
+  }
 }
 
 export async function getRandomSeedProducts(itemName?: string, itemCategory?: string): Promise<Product[]> {
