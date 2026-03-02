@@ -340,7 +340,7 @@ async function rankWithGpt(
   const prompt = `
 You are helping match a detected decor item from a room photo to affiliate catalog products.
 
-The detected item:
+The detected item (use "tags" for shape/form; "color" is the primary color):
 ${JSON.stringify(itemSummary, null, 2)}
 
 The candidate products (from Ashley and TOV):
@@ -349,16 +349,19 @@ ${JSON.stringify(candidatePayload, null, 2)}
 TASK:
 - Rank the candidates by how well they visually and stylistically match the detected item.
 - Consider, in order of importance:
-  1) SHAPE and structure (L-shaped vs straight sofa; round vs rectangular table; low vs high back, etc.).
-     IMPORTANT: If the detected item is rectangular (e.g. a rectangular coffee table), a ROUND coffee table must NOT
-     rank above a rectangular one unless all rectangular options are clearly terrible matches.
-  2) COLOR accuracy (primary color should be as close as possible).
+
+  1) COLOR ACCURACY (critical). The detected item's primary color is in "color". A product whose color does NOT match (e.g. grey when the item is white, or brown when the item is black) must be heavily penalized. A grey sofa must NOT rank above a white sofa when the detected item is a white sofa. Prefer products that match the stated color; only rank a different color higher if there is no reasonable color match in the list.
+
+  2) SHAPE and structure. Use the detected item's "tags" array for shape and form: e.g. round, rectangular, low, two-seater, L-shaped, upholstered, sectional. If the detected item is rectangular (tags or description mention rectangular), a ROUND coffee table must NOT rank above a rectangular one. If tags say "round", prefer round options. Shape mismatch must strongly reduce the score.
+
   3) STYLE match (e.g. bohemian vs modern vs farmhouse vs glam).
+
   4) MATERIAL where visible (e.g. linen vs leather, wood vs metal vs glass).
 
 SCORING:
 - For each returned product, assign a score from 0 to 10 (10 = excellent visual match, 0 = completely wrong).
 - Use the full 0–10 range; do not exceed 10.
+- Color mismatch should typically reduce score by at least 3–4 points.
 
 OUTPUT:
 - Return a JSON array ONLY, no extra text, no comments:
@@ -367,7 +370,7 @@ OUTPUT:
     ...
   ]
 - The array MUST contain at most 3 entries (top 3 matches).
-- "index" MUST correspond to the "index" of the candidate in the candidateProducts list above.
+- "index" MUST correspond to the "index" of the candidate in the candidate products list above.
 `;
 
   try {

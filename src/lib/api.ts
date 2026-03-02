@@ -415,7 +415,9 @@ export async function getAffiliateProductsForItem(itemId: string): Promise<Produ
       tags: undefined,
       rating: undefined,
       review_count: undefined,
-      match_score: row.match_score,
+      // Affiliate match_score is stored 0–10; normalize to 0–1 so UI percentage (match_score * 100) shows e.g. 80% not 800%
+      match_score:
+        row.match_score != null ? Number(row.match_score) / 10 : undefined,
       is_top_pick: row.is_top_pick,
       created_at: p.created_at || new Date().toISOString(),
     };
