@@ -374,6 +374,7 @@ export async function getAffiliateProductsForItem(itemId: string): Promise<Produ
     .select(`
       match_score,
       is_top_pick,
+      color_accurate,
       affiliate_products (*)
     `)
     .eq('detected_item_id', itemId)
@@ -384,6 +385,7 @@ export async function getAffiliateProductsForItem(itemId: string): Promise<Produ
   const rows = (data || []) as Array<{
     match_score: number;
     is_top_pick: boolean;
+    color_accurate: boolean | null;
     affiliate_products: any;
   }>;
 
@@ -419,6 +421,7 @@ export async function getAffiliateProductsForItem(itemId: string): Promise<Produ
       match_score:
         row.match_score != null ? Number(row.match_score) / 10 : undefined,
       is_top_pick: row.is_top_pick,
+      color_accurate: row.color_accurate ?? true,
       created_at: p.created_at || new Date().toISOString(),
     };
   });

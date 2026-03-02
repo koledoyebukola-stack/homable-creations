@@ -1688,8 +1688,15 @@ export default function ItemDetection() {
                                       </div>
                                     )}
                                     {product.match_score && (
-                                      <div className="absolute top-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                                        {Math.round(product.match_score * 100)}% Match
+                                      <div className="absolute top-4 left-4 flex flex-col gap-1">
+                                        <div className="bg-black/70 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                                          {Math.round(product.match_score * 100)}% Match
+                                        </div>
+                                        {product.color_accurate === false && (
+                                          <span className="text-[10px] text-white/90 bg-black/50 px-2 py-0.5 rounded-full w-fit">
+                                            Closest available match
+                                          </span>
+                                        )}
                                       </div>
                                     )}
                                     {product.is_seed && (

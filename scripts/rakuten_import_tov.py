@@ -98,19 +98,22 @@ def parse_row(values):
     if not raw_url:
         return None
 
+    # Rakuten correct format (Publisher ID from dashboard):
+    # https://click.linksynergy.com/link?id=NkCKklbxWBc&offerid={MID}.{SKU}&type=2&murl={encoded}
     try:
         qs = urllib.parse.parse_qs(urllib.parse.urlparse(raw_url).query)
         murl = qs.get("murl", [""])[0]
         if murl:
+            murl_encoded = urllib.parse.quote(murl, safe="")
             affiliate_url = (
-                f"https://click.linksynergy.com/deeplink"
-                f"?id=4632350&mid={MERCHANT_MID}"
-                f"&murl={urllib.parse.quote(murl, safe='')}"
+                f"https://click.linksynergy.com/link"
+                f"?id=NkCKklbxWBc&offerid={MERCHANT_MID}.{sku}"
+                f"&type=2&murl={murl_encoded}"
             )
         else:
-            affiliate_url = raw_url.replace("<LSN EID>", "4632350")
+            affiliate_url = raw_url.replace("<LSN EID>", "NkCKklbxWBc")
     except Exception:
-        affiliate_url = raw_url.replace("<LSN EID>", "4632350")
+        affiliate_url = raw_url.replace("<LSN EID>", "NkCKklbxWBc")
 
     product_name = values[COL["product_name"]].strip()
     if not product_name:

@@ -81,6 +81,8 @@ export interface Product {
   review_count?: number;
   match_score?: number;
   is_top_pick?: boolean;
+  /** When false (Canada affiliate), UI shows "Closest available match" — color does not closely match detected item */
+  color_accurate?: boolean;
   created_at: string;
 }
 

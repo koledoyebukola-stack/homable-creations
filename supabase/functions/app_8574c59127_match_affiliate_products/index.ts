@@ -294,6 +294,62 @@ function normaliseScore(raw: number): number {
   return Math.min(10, raw);
 }
 
+// Color families for "close enough" matching (e.g. ivory ≈ white)
+const COLOR_FAMILIES: Record<string, string[]> = {
+  white: ['white', 'ivory', 'cream', 'off-white', 'offwhite', 'bone', 'linen'],
+  grey: ['grey', 'gray', 'silver', 'charcoal', 'slate'],
+  black: ['black', 'navy', 'ebony', 'obsidian'],
+  brown: ['brown', 'tan', 'beige', 'taupe', 'espresso', 'walnut', 'mahogany'],
+  blue: ['blue', 'navy', 'teal', 'cobalt'],
+  green: ['green', 'sage', 'olive', 'mint'],
+  red: ['red', 'burgundy', 'maroon', 'wine'],
+  gold: ['gold', 'brass', 'bronze', 'champagne'],
+};
+
+function colorsMatch(itemColor: string | null, productColor: string | null): boolean {
+  const ic = normaliseCategory(itemColor);
+  const pc = (productColor || '').trim().toLowerCase();
+  if (!ic) return true; // No item color to match
+  if (!pc) return false; // Product has no color info
+  if (pc.includes(ic) || ic.includes(pc)) return true;
+  for (const family of Object.values(COLOR_FAMILIES)) {
+    const itemInFamily = family.some((c) => ic.includes(c) || c.includes(ic));
+    const prodInFamily = family.some((c) => pc.includes(c) || c.includes(pc));
+    if (itemInFamily && prodInFamily) return true;
+  }
+  return false;
+}
+
+// Shape hard filter: item tags drive inclusion. If tags say round, only round products.
+// If tags say rectangular/square, exclude round products.
+function filterByShape(
+  item: DetectedItemRow,
+  candidates: AffiliateProductRow[],
+): AffiliateProductRow[] {
+  const tags = (item.tags || []).map((t) => String(t).toLowerCase());
+  const wantsRound = tags.some((t) =>
+    ['round', 'oval', 'circular', 'circle'].some((kw) => t.includes(kw)),
+  );
+  const wantsRectangular = tags.some((t) =>
+    ['rectangular', 'rectangle', 'square'].some((kw) => t.includes(kw)),
+  );
+
+  if (!wantsRound && !wantsRectangular) return candidates;
+
+  const productText = (p: AffiliateProductRow) =>
+    [p.product_name, p.description, p.subcategory].filter(Boolean).join(' ').toLowerCase();
+  const isRound = (p: AffiliateProductRow) =>
+    ['round', 'oval', 'circular', 'circle'].some((kw) => productText(p).includes(kw));
+
+  if (wantsRound) {
+    return candidates.filter((p) => isRound(p));
+  }
+  if (wantsRectangular) {
+    return candidates.filter((p) => !isRound(p));
+  }
+  return candidates;
+}
+
 type GptRankingEntry = {
   index: number;
   score: number;
@@ -523,6 +579,7 @@ Deno.serve(async (req) => {
       match_score: number;
       is_top_pick: boolean;
       rank: number;
+      color_accurate: boolean;
     }[] = [];
 
     // Process each detected item independently
@@ -563,7 +620,8 @@ Deno.serve(async (req) => {
         .eq('category', target.category)
         .eq('subcategory', target.subcategory)
         .eq('availability', 'in stock')
-        .limit(20);
+        .in('retailer', ['ashley', 'tov'])
+        .limit(50);
 
       if (candidatesError) {
         console.error(
@@ -580,7 +638,16 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const candidateRows = candidates as AffiliateProductRow[];
+      let candidateRows = candidates as AffiliateProductRow[];
+
+      // Shape hard filter: tags drive inclusion (round vs rectangular)
+      candidateRows = filterByShape(rawItem, candidateRows);
+      if (candidateRows.length === 0) {
+        console.log(
+          `[${requestId}] No candidates pass shape filter for item ${rawItem.id} (tags: ${JSON.stringify(rawItem.tags)})`,
+        );
+        continue;
+      }
 
       // Stage 2: GPT re-ranking
       const gptRanking = await rankWithGpt(requestId, rawItem, candidateRows);
@@ -589,12 +656,14 @@ Deno.serve(async (req) => {
         gptRanking.forEach((entry, index) => {
           const product = candidateRows[entry.index];
           if (!product) return;
+          const colorAccurate = colorsMatch(rawItem.dominant_color, product.color);
           allMatches.push({
             detected_item_id: rawItem.id,
             affiliate_product_id: product.id,
             match_score: normaliseScore(entry.score),
             is_top_pick: index === 0,
             rank: index + 1,
+            color_accurate: colorAccurate,
           });
         });
         console.log(
@@ -623,12 +692,14 @@ Deno.serve(async (req) => {
         }
 
         scored.forEach((entry, index) => {
+          const colorAccurate = colorsMatch(rawItem.dominant_color, entry.product.color);
           allMatches.push({
             detected_item_id: rawItem.id,
             affiliate_product_id: entry.product.id,
             match_score: entry.score,
             is_top_pick: index === 0,
             rank: index + 1,
+            color_accurate: colorAccurate,
           });
         });
 
