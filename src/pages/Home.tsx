@@ -88,6 +88,10 @@ const HERO_DESCRIPTION_DEFAULT =
 // TEMP: Hidden for Nigerian launch - re-enable once supply is sufficient (50+ vendors). Set to true to show "Upload Your Inspiration" for Nigeria.
 const SHOW_UPLOAD_INSPIRATION_FOR_NIGERIA = false;
 
+function formatCad(value: number): string {
+  return `C$${Number(value).toLocaleString('en-CA')}`;
+}
+
 export default function Home() {
   const navigate = useNavigate();
   const [carouselSlide, setCarouselSlide] = useState(0);
@@ -396,35 +400,49 @@ export default function Home() {
               </p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                {exploreScenes.map((scene) => (
-                  <button
-                    key={scene.id}
-                    type="button"
-                    onClick={() => navigate(`/explore/${scene.slug}`)}
-                    className="group text-left bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow border border-[#e5e5e5] flex flex-col"
-                  >
-                    <div className="aspect-[4/3] w-full bg-gray-100 relative overflow-hidden">
-                      <img
-                        src={
-                          scene.hero_image_url ||
-                          'https://placehold.co/800x600/f5f5f5/999?text=Room'
-                        }
-                        alt={scene.title}
-                        className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
-                    <div className="px-3 pt-3 pb-4">
-                      <h3 className="text-base md:text-lg font-semibold text-[#111111] leading-snug line-clamp-2 mb-1.5">
-                        {scene.title}
-                      </h3>
-                      {scene.description && (
-                        <p className="text-sm text-[#666666] line-clamp-2 mb-2">
-                          {scene.description}
-                        </p>
-                      )}
-                    </div>
-                  </button>
-                ))}
+                {exploreScenes.map((scene) => {
+                  const catalogBudget = Number(scene.catalog_budget_ngn) || 0;
+                  const minimumItemPrice = Number(scene.minimum_item_price_ngn) || 0;
+                  return (
+                    <button
+                      key={scene.id}
+                      type="button"
+                      onClick={() => navigate(`/explore/${scene.slug}`)}
+                      className="group text-left bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow border border-[#e5e5e5] flex flex-col"
+                    >
+                      <div className="aspect-[4/3] w-full bg-gray-100 relative overflow-hidden">
+                        <img
+                          src={
+                            scene.hero_image_url ||
+                            'https://placehold.co/800x600/f5f5f5/999?text=Room'
+                          }
+                          alt={scene.title}
+                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                      <div className="px-3 pt-3 pb-4">
+                        <h3 className="text-base md:text-lg font-semibold text-[#111111] leading-snug line-clamp-2 mb-1">
+                          {scene.title}
+                        </h3>
+                        {scene.description && (
+                          <p className="text-sm text-[#666666] line-clamp-2 mb-2">
+                            {scene.description}
+                          </p>
+                        )}
+                        {minimumItemPrice > 0 && (
+                          <p className="text-sm font-semibold text-[#111111]">
+                            Items from {formatCad(minimumItemPrice)}
+                          </p>
+                        )}
+                        {catalogBudget > 0 && (
+                          <p className="text-xs text-gray-500">
+                            Complete room from {formatCad(catalogBudget)}
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

@@ -2039,6 +2039,34 @@ export async function getExploreScenes(
   if (sceneList.length === 0) return sceneList;
 
   const sceneIds = sceneList.map((s) => s.id);
+
+  // Canada: compute budgets from external_price_cad on explore_scene_items
+  if (location === 'CA') {
+    const { data: caItems } = await supabase
+      .from('explore_scene_items')
+      .select('scene_id, external_price_cad')
+      .in('scene_id', sceneIds)
+      .gt('external_price_cad', 0);
+
+    const pricesByScene: Record<string, number[]> = {};
+    for (const row of (caItems || []) as { scene_id: string; external_price_cad: number }[]) {
+      if (!pricesByScene[row.scene_id]) pricesByScene[row.scene_id] = [];
+      pricesByScene[row.scene_id].push(Number(row.external_price_cad));
+    }
+
+    return sceneList.map((s) => {
+      const prices = pricesByScene[s.id] || [];
+      const total = prices.reduce((sum, v) => sum + v, 0);
+      const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+      return {
+        ...s,
+        catalog_budget_ngn: total,            // reused field: holds CAD total for CA
+        minimum_item_price_ngn: minPrice,     // reused field: holds CAD minimum for CA
+      };
+    });
+  }
+
+  // Nigeria + other locations: compute budgets from vendor_products as before
   const { data: sceneItems } = await supabase
     .from('explore_scene_items')
     .select('scene_id, vendor_product_id')

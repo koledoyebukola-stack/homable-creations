@@ -19,6 +19,10 @@ function formatNgn(value: number): string {
   return `₦${Number(value).toLocaleString('en-NG')}`;
 }
 
+function formatCad(value: number): string {
+  return `C$${Number(value).toLocaleString('en-CA')}`;
+}
+
 function formatVendorPrice(p: VendorProduct): string {
   if (p.price_min != null && p.price_max != null && p.price_min !== p.price_max) {
     return `${formatNgn(p.price_min)} – ${formatNgn(p.price_max)}`;
@@ -289,6 +293,17 @@ export default function ExploreScenePage() {
     (i) => !i.vendor_product && !!i.external_product_url,
   );
 
+  const isCanadaScene = scene.location === 'CA';
+  const isNigeriaScene = scene.location === 'NG';
+
+  const canadianPricedItems = externalItems.filter(
+    (i) => typeof i.external_price_cad === 'number' && (i.external_price_cad ?? 0) > 0,
+  );
+  const canadianTotalCad = canadianPricedItems.reduce(
+    (sum, i) => sum + (i.external_price_cad ?? 0),
+    0,
+  );
+
   /** Split catalog items by vendor_type for "Available on Homable": Furniture (carpenter) first, Decorative Items (decor_store) second. */
   const furnitureItems = catalogItems.filter((i) => i.storefront?.vendor_type !== 'decor_store');
   const decorativeItems = catalogItems.filter((i) => i.storefront?.vendor_type === 'decor_store');
@@ -365,42 +380,71 @@ export default function ExploreScenePage() {
             Shop This Look
           </h2>
           <p className="text-lg text-gray-600 max-w-xl mx-auto">
-            Everything in this room can be recreated with verified Nigerian vendors
+            {isCanadaScene
+              ? 'Hand-picked products from trusted Canadian retailers, curated for your space.'
+              : 'Everything in this room can be recreated with verified Nigerian vendors'}
           </p>
         </div>
 
-        {/* Items available on Homable — line list + total (no custom/decor breakdown) */}
-        <section className="mb-10 p-6 rounded-2xl bg-white border border-[#e5e5e5] shadow-sm">
-          <h3 className="text-base font-semibold text-[#111111] mb-1">Items available on Homable</h3>
-          <p className="text-sm text-[#666666] mb-4">Prices below; click any item to view and contact the vendor.</p>
-          {catalogItems.length > 0 ? (
-            <>
-              <ul className="space-y-2 text-[#333333]">
-                {catalogItems.map((item) => {
-                  const product = item.vendor_product;
-                  if (!product) return null;
-                  return (
-                    <li key={item.id} className="flex justify-between items-baseline gap-3">
-                      <span className="text-[#111111] truncate">{product.name}</span>
-                      <span className="font-medium text-[#111111] flex-shrink-0">
-                        {formatVendorPrice(product)}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-              <div className="flex justify-between items-baseline pt-3 mt-3 border-t border-[#e5e5e5]">
-                <span className="font-semibold text-[#111111]">Total</span>
-                <span className="font-semibold text-[#111111]">{formatNgn(catalogBudget)}</span>
-              </div>
-            </>
-          ) : (
-            <p className="text-[#666666] text-sm">No catalog items in this room yet.</p>
-          )}
-        </section>
+        {/* Budget summary: Nigeria uses NGN vendor products; Canada uses external CAD prices */}
+        {!isCanadaScene && (
+          <section className="mb-10 p-6 rounded-2xl bg-white border border-[#e5e5e5] shadow-sm">
+            <h3 className="text-base font-semibold text-[#111111] mb-1">Items available on Homable</h3>
+            <p className="text-sm text-[#666666] mb-4">Prices below; click any item to view and contact the vendor.</p>
+            {catalogItems.length > 0 ? (
+              <>
+                <ul className="space-y-2 text-[#333333]">
+                  {catalogItems.map((item) => {
+                    const product = item.vendor_product;
+                    if (!product) return null;
+                    return (
+                      <li key={item.id} className="flex justify-between items-baseline gap-3">
+                        <span className="text-[#111111] truncate">{product.name}</span>
+                        <span className="font-medium text-[#111111] flex-shrink-0">
+                          {formatVendorPrice(product)}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <div className="flex justify-between items-baseline pt-3 mt-3 border-t border-[#e5e5e5]">
+                  <span className="font-semibold text-[#111111]">Total</span>
+                  <span className="font-semibold text-[#111111]">{formatNgn(catalogBudget)}</span>
+                </div>
+              </>
+            ) : (
+              <p className="text-[#666666] text-sm">No catalog items in this room yet.</p>
+            )}
+          </section>
+        )}
+
+        {isCanadaScene && canadianPricedItems.length > 0 && (
+          <section className="mb-10 p-6 rounded-2xl bg-white border border-[#e5e5e5] shadow-sm">
+            <h3 className="text-base font-semibold text-[#111111] mb-1">Items available to shop</h3>
+            <p className="text-sm text-[#666666] mb-4">
+              Prices below; click any item to view it on the retailer&apos;s site.
+            </p>
+            <ul className="space-y-2 text-[#333333]">
+              {canadianPricedItems.map((item) => (
+                <li key={item.id} className="flex justify-between items-baseline gap-3">
+                  <span className="text-[#111111] truncate">{item.name}</span>
+                  <span className="font-medium text-[#111111] flex-shrink-0">
+                    {formatCad(item.external_price_cad ?? 0)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex justify-between items-baseline pt-3 mt-3 border-t border-[#e5e5e5]">
+              <span className="font-semibold text-[#111111]">Total</span>
+              <span className="font-semibold text-[#111111]">
+                {formatCad(canadianTotalCad)}
+              </span>
+            </div>
+          </section>
+        )}
 
         {/* Section A: Available on Homable — grouped by vendor_type: Furniture (carpenter) then Decorative Items (decor_store) */}
-        {catalogItems.length > 0 && (
+        {!isCanadaScene && catalogItems.length > 0 && (
           <section className="mb-10">
             <h3 className="text-lg font-semibold text-[#111111] mb-4 flex items-center gap-2">
               <ShoppingBag className="w-5 h-5" />
@@ -552,7 +596,7 @@ export default function ExploreScenePage() {
         )}
 
         {/* Section A2: Canadian Explore — external retailer cards (Wayfair, Ashley, TOV, etc.) */}
-        {externalItems.length > 0 && (
+        {isCanadaScene && externalItems.length > 0 && (
           <section className="mb-10">
             <h3 className="text-lg font-semibold text-[#111111] mb-4 flex items-center gap-2">
               <ShoppingBag className="w-5 h-5" />
@@ -697,8 +741,8 @@ export default function ExploreScenePage() {
           </section>
         )}
 
-        {/* Complete This Look with Artwork — only when scene has no artwork items */}
-        {!hasArtworkInScene && randomArtworkProducts.length > 0 && (
+        {/* Complete This Look with Artwork — only when scene has no artwork items (Nigeria only) */}
+        {!isCanadaScene && !hasArtworkInScene && randomArtworkProducts.length > 0 && (
           <section className="mb-10">
             <h2 className="text-xl font-semibold text-[#111111] mb-2">Complete This Look with Artwork</h2>
             <p className="text-sm text-gray-600 mb-1">Choose from our curated collection</p>
