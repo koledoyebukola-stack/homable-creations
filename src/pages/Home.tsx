@@ -80,6 +80,8 @@ const HERO_CAROUSEL_IMAGES = [
 
 const HERO_DESCRIPTION_NG =
   'Turn decor inspiration into a clear plan. Explore curated styles to get an instant shopping list, and invite friends and family to help finish the room.';
+const HERO_DESCRIPTION_CA =
+  "Upload any room photo and we'll identify every piece in it. Each item is matched to real products from trusted Canadian retailers so you see exactly what the room costs and can shop it all in one place.";
 const HERO_DESCRIPTION_DEFAULT =
   'Turn decor inspiration into a clear plan. Upload a room photo to get an instant shopping list, explore curated styles, visualize your space in 3D, and invite friends and family to help finish the room.';
 
@@ -169,7 +171,11 @@ export default function Home() {
               {country === 'NG' ? 'From inspiration to execution. Built for Nigeria.' : 'From inspiration to execution'}
             </h1>
             <p className="text-lg md:text-xl text-[#555555] text-center md:text-left mb-10">
-              {country === 'NG' ? HERO_DESCRIPTION_NG : HERO_DESCRIPTION_DEFAULT}
+              {country === 'NG'
+                ? HERO_DESCRIPTION_NG
+                : country === 'CA'
+                ? HERO_DESCRIPTION_CA
+                : HERO_DESCRIPTION_DEFAULT}
             </p>
 
             {/* CTAs: Nigeria = Explore only (upload hidden for launch); rest = Upload primary, Explore secondary */}
@@ -397,11 +403,17 @@ export default function Home() {
                   <span className="text-2xl font-bold text-white">3</span>
                 </div>
                 <h3 className="text-xl font-semibold text-[#111111]">
-                  {country === 'NG' ? 'Shop and Track Progress' : 'Shop and Track Your List'}
+                  {country === 'NG'
+                    ? 'Shop and Track Progress'
+                    : country === 'CA'
+                    ? 'Shop Real Products'
+                    : 'Shop and Track Your List'}
                 </h3>
                 <p className="text-[#555555]">
                   {country === 'NG'
                     ? 'Create your shopping list, monitor your budget, and invite others to help you complete the space.'
+                    : country === 'CA'
+                    ? 'We match every detected item to real products from trusted retailers with live prices and direct buy links, so you can shop your whole room without hunting across sites.'
                     : 'Use the item names to search for products online and save them as a checklist so you can plan, shop, and decorate at your own pace.'}
                 </p>
               </div>

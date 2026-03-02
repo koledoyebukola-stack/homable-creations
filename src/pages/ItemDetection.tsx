@@ -1301,6 +1301,22 @@ export default function ItemDetection() {
                     ? (showInternationalStores[item.id] || false)
                     : showWesternRetailers;
 
+                  // Canada affiliate flow: show one large top pick card + two smaller secondary cards (always visible)
+                  const isCanadaAffiliate =
+                    effectiveCountry === 'CA' &&
+                    itemProducts.length > 0 &&
+                    itemProducts.some((p) => p.is_top_pick != null || p.match_score != null);
+
+                  const topPick =
+                    isCanadaAffiliate && itemProducts.length > 0
+                      ? itemProducts.find((p) => p.is_top_pick) ?? itemProducts[0]
+                      : null;
+
+                  const similarProducts =
+                    isCanadaAffiliate && topPick
+                      ? itemProducts.filter((p) => p.id !== topPick.id).slice(0, 2)
+                      : [];
+
                   return (
                     <div 
                       key={item.id}
@@ -1667,87 +1683,225 @@ export default function ItemDetection() {
 
                         {(!isNigeria || !isBuildableFurniture(item)) && itemProducts.length > 0 && (
                           <>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                              {itemProducts.map((product) => (
-                                <Card
-                                  key={product.id}
-                                  className={`overflow-hidden rounded-3xl border-0 shadow-lg hover:shadow-xl transition-all ${
-                                    product.is_top_pick ? 'ring-2 ring-[#C89F7A]' : ''
-                                  }`}
-                                >
-                                  <div className="relative aspect-square overflow-hidden bg-gray-100">
-                                    <img
-                                      src={product.image_url}
-                                      alt={product.product_name}
-                                      className="w-full h-full object-cover"
-                                    />
-                                    {product.is_top_pick && (
-                                      <div className="absolute top-4 right-4 bg-[#C89F7A] text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-                                        <Star className="h-3 w-3 fill-white" />
-                                        Top Pick
-                                      </div>
-                                    )}
-                                    {product.match_score && (
-                                      <div className="absolute top-4 left-4 flex flex-col gap-1">
-                                        <div className="bg-black/70 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                                          {Math.round(product.match_score * 100)}% Match
+                            {isCanadaAffiliate ? (
+                              <>
+                                {topPick && (
+                                  <Card
+                                    key={topPick.id}
+                                    className={`overflow-hidden rounded-3xl border-0 shadow-lg hover:shadow-xl transition-all ${
+                                      topPick.is_top_pick ? 'ring-2 ring-[#C89F7A]' : ''
+                                    }`}
+                                  >
+                                    <div className="relative aspect-square overflow-hidden bg-gray-100">
+                                      <img
+                                        src={topPick.image_url}
+                                        alt={topPick.product_name}
+                                        className="w-full h-full object-cover"
+                                      />
+                                      {topPick.is_top_pick && (
+                                        <div className="absolute top-4 right-4 bg-[#C89F7A] text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                                          <Star className="h-3 w-3 fill-white" />
+                                          Top Pick
                                         </div>
-                                        {product.color_accurate === false && (
-                                          <span className="text-[10px] text-white/90 bg-black/50 px-2 py-0.5 rounded-full w-fit">
-                                            Closest available match
-                                          </span>
-                                        )}
-                                      </div>
-                                    )}
-                                    {product.is_seed && (
-                                      <div className="absolute bottom-4 left-4 bg-white/90 text-[#555555] px-3 py-1 rounded-full text-xs font-medium">
-                                        Similar to your inspiration
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  <CardContent className="p-4 md:p-6 space-y-3 md:space-y-4">
-                                    <h3 className="text-base md:text-lg font-semibold text-[#111111] line-clamp-2">
-                                      {product.product_name}
-                                    </h3>
-
-                                    {product.description && (
-                                      <p className="text-xs md:text-sm text-[#555555] line-clamp-2">
-                                        {product.description}
-                                      </p>
-                                    )}
-
-                                    <div className="flex items-center justify-between">
-                                      <Badge variant="outline" className="text-xs text-[#555555]">
-                                        {product.merchant}
-                                      </Badge>
-                                      <span className="text-xl md:text-2xl font-bold text-[#111111]">
-                                        ${product.price}
-                                      </span>
+                                      )}
+                                      {topPick.match_score && (
+                                        <div className="absolute top-4 left-4 flex flex-col gap-1">
+                                          <div className="bg-black/70 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                                            {Math.round(topPick.match_score * 100)}% Match
+                                          </div>
+                                          {topPick.color_accurate === false && (
+                                            <span className="text-[10px] text-white/90 bg-black/50 px-2 py-0.5 rounded-full w-fit">
+                                              Closest available match
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                      {topPick.is_seed && (
+                                        <div className="absolute bottom-4 left-4 bg-white/90 text-[#555555] px-3 py-1 rounded-full text-xs font-medium">
+                                          Similar to your inspiration
+                                        </div>
+                                      )}
                                     </div>
 
-                                    {product.rating && (
-                                      <div className="flex items-center gap-2 text-xs md:text-sm text-[#555555]">
-                                        <span className="flex items-center">
-                                          ⭐ {product.rating}
-                                        </span>
-                                        {product.review_count && (
-                                          <span>({product.review_count} reviews)</span>
-                                        )}
-                                      </div>
-                                    )}
+                                    <CardContent className="p-4 md:p-6 space-y-3 md:space-y-4">
+                                      <h3 className="text-base md:text-lg font-semibold text-[#111111] line-clamp-2">
+                                        {topPick.product_name}
+                                      </h3>
 
-                                    <Button
-                                      className="w-full bg-[#111111] hover:bg-[#333333] text-white rounded-full text-sm md:text-base"
-                                      onClick={() => window.open(product.product_url, '_blank')}
-                                    >
-                                      View Product
-                                      <ExternalLink className="ml-2 h-3 w-3 md:h-4 md:w-4" />
-                                    </Button>
-                                  </CardContent>
-                                </Card>
-                              ))}
-                            </div>
+                                      {topPick.description && (
+                                        <p className="text-xs md:text-sm text-[#555555] line-clamp-2">
+                                          {topPick.description}
+                                        </p>
+                                      )}
+
+                                      <div className="flex items-center justify-between">
+                                        <Badge variant="outline" className="text-xs text-[#555555]">
+                                          {topPick.merchant}
+                                        </Badge>
+                                        <span className="text-xl md:text-2xl font-bold text-[#111111]">
+                                          ${topPick.price}
+                                        </span>
+                                      </div>
+
+                                      {topPick.rating && (
+                                        <div className="flex items-center gap-2 text-xs md:text-sm text-[#555555]">
+                                          <span className="flex items-center">
+                                            ⭐ {topPick.rating}
+                                          </span>
+                                          {topPick.review_count && (
+                                            <span>({topPick.review_count} reviews)</span>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      <Button
+                                        className="w-full bg-[#111111] hover:bg-[#333333] text-white rounded-full text-sm md:text-base"
+                                        onClick={() => window.open(topPick.product_url, '_blank')}
+                                      >
+                                        View Product
+                                        <ExternalLink className="ml-2 h-3 w-3 md:h-4 md:w-4" />
+                                      </Button>
+                                    </CardContent>
+                                  </Card>
+                                )}
+
+                                {similarProducts.length > 0 && (
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 mt-4">
+                                    {similarProducts.map((product) => (
+                                      <Card
+                                        key={product.id}
+                                        className="overflow-hidden rounded-2xl border border-gray-200 shadow-md hover:shadow-lg transition-all"
+                                      >
+                                        <div className="relative aspect-square overflow-hidden bg-gray-100">
+                                          <img
+                                            src={product.image_url}
+                                            alt={product.product_name}
+                                            className="w-full h-full object-cover"
+                                          />
+                                          {product.match_score && (
+                                            <div className="absolute top-3 left-3 flex flex-col gap-1">
+                                              <div className="bg-black/70 text-white px-2.5 py-1 rounded-full text-[11px] font-semibold">
+                                                {Math.round(product.match_score * 100)}% Match
+                                              </div>
+                                              {product.color_accurate === false && (
+                                                <span className="text-[9px] text-white/90 bg-black/50 px-2 py-0.5 rounded-full w-fit">
+                                                  Closest available match
+                                                </span>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        <CardContent className="p-3 md:p-4 space-y-2 md:space-y-3">
+                                          <h3 className="text-sm md:text-base font-semibold text-[#111111] line-clamp-2">
+                                            {product.product_name}
+                                          </h3>
+
+                                          <div className="flex items-center justify-between">
+                                            <Badge variant="outline" className="text-[11px] text-[#555555]">
+                                              {product.merchant}
+                                            </Badge>
+                                            <span className="text-lg md:text-xl font-bold text-[#111111]">
+                                              ${product.price}
+                                            </span>
+                                          </div>
+
+                                          <Button
+                                            className="w-full bg-[#111111] hover:bg-[#333333] text-white rounded-full text-xs md:text-sm"
+                                            onClick={() => window.open(product.product_url, '_blank')}
+                                          >
+                                            View Product
+                                            <ExternalLink className="ml-2 h-3 w-3 md:h-4 md:w-4" />
+                                          </Button>
+                                        </CardContent>
+                                      </Card>
+                                    ))}
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                                {itemProducts.map((product) => (
+                                  <Card
+                                    key={product.id}
+                                    className={`overflow-hidden rounded-3xl border-0 shadow-lg hover:shadow-xl transition-all ${
+                                      product.is_top_pick ? 'ring-2 ring-[#C89F7A]' : ''
+                                    }`}
+                                  >
+                                    <div className="relative aspect-square overflow-hidden bg-gray-100">
+                                      <img
+                                        src={product.image_url}
+                                        alt={product.product_name}
+                                        className="w-full h-full object-cover"
+                                      />
+                                      {product.is_top_pick && (
+                                        <div className="absolute top-4 right-4 bg-[#C89F7A] text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                                          <Star className="h-3 w-3 fill-white" />
+                                          Top Pick
+                                        </div>
+                                      )}
+                                      {product.match_score && (
+                                        <div className="absolute top-4 left-4 flex flex-col gap-1">
+                                          <div className="bg-black/70 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                                            {Math.round(product.match_score * 100)}% Match
+                                          </div>
+                                          {product.color_accurate === false && (
+                                            <span className="text-[10px] text-white/90 bg-black/50 px-2 py-0.5 rounded-full w-fit">
+                                              Closest available match
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                      {product.is_seed && (
+                                        <div className="absolute bottom-4 left-4 bg-white/90 text-[#555555] px-3 py-1 rounded-full text-xs font-medium">
+                                          Similar to your inspiration
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    <CardContent className="p-4 md:p-6 space-y-3 md:space-y-4">
+                                      <h3 className="text-base md:text-lg font-semibold text-[#111111] line-clamp-2">
+                                        {product.product_name}
+                                      </h3>
+
+                                      {product.description && (
+                                        <p className="text-xs md:text-sm text-[#555555] line-clamp-2">
+                                          {product.description}
+                                        </p>
+                                      )}
+
+                                      <div className="flex items-center justify-between">
+                                        <Badge variant="outline" className="text-xs text-[#555555]">
+                                          {product.merchant}
+                                        </Badge>
+                                        <span className="text-xl md:text-2xl font-bold text-[#111111]">
+                                          ${product.price}
+                                        </span>
+                                      </div>
+
+                                      {product.rating && (
+                                        <div className="flex items-center gap-2 text-xs md:text-sm text-[#555555]">
+                                          <span className="flex items-center">
+                                            ⭐ {product.rating}
+                                          </span>
+                                          {product.review_count && (
+                                            <span>({product.review_count} reviews)</span>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      <Button
+                                        className="w-full bg-[#111111] hover:bg-[#333333] text-white rounded-full text-sm md:text-base"
+                                        onClick={() => window.open(product.product_url, '_blank')}
+                                      >
+                                        View Product
+                                        <ExternalLink className="ml-2 h-3 w-3 md:h-4 md:w-4" />
+                                      </Button>
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                              </div>
+                            )}
                             
                             <div className="text-center pt-4 space-y-3">
                               <p className="text-sm text-[#555555] mb-2">
