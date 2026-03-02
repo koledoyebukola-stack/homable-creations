@@ -244,6 +244,16 @@ export interface ExploreSceneItem {
   /** Optional Instagram handle for styling/decor items (e.g. '@plant_home.ng') */
   instagram_handle?: string | null;
   external_link: string | null;
+  /** External product URL for curated Canadian Explore items (e.g. Wayfair, Ashley, TOV) */
+  external_product_url?: string | null;
+  /** External image URL hosted by the retailer */
+  external_image_url?: string | null;
+  /** Price in CAD for Canadian Explore scenes */
+  external_price_cad?: number | null;
+  /** Display name of the external retailer (Wayfair, Ashley, TOV, etc.) */
+  external_retailer_name?: string | null;
+  /** When false, item is currently unavailable; UI should show muted card + "Find similar" */
+  external_available?: boolean | null;
   created_at: string;
   updated_at: string;
 }

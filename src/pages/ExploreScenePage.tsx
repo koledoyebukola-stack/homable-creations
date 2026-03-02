@@ -284,6 +284,11 @@ export default function ExploreScenePage() {
   const customBuildItems = items.filter((i) => i.item_type === 'custom_build');
   const decorItems = items.filter((i) => i.item_type === 'instagram_link');
 
+  // Canadian Explore: external retailer items (Wayfair, Ashley, TOV, etc.)
+  const externalItems = items.filter(
+    (i) => !i.vendor_product && !!i.external_product_url,
+  );
+
   /** Split catalog items by vendor_type for "Available on Homable": Furniture (carpenter) first, Decorative Items (decor_store) second. */
   const furnitureItems = catalogItems.filter((i) => i.storefront?.vendor_type !== 'decor_store');
   const decorativeItems = catalogItems.filter((i) => i.storefront?.vendor_type === 'decor_store');
@@ -543,6 +548,118 @@ export default function ExploreScenePage() {
                 </div>
               </div>
             )}
+          </section>
+        )}
+
+        {/* Section A2: Canadian Explore — external retailer cards (Wayfair, Ashley, TOV, etc.) */}
+        {externalItems.length > 0 && (
+          <section className="mb-10">
+            <h3 className="text-lg font-semibold text-[#111111] mb-4 flex items-center gap-2">
+              <ShoppingBag className="w-5 h-5" />
+              Shop This Look
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+              {externalItems.map((item) => {
+                const retailer = item.external_retailer_name || 'Retailer';
+                const price =
+                  typeof item.external_price_cad === 'number'
+                    ? `C$${item.external_price_cad.toLocaleString('en-CA')}`
+                    : null;
+                const isUnavailable = item.external_available === false;
+                const productUrl = item.external_product_url || undefined;
+
+                // Build retailer search URL for "Find similar" when unavailable.
+                const searchQuery = item.name || '';
+                const encodedQuery = encodeURIComponent(searchQuery);
+                let findSimilarUrl: string | undefined;
+                const retailerLower = retailer.toLowerCase();
+                if (retailerLower.includes('wayfair')) {
+                  findSimilarUrl = `https://www.wayfair.ca/keyword.php?keyword=${encodedQuery}`;
+                } else if (retailerLower.includes('ashley')) {
+                  findSimilarUrl = `https://ashleyhomestore.ca/search?q=${encodedQuery}`;
+                } else if (retailerLower.includes('tov')) {
+                  findSimilarUrl = `https://tovfurniture.com/search?q=${encodedQuery}`;
+                }
+
+                return (
+                  <div
+                    key={item.id}
+                    className={`group bg-white rounded-2xl overflow-hidden border flex flex-col ${
+                      isUnavailable
+                        ? 'border-gray-300 bg-gray-50 opacity-90'
+                        : 'border-[#e5e5e5] shadow-sm hover:shadow-lg transition-shadow'
+                    }`}
+                  >
+                    <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
+                      {item.external_image_url ? (
+                        <img
+                          src={item.external_image_url}
+                          alt={item.name}
+                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[#999] text-sm">
+                          No image
+                        </div>
+                      )}
+                      <div className="absolute top-2 left-2 space-y-1">
+                        <span className="inline-block bg-gray-900 text-white text-[10px] font-medium border-0 shadow-sm px-2 py-1 rounded-full">
+                          Sold by {retailer}
+                        </span>
+                        {isUnavailable && (
+                          <span className="inline-block bg-red-600 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                            Currently unavailable
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="px-2.5 pt-2.5 pb-3 md:px-3 md:pt-3 flex-1 flex flex-col">
+                      <h3 className="text-[13px] md:text-sm font-semibold text-gray-900 leading-snug line-clamp-2 mb-1">
+                        {item.name}
+                      </h3>
+                      {price && (
+                        <p className="text-xs text-gray-600 mb-2">{price}</p>
+                      )}
+
+                      <div className="mt-auto">
+                        {isUnavailable ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full rounded-lg text-xs"
+                            disabled={!findSimilarUrl}
+                            onClick={() => {
+                              if (findSimilarUrl) {
+                                window.open(findSimilarUrl, '_blank', 'noopener,noreferrer');
+                              }
+                            }}
+                          >
+                            {findSimilarUrl
+                              ? `Find similar on ${retailer}`
+                              : 'Currently unavailable'}
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            className="w-full rounded-lg bg-[#111111] hover:bg-[#333] text-white border-0 text-xs"
+                            disabled={!productUrl}
+                            onClick={() => {
+                              if (productUrl) {
+                                window.open(productUrl, '_blank', 'noopener,noreferrer');
+                              }
+                            }}
+                          >
+                            View on {retailer}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </section>
         )}
 
