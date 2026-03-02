@@ -94,21 +94,24 @@ def parse_row(values):
     if not sku:
         return None
 
+    # Feed column 0 is the product ID used in offerid (required for valid links)
+    feed_product_id = values[0].strip() if values else ""
+
     raw_url = values[COL["affiliate_url"]].strip()
     if not raw_url:
         return None
 
-    # Rakuten correct format (Publisher ID from dashboard):
-    # https://click.linksynergy.com/link?id=NkCKklbxWBc&offerid={MID}.{SKU}&type=2&murl={encoded}
+    # Rakuten format from feed: offerid=<LSN OID>.<feed_product_id>&type=15
+    # Use feed_product_id (col 0), NOT sku; type=15 matches the feed
     try:
         qs = urllib.parse.parse_qs(urllib.parse.urlparse(raw_url).query)
         murl = qs.get("murl", [""])[0]
-        if murl:
+        if murl and feed_product_id:
             murl_encoded = urllib.parse.quote(murl, safe="")
             affiliate_url = (
                 f"https://click.linksynergy.com/link"
-                f"?id=NkCKklbxWBc&offerid={MERCHANT_MID}.{sku}"
-                f"&type=2&murl={murl_encoded}"
+                f"?id=NkCKklbxWBc&offerid={MERCHANT_MID}.{feed_product_id}"
+                f"&type=15&murl={murl_encoded}"
             )
         else:
             affiliate_url = raw_url.replace("<LSN EID>", "NkCKklbxWBc")
@@ -120,8 +123,9 @@ def parse_row(values):
         return None
 
     return {
-        "sku":           sku,
-        "product_name":  product_name,
+        "sku":             sku,
+        "feed_product_id": feed_product_id or None,
+        "product_name":    product_name,
         "category":      values[COL["category"]].strip() or None,
         "subcategory":   values[COL["subcategory"]].strip() or None,
         "affiliate_url": affiliate_url,

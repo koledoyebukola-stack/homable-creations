@@ -2,17 +2,20 @@
 Fix affiliate URLs in affiliate_products table.
 ----------------------------------------------
 Rakuten correct format (Publisher ID: NkCKklbxWBc):
-  https://click.linksynergy.com/link?id=NkCKklbxWBc&offerid={MID}.{SKU}&type=2&murl={encoded_product_url}
-  Ashley: offerid = 47134.{SKU}
-  TOV:    offerid = 53375.{SKU}
+  https://click.linksynergy.com/link?id=NkCKklbxWBc&offerid={MID}.{feed_product_id}&type=15&murl={encoded}
+  Ashley: offerid = 47134.{feed_product_id}  (feed_product_id = col 0 from feed, NOT sku)
+  TOV:    offerid = 53375.{feed_product_id}
 
-Parses existing affiliate_url to extract murl, then rebuilds with correct format.
-Run once to fix all 2,743 rows.
+The feed uses offerid=<LSN OID>.<feed_product_id>; we must use feed_product_id from column 0.
+type=15 matches the feed (type=2 was wrong).
 
 Usage:
   python3 scripts/fix_affiliate_urls.py
+
+Requires feed files in scripts/feeds/ (47134_*.gz, 53375_*.gz).
 """
 
+import gzip
 import os
 import sys
 import urllib.parse
@@ -28,6 +31,7 @@ except ImportError:
 PUBLISHER_ID = "NkCKklbxWBc"
 ASHLEY_MID = "47134"
 TOV_MID = "53375"
+FEED_DIR = "scripts/feeds"
 
 
 def load_env(path=".env.local"):
@@ -47,6 +51,39 @@ def load_env(path=".env.local"):
     return env
 
 
+def build_sku_to_feed_product_id() -> dict:
+    """Parse feed files and build {retailer: {sku: feed_product_id}}."""
+    sku_to_feed_id = {"ashley": {}, "tov": {}}
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    feed_dir = os.path.join(root, FEED_DIR)
+
+    if not os.path.exists(feed_dir):
+        print(f"  Warning: feed dir not found: {feed_dir}")
+        return sku_to_feed_id
+
+    for retailer, mid in [("ashley", "47134"), ("tov", "53375")]:
+        for fname in sorted(os.listdir(feed_dir)):
+            if fname.startswith(mid) and fname.endswith(".gz"):
+                path = os.path.join(feed_dir, fname)
+                try:
+                    with gzip.open(path, "rt", encoding="utf-8", errors="replace") as gz:
+                        for line in gz:
+                            line = line.rstrip("\n")
+                            if not line or line.startswith("HDR") or line.startswith("TRL"):
+                                continue
+                            vals = line.split("|")
+                            if len(vals) >= 3:
+                                feed_product_id = vals[0].strip()
+                                sku = vals[2].strip()
+                                if feed_product_id and sku:
+                                    sku_to_feed_id[retailer][sku] = feed_product_id
+                except Exception as e:
+                    print(f"  Warning: could not parse {fname}: {e}")
+                break
+
+    return sku_to_feed_id
+
+
 def extract_murl_from_affiliate_url(url: str) -> Optional[str]:
     """Extract murl (encoded product URL) from existing affiliate_url."""
     if not url or not url.startswith("http"):
@@ -60,18 +97,16 @@ def extract_murl_from_affiliate_url(url: str) -> Optional[str]:
         return None
 
 
-def build_correct_affiliate_url(murl: str, mid: str, sku: str) -> str:
-    """Build URL in correct Rakuten format."""
-    offerid = f"{mid}.{sku}"
-    # murl is already encoded from the feed; if we got it from our URL it might be double-encoded
-    # Use as-is if it looks encoded, else encode
+def build_correct_affiliate_url(murl: str, mid: str, feed_product_id: str) -> str:
+    """Build URL in correct Rakuten format (feed format: type=15, offerid=mid.feed_product_id)."""
+    offerid = f"{mid}.{feed_product_id}"
     if "%" in murl:
         murl_param = murl
     else:
         murl_param = urllib.parse.quote(murl, safe="")
     return (
         f"https://click.linksynergy.com/link"
-        f"?id={PUBLISHER_ID}&offerid={offerid}&type=2&murl={murl_param}"
+        f"?id={PUBLISHER_ID}&offerid={offerid}&type=15&murl={murl_param}"
     )
 
 
@@ -90,7 +125,15 @@ def main():
         "Content-Type": "application/json",
     }
 
-    # Fetch all affiliate_products (paginate; Supabase default limit is 1000)
+    # Build sku -> feed_product_id from feed files
+    print("Loading feed files for sku -> feed_product_id mapping...")
+    sku_to_feed_id = build_sku_to_feed_product_id()
+    ashley_count = len(sku_to_feed_id["ashley"])
+    tov_count = len(sku_to_feed_id["tov"])
+    print(f"  Ashley: {ashley_count} SKUs mapped")
+    print(f"  TOV: {tov_count} SKUs mapped")
+
+    # Fetch all affiliate_products
     print("Fetching affiliate_products...")
     rows = []
     page_size = 1000
@@ -130,16 +173,22 @@ def main():
             skipped += 1
             continue
 
-        murl = extract_murl_from_affiliate_url(old_url)
-        if not murl:
-            if retailer not in ("ashley", "tov"):
-                errors.append((rid, "no murl and unknown retailer"))
-            else:
-                errors.append((rid, "could not extract murl from existing URL"))
+        feed_product_id = sku_to_feed_id.get(retailer, {}).get(sku)
+        if not feed_product_id and retailer == "ashley":
+            # Ashley feed uses feed_product_id = MID + SKU (concatenated)
+            feed_product_id = f"{mid}{sku}"
+        if not feed_product_id:
+            errors.append((rid, f"no feed_product_id for sku={sku}"))
             skipped += 1
             continue
 
-        new_url = build_correct_affiliate_url(murl, mid, sku)
+        murl = extract_murl_from_affiliate_url(old_url)
+        if not murl:
+            errors.append((rid, "could not extract murl from existing URL"))
+            skipped += 1
+            continue
+
+        new_url = build_correct_affiliate_url(murl, mid, feed_product_id)
         updates.append((rid, new_url))
 
     # PATCH each row in parallel (20 workers)
