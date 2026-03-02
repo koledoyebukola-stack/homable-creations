@@ -311,9 +311,11 @@ export default function ExploreScenePage() {
   /** True if this scene has at least one catalog product with category = 'artwork' */
   const hasArtworkInScene = catalogItems.some((i) => i.vendor_product?.category === 'artwork');
 
-  const hasSavableItems = items.some((i) =>
-    i.item_type === 'catalog_product' ? !!i.vendor_product?.name : !!i.name
-  );
+  const hasSavableItems = isCanadaScene
+    ? externalItems.length > 0
+    : items.some((i) =>
+        i.item_type === 'catalog_product' ? !!i.vendor_product?.name : !!i.name,
+      );
   const catalogBudget = Number(scene.catalog_budget_ngn) || 0;
 
   return (
@@ -411,6 +413,9 @@ export default function ExploreScenePage() {
                   <span className="font-semibold text-[#111111]">Total</span>
                   <span className="font-semibold text-[#111111]">{formatNgn(catalogBudget)}</span>
                 </div>
+            <p className="mt-2 text-xs text-[#777777]">
+              Prices shown at time of curation and may vary.
+            </p>
               </>
             ) : (
               <p className="text-[#666666] text-sm">No catalog items in this room yet.</p>
@@ -440,6 +445,9 @@ export default function ExploreScenePage() {
                 {formatCad(canadianTotalCad)}
               </span>
             </div>
+            <p className="mt-2 text-xs text-[#777777]">
+              Prices shown at time of curation and may vary.
+            </p>
           </section>
         )}
 
