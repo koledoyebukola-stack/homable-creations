@@ -247,7 +247,9 @@ export default function ShopsProductDetail() {
                         onClick={() => navigate(`/stores/${storefront.slug}`)}
                         className="flex-initial rounded-full border-gray-300 text-gray-900 hover:bg-gray-50 hover:border-gray-900 py-2 px-3 text-xs md:py-2 md:px-4 md:text-sm"
                       >
-                        View all products
+                        {storefront.name
+                          ? `More from ${storefront.name.split(/\s+/).slice(0, 2).join(' ')}`
+                          : 'More from this vendor'}
                       </Button>
                     </div>
                   </div>
