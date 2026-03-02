@@ -612,6 +612,7 @@ Deno.serve(async (req) => {
         `[${requestId}] Matching item ${rawItem.id} (${rawItem.item_name}) -> ${target.category} / ${target.subcategory}`,
       );
 
+      // Always query both retailers (Ashley + TOV) for every detected item category
       const { data: candidates, error: candidatesError } = await supabase
         .from('affiliate_products')
         .select(
@@ -640,7 +641,7 @@ Deno.serve(async (req) => {
 
       let candidateRows = candidates as AffiliateProductRow[];
 
-      // Shape hard filter: tags drive inclusion (round vs rectangular)
+      // Shape hard filter: item tags are a hard filter, not just ranking. Round → only round; rectangular/square → exclude round.
       candidateRows = filterByShape(rawItem, candidateRows);
       if (candidateRows.length === 0) {
         console.log(
@@ -656,6 +657,7 @@ Deno.serve(async (req) => {
         gptRanking.forEach((entry, index) => {
           const product = candidateRows[entry.index];
           if (!product) return;
+          // color_accurate: when false, UI shows "Closest available match" instead of implying color-accurate
           const colorAccurate = colorsMatch(rawItem.dominant_color, product.color);
           allMatches.push({
             detected_item_id: rawItem.id,
@@ -699,7 +701,7 @@ Deno.serve(async (req) => {
             match_score: entry.score,
             is_top_pick: index === 0,
             rank: index + 1,
-            color_accurate: colorAccurate,
+            color_accurate: colorAccurate, // false → UI shows "Closest available match"
           });
         });
 
