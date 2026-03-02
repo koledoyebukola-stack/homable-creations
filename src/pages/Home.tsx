@@ -106,14 +106,26 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (country !== 'NG') {
-      setExploreScenes([]);
+    // Nigeria: load NG Explore scenes
+    if (country === 'NG') {
+      setLoadingExplore(true);
+      getExploreScenes('NG')
+        .then(setExploreScenes)
+        .finally(() => setLoadingExplore(false));
       return;
     }
-    setLoadingExplore(true);
-    getExploreScenes('NG')
-      .then(setExploreScenes)
-      .finally(() => setLoadingExplore(false));
+
+    // Canada: load CA Explore scenes (curated external retailer rooms)
+    if (country === 'CA') {
+      setLoadingExplore(true);
+      getExploreScenes('CA')
+        .then(setExploreScenes)
+        .finally(() => setLoadingExplore(false));
+      return;
+    }
+
+    // Other markets: no Explore scenes yet
+    setExploreScenes([]);
   }, [country]);
 
   // Nigerian journey: track homepage landing (NG only)
@@ -353,6 +365,67 @@ export default function Home() {
                   </Button>
                 </div>
               </>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Explore Preview Section (Canada) - curated retailer rooms */}
+      {country === 'CA' && (
+        <section
+          id="explore-preview-ca"
+          className="bg-gradient-to-br from-gray-50 to-stone-50 pt-10 pb-16 md:pt-12 md:pb-12 px-4 md:px-6"
+        >
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-2">
+              Explore Curated Canadian Rooms
+            </h2>
+            <p className="text-center text-[#555555] text-lg mb-6 md:mb-8 max-w-2xl mx-auto">
+              Hand-picked inspiration rooms matched to real products from trusted Canadian retailers.
+            </p>
+
+            {loadingExplore ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="aspect-[4/3] rounded-xl bg-gray-200 animate-pulse" />
+                ))}
+              </div>
+            ) : exploreScenes.length === 0 ? (
+              <p className="text-center text-[#777777] text-sm">
+                Canadian curated rooms are coming soon. In the meantime, upload your own photo to get matches.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                {exploreScenes.map((scene) => (
+                  <button
+                    key={scene.id}
+                    type="button"
+                    onClick={() => navigate(`/explore/${scene.slug}`)}
+                    className="group text-left bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow border border-[#e5e5e5] flex flex-col"
+                  >
+                    <div className="aspect-[4/3] w-full bg-gray-100 relative overflow-hidden">
+                      <img
+                        src={
+                          scene.hero_image_url ||
+                          'https://placehold.co/800x600/f5f5f5/999?text=Room'
+                        }
+                        alt={scene.title}
+                        className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                    <div className="px-3 pt-3 pb-4">
+                      <h3 className="text-base md:text-lg font-semibold text-[#111111] leading-snug line-clamp-2 mb-1.5">
+                        {scene.title}
+                      </h3>
+                      {scene.description && (
+                        <p className="text-sm text-[#666666] line-clamp-2 mb-2">
+                          {scene.description}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         </section>
