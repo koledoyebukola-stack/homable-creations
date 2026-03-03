@@ -201,7 +201,6 @@ export default function Upload() {
   const country = testCountry || countryState;
   const isNigeria = country === 'NG';
   const isCanada = country === 'CA';
-  const isCanada = country === 'CA';
 
   // Sync country when user changes location in header
   useEffect(() => {
