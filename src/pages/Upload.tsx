@@ -200,6 +200,7 @@ export default function Upload() {
   const testCountry = searchParams.get('test_country');
   const country = testCountry || countryState;
   const isNigeria = country === 'NG';
+  const isCanada = country === 'CA';
 
   // Sync country when user changes location in header
   useEffect(() => {
@@ -242,14 +243,14 @@ export default function Upload() {
     }
   }, [searchParams, isNigeria]);
 
-  // Fetch Nigerian explore scenes when Explore tab is active and country is NG
+  // Fetch explore scenes when Explore tab is active and country is NG or CA
   useEffect(() => {
-    if (activeTab !== 'explore' || country !== 'NG') {
-      if (country !== 'NG') setExploreScenes([]);
+    if (activeTab !== 'explore' || (country !== 'NG' && country !== 'CA')) {
+      if (country !== 'NG' && country !== 'CA') setExploreScenes([]);
       return;
     }
     setLoadingExploreScenes(true);
-    getExploreScenes('NG')
+    getExploreScenes(country as 'NG' | 'CA')
       .then(setExploreScenes)
       .finally(() => setLoadingExploreScenes(false));
   }, [activeTab, country]);
@@ -574,17 +575,19 @@ export default function Upload() {
           )}
 
           {/* Tab Content */}
-          {/* Explore Tab: Nigeria = curated rooms from DB; International = styles by room (DESIGN_STYLES_BY_ROOM) */}
+          {/* Explore Tab: Nigeria/Canada = curated rooms from DB; Other = styles by room (DESIGN_STYLES_BY_ROOM) */}
           {activeTab === 'explore' && (
             <>
-              {isNigeria ? (
+              {isNigeria || isCanada ? (
                 <div className="space-y-8 max-w-6xl mx-auto w-full">
                   <div className="text-center">
                     <h1 className="text-3xl md:text-4xl font-bold text-[#111111] mb-2">
-                      Explore Curated Rooms
+                      {isNigeria ? 'Explore Curated Rooms' : 'Shop Curated Rooms'}
                     </h1>
                     <p className="text-lg text-[#555555] max-w-xl mx-auto">
-                      Professionally designed rooms you can recreate with local vendors
+                      {isNigeria
+                        ? 'Professionally designed rooms you can recreate with local vendors'
+                        : 'Curated Canadian rooms matched to real products from trusted retailers'}
                     </p>
                   </div>
                   <div className="flex gap-2 overflow-x-auto pb-2 md:overflow-visible md:flex-wrap md:justify-center scroll-pills-hide-scrollbar">

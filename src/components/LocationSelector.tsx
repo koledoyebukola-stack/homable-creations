@@ -15,11 +15,9 @@ interface Location {
 }
 
 const LOCATIONS: Location[] = [
-  { code: 'NG', name: 'Nigeria', flag: '🇳🇬' },
-  { code: 'US', name: 'United States', flag: '🇺🇸' },
-  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
   { code: 'CA', name: 'Canada', flag: '🇨🇦' },
-  { code: 'OTHER', name: 'Other', flag: '🌍' },
+  { code: 'NG', name: 'Nigeria', flag: '🇳🇬' },
+  { code: 'OTHER', name: 'Other Countries', flag: '🌍' },
 ];
 
 const STORAGE_KEY = 'homable_selected_country';
@@ -32,9 +30,14 @@ export default function LocationSelector() {
     // Load saved location from localStorage
     const savedCountry = localStorage.getItem(STORAGE_KEY);
     if (savedCountry) {
-      const location = LOCATIONS.find(loc => loc.code === savedCountry);
-      if (location) {
-        setSelectedLocation(location);
+      let effectiveCode = savedCountry;
+      if (savedCountry === 'US' || savedCountry === 'GB') {
+        effectiveCode = 'OTHER';
+      }
+      const location = LOCATIONS.find(loc => loc.code === effectiveCode) || LOCATIONS[0];
+      setSelectedLocation(location);
+      if (effectiveCode !== savedCountry) {
+        localStorage.setItem(STORAGE_KEY, effectiveCode);
       }
     } else {
       // Try to detect location via IP (fallback to Nigeria)
@@ -48,7 +51,9 @@ export default function LocationSelector() {
       const data = await response.json();
       const countryCode = data.country_code;
 
-      const location = LOCATIONS.find(loc => loc.code === countryCode);
+      const mappedCode =
+        countryCode === 'US' || countryCode === 'GB' ? 'OTHER' : countryCode;
+      const location = LOCATIONS.find(loc => loc.code === mappedCode);
       if (location) {
         setSelectedLocation(location);
         localStorage.setItem(STORAGE_KEY, location.code);
@@ -104,5 +109,9 @@ export default function LocationSelector() {
 
 // Helper function to get current selected country
 export function getSelectedCountry(): string {
-  return localStorage.getItem(STORAGE_KEY) || 'NG';
+  const stored = localStorage.getItem(STORAGE_KEY) || 'NG';
+  if (stored === 'US' || stored === 'GB') {
+    return 'OTHER';
+  }
+  return stored;
 }

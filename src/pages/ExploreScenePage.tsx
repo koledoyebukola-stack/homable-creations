@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { trackNgEvent, NG_EVENTS } from '@/lib/analytics-ng';
 import type { ExploreScene, ExploreSceneItemWithProduct, VendorProduct, Storefront, Checklist } from '@/lib/types';
 import type { User } from '@supabase/supabase-js';
-import { ExternalLink, ShoppingBag, Wrench, Instagram, ListChecks, Upload } from 'lucide-react';
+import { ExternalLink, ShoppingBag, Wrench, Instagram, ListChecks, Upload, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 
 const SCROLL_THRESHOLD_PX = 150;
@@ -47,6 +47,8 @@ export default function ExploreScenePage() {
   const [existingChecklist, setExistingChecklist] = useState<Checklist | null>(null);
   const [randomArtworkProducts, setRandomArtworkProducts] = useState<VendorProduct[]>([]);
   const [isHeroImageOpen, setIsHeroImageOpen] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [scrollDirection, setScrollDirection] = useState<'down' | 'up'>('down');
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user: u } }) => {
@@ -92,6 +94,29 @@ export default function ExploreScenePage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isHeroImageOpen]);
+
+  // Floating scroll navigation button on mobile (up/down based on scroll position)
+  useEffect(() => {
+    const handleScroll = () => {
+      const doc = document.documentElement;
+      const scrollTop = window.scrollY || doc.scrollTop;
+      const maxScroll = doc.scrollHeight - window.innerHeight;
+
+      if (maxScroll <= 0) {
+        setShowScrollButton(false);
+        return;
+      }
+
+      setShowScrollButton(true);
+
+      const ratio = maxScroll > 0 ? scrollTop / maxScroll : 0;
+      setScrollDirection(ratio < 0.5 ? 'down' : 'up');
+    };
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     if (!slug) return;
@@ -611,7 +636,7 @@ export default function ExploreScenePage() {
               Shop This Look
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
               {externalItems.map((item) => {
                 const retailer = item.external_retailer_name || 'Retailer';
                 const price =
@@ -643,7 +668,7 @@ export default function ExploreScenePage() {
                         : 'border-[#e5e5e5] shadow-sm hover:shadow-lg transition-shadow'
                     }`}
                   >
-                    <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
+                    <div className="aspect-[4/5] sm:aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
                       {item.external_image_url ? (
                         <img
                           src={item.external_image_url}
@@ -667,12 +692,14 @@ export default function ExploreScenePage() {
                       </div>
                     </div>
 
-                    <div className="px-2.5 pt-2.5 pb-3 md:px-3 md:pt-3 flex-1 flex flex-col">
-                      <h3 className="text-[13px] md:text-sm font-semibold text-gray-900 leading-snug line-clamp-2 mb-1">
+                    <div className="px-2 pt-2 pb-2.5 sm:px-3 sm:pt-3 flex-1 flex flex-col">
+                      <h3 className="text-[12px] sm:text-sm font-semibold text-gray-900 leading-snug line-clamp-2 mb-1">
                         {item.name}
                       </h3>
                       {price && (
-                        <p className="text-xs text-gray-600 mb-2">{price}</p>
+                        <p className="text-[11px] sm:text-xs text-gray-600 mb-2">
+                          {price}
+                        </p>
                       )}
 
                       <div className="mt-auto">
@@ -680,7 +707,7 @@ export default function ExploreScenePage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="w-full rounded-lg text-xs"
+                            className="w-full rounded-lg text-[11px] sm:text-xs h-8 sm:h-9"
                             disabled={!findSimilarUrl}
                             onClick={() => {
                               if (findSimilarUrl) {
@@ -695,7 +722,7 @@ export default function ExploreScenePage() {
                         ) : (
                           <Button
                             size="sm"
-                            className="w-full rounded-lg bg-[#111111] hover:bg-[#333] text-white border-0 text-xs"
+                            className="w-full rounded-lg bg-[#111111] hover:bg-[#333] text-white border-0 text-[11px] sm:text-xs h-8 sm:h-9"
                             disabled={!productUrl}
                             onClick={() => {
                               if (productUrl) {
@@ -878,6 +905,31 @@ export default function ExploreScenePage() {
       )}
 
       <Footer />
+
+      {/* Floating scroll navigation button (mobile only) */}
+      {showScrollButton && (
+        <button
+          type="button"
+          className="fixed bottom-20 right-4 z-40 md:hidden rounded-full bg-black text-white p-3 shadow-lg border border-black/10 flex items-center justify-center"
+          onClick={() => {
+            if (scrollDirection === 'down') {
+              window.scrollTo({
+                top: document.documentElement.scrollHeight,
+                behavior: 'smooth',
+              });
+            } else {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          }}
+          aria-label={scrollDirection === 'down' ? 'Scroll to bottom' : 'Scroll to top'}
+        >
+          {scrollDirection === 'down' ? (
+            <ChevronDown className="w-5 h-5" />
+          ) : (
+            <ChevronUp className="w-5 h-5" />
+          )}
+        </button>
+      )}
 
       {/* Scroll-triggered auth gate: modal with blur overlay when unauthenticated user scrolls down */}
       {showAuthGate && (
