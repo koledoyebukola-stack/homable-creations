@@ -569,16 +569,18 @@ export default function Upload() {
                 >
                   Start with inspiration
                 </button>
-                <button
-                  onClick={() => handleTabChange('specs')}
-                  className={`px-3 sm:px-6 py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
-                    activeTab === 'specs'
-                      ? 'bg-[#111111] text-white'
-                      : 'text-[#555555] hover:text-[#111111]'
-                  }`}
-                >
-                  Start with what fits
-                </button>
+                {!isCanada && (
+                  <button
+                    onClick={() => handleTabChange('specs')}
+                    className={`px-3 sm:px-6 py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
+                      activeTab === 'specs'
+                        ? 'bg-[#111111] text-white'
+                        : 'text-[#555555] hover:text-[#111111]'
+                    }`}
+                  >
+                    Start with what fits
+                  </button>
+                )}
               </div>
             </div>
           )}
