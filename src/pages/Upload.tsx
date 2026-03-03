@@ -201,6 +201,7 @@ export default function Upload() {
   const country = testCountry || countryState;
   const isNigeria = country === 'NG';
   const isCanada = country === 'CA';
+  const isCanada = country === 'CA';
 
   // Sync country when user changes location in header
   useEffect(() => {
@@ -227,6 +228,14 @@ export default function Upload() {
     }
     // Nigerian experience: hide "Start with what fits" (mode=find); redirect to explore
     if (isNigeria && mode === 'find') {
+      setActiveTab('explore');
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('mode', 'explore');
+      window.history.replaceState({}, '', `${window.location.pathname}?${newParams}`);
+      return;
+    }
+    // Canadian experience: hide "Start with what fits" (mode=find); redirect to explore
+    if (isCanada && mode === 'find') {
       setActiveTab('explore');
       const newParams = new URLSearchParams(searchParams);
       newParams.set('mode', 'explore');
@@ -535,7 +544,7 @@ export default function Upload() {
             </p>
           </div>
 
-          {/* Tab Selector: Nigeria = Explore only (switcher hidden); International = Explore + Inspiration + Specs */}
+          {/* Tab Selector: Nigeria = Explore only (switcher hidden); Canada = Explore + Inspiration; Other = Explore + Inspiration + Specs */}
           {/* TEMP: Hide tab switcher for Nigeria (single tab) - re-enable inspiration tab once supply is sufficient (50+ vendors) */}
           {!isNigeria && (
             <div className="flex justify-center mb-12">
@@ -826,7 +835,7 @@ export default function Upload() {
           )}
 
           {/* Start with Specs Tab */}
-          {activeTab === 'specs' && !isNigeria && (
+          {activeTab === 'specs' && !isNigeria && !isCanada && (
             <SpecsCategorySelection />
           )}
         </div>
