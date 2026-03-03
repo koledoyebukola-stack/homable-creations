@@ -227,15 +227,41 @@ export default function ExploreScenePage() {
       return;
     }
 
-    // Build item payloads with names and link fields for Nigerian Explore list (View Product / View on Instagram)
+    // Build item payloads with names and link fields for Explore lists:
+    // - Nigeria: vendor products (internal) and Instagram items
+    // - Canada / external scenes: external retailer items (external_product_url + retailer name)
     const checklistItemInputs = items
       .map((item) => {
         const itemName =
-          item.item_type === 'catalog_product' ? item.vendor_product?.name ?? null : item.name ?? null;
+          item.item_type === 'catalog_product'
+            ? item.vendor_product?.name ?? item.name ?? null
+            : item.name ?? null;
         if (!itemName) return null;
+
+        // Canadian / external retailer items — save external URL + retailer name so checklist can open retailer directly
+        if (item.external_product_url) {
+          const payload: {
+            item_name: string;
+            vendor_product_slug?: string;
+            instagram_handle?: string;
+          } = {
+            item_name: itemName,
+          };
+          // Reuse vendor_product_slug field to store the external URL (ChecklistDetail detects URLs vs slugs)
+          payload.vendor_product_slug = item.external_product_url;
+          // Reuse instagram_handle field to store retailer display name for button label
+          if (item.external_retailer_name) {
+            payload.instagram_handle = item.external_retailer_name;
+          }
+          return payload;
+        }
+
+        // Nigerian vendor product items — keep existing behavior (link to /shops/products/{slug})
         if (item.item_type === 'catalog_product' && item.vendor_product?.slug) {
           return { item_name: itemName, vendor_product_slug: item.vendor_product.slug };
         }
+
+        // Nigerian Instagram decor items — keep existing behavior (link to instagram.com/{handle})
         if (item.item_type === 'instagram_link' && item.instagram_handle) {
           return { item_name: itemName, instagram_handle: item.instagram_handle.replace(/^@/, '') };
         }

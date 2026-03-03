@@ -220,6 +220,37 @@ export default function ChecklistDetail() {
     );
     if (isNigerianExplore) {
       if (item.vendor_product_slug) {
+        const slug = String(item.vendor_product_slug);
+        const isExternalUrl = /^https?:\/\//.test(slug);
+
+        // Explore checklist item that points to an external retailer URL (e.g. Canadian curated scenes)
+        if (isExternalUrl) {
+          const retailerName = (item.instagram_handle || '').trim() || 'Retailer';
+          return (
+            <div className="flex gap-0 shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => window.open(slug, '_blank')}
+                className="rounded-r-none border-r-0"
+              >
+                View on {retailerName}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" className="px-2 rounded-l-none">
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  {googleItem}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        }
+
+        // Nigerian explore item pointing to an internal Homable product
         return (
           <div className="flex gap-0 shrink-0">
             <Button size="sm" variant="outline" onClick={() => navigate(`/shops/products/${item.vendor_product_slug}`)} className="rounded-r-none border-r-0">
