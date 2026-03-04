@@ -35,7 +35,7 @@ export default function ExploreScenePage() {
   const navigate = useNavigate();
   const [data, setData] = useState<{ scene: ExploreScene; items: ExploreSceneItemWithProduct[] } | null | undefined>(undefined);
 
-  // Auth gate (Canadian explore): show modal only when unauthenticated user clicks a product card or "View on [retailer]"
+  // Auth gate (CA + NG): show modal when unauthenticated user clicks a product card, "View on [retailer]" (CA), or Instagram link (NG)
   const [user, setUser] = useState<User | null>(null);
   const [showAuthGate, setShowAuthGate] = useState(false);
   const lastIncrementedSceneIdRef = useRef<string | null>(null);
@@ -519,6 +519,11 @@ export default function ExploreScenePage() {
                         role="button"
                         tabIndex={0}
                         onClick={() => {
+                          if (!user) {
+                            setShowAuthGate(true);
+                            document.body.style.overflow = 'hidden';
+                            return;
+                          }
                           trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
                             product_id: product.id,
                             product_name: product.name,
@@ -532,6 +537,11 @@ export default function ExploreScenePage() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
+                            if (!user) {
+                              setShowAuthGate(true);
+                              document.body.style.overflow = 'hidden';
+                              return;
+                            }
                             trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
                               product_id: product.id,
                               product_name: product.name,
@@ -590,6 +600,11 @@ export default function ExploreScenePage() {
                         role="button"
                         tabIndex={0}
                         onClick={() => {
+                          if (!user) {
+                            setShowAuthGate(true);
+                            document.body.style.overflow = 'hidden';
+                            return;
+                          }
                           trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
                             product_id: product.id,
                             product_name: product.name,
@@ -603,6 +618,11 @@ export default function ExploreScenePage() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
+                            if (!user) {
+                              setShowAuthGate(true);
+                              document.body.style.overflow = 'hidden';
+                              return;
+                            }
                             trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
                               product_id: product.id,
                               product_name: product.name,
@@ -881,7 +901,13 @@ export default function ExploreScenePage() {
                       href={item.external_link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      onClick={() => {
+                      onClick={(e) => {
+                        if (!user) {
+                          e.preventDefault();
+                          setShowAuthGate(true);
+                          document.body.style.overflow = 'hidden';
+                          return;
+                        }
                         trackNgEvent(NG_EVENTS.VIEW_ON_INSTAGRAM_CLICKED, {
                           instagram_handle: item.instagram_handle ?? undefined,
                           item_name: item.name ?? undefined,
@@ -955,7 +981,7 @@ export default function ExploreScenePage() {
         </button>
       )}
 
-      {/* Auth gate: show login when unauthenticated user clicks a Canadian product card or "View on [retailer]" */}
+      {/* Auth gate: show login when unauthenticated user clicks a product card, "View on [retailer]" (CA), or Instagram link (NG) */}
       {showAuthGate && (
         <AuthModal
           title="Sign in to continue"
