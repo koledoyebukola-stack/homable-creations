@@ -18,7 +18,7 @@ interface Location {
 const LOCATIONS: Location[] = [
   { code: 'CA', name: 'Canada', flag: '🇨🇦' },
   { code: 'NG', name: 'Nigeria', flag: '🇳🇬' },
-  { code: 'OTHER', name: 'Other Countries', flag: '🌍' },
+  { code: 'OTHER', name: 'Other', flag: '🌍' },
 ];
 
 export default function LocationSelector() {
@@ -36,6 +36,9 @@ export default function LocationSelector() {
     setCountry(location.code as CountryCode);
   };
 
+  // Single display value so flag and label always update atomically (avoids "Cauntries"-style glitches on mobile)
+  const triggerLabel = `${selectedLocation.flag} ${selectedLocation.name}`;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -43,10 +46,10 @@ export default function LocationSelector() {
           variant="outline"
           size="sm"
           className="h-9 px-3 rounded-full bg-white/90 hover:bg-white border-[#E5E5E5] text-[#555555] font-normal"
+          key={selectedLocation.code}
         >
-          <Globe className="h-4 w-4 mr-2" />
-          <span className="mr-1">{selectedLocation.flag}</span>
-          <span>{selectedLocation.name}</span>
+          <Globe className="h-4 w-4 mr-2 shrink-0" />
+          <span>{triggerLabel}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">

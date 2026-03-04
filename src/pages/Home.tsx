@@ -177,7 +177,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
-      {/* Other Countries only: dismissible banner above everything (session-only dismiss) */}
+      <Header />
+
+      {/* Other Countries only: dismissible banner between navbar and hero (session-only dismiss) */}
       {country === 'OTHER' && !otherCountriesBannerDismissed && (
         <div className="bg-stone-800 text-white px-4 py-3 flex flex-wrap items-center justify-center gap-3 sm:gap-4 relative">
           <p className="text-sm sm:text-base text-center pr-8 sm:pr-10">
@@ -219,8 +221,6 @@ export default function Home() {
           </button>
         </div>
       )}
-
-      <Header />
 
       {/* Hero Section - 3-tier action hierarchy; two-column on desktop with carousel */}
       <section className="bg-[#f9f9f9] pt-10 pb-0 px-5 md:pt-14 md:pb-12 md:px-6">
