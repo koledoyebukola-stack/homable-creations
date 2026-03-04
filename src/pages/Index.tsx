@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Upload, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import Header from '@/components/Header';
 import HeroCarousel from '@/components/HeroCarousel';
 import PopularProducts from '@/components/PopularProducts';
 
@@ -10,7 +9,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
-      <Header />
 
       {/* Hero Section */}
       <section className="container mx-auto px-4 md:px-6 pt-12 md:pt-20 pb-16 md:pb-24">

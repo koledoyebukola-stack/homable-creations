@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -52,18 +50,15 @@ export default function MyBoards() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-        <Header />
         <main className="flex-1 container mx-auto px-4 py-16">
           <LoadingSpinner message="Loading your history..." />
         </main>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-      <Header />
 
       <main className="flex-1 container mx-auto px-4 py-16">
         <div className="max-w-7xl mx-auto">
@@ -159,7 +154,6 @@ export default function MyBoards() {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }

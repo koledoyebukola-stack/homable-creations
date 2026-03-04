@@ -1,7 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import Auth from '@/components/AuthModal';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ExternalLink, Search } from 'lucide-react';
@@ -162,7 +160,6 @@ export default function TemplateResults() {
   if (!template) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-        <Header />
         <main className="flex-1 container mx-auto px-4 py-16">
           <div className="max-w-2xl mx-auto text-center">
             <h1 className="text-3xl font-bold text-[#111111] mb-4">Template not found</h1>
@@ -172,7 +169,6 @@ export default function TemplateResults() {
             </Button>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -210,20 +206,17 @@ export default function TemplateResults() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-        <Header />
         <main className="flex-1 container mx-auto px-4 py-16">
           <div className="max-w-2xl mx-auto text-center">
             <p className="text-[#555555]">Loading...</p>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-      <Header />
 
       <main className="flex-1 container mx-auto px-4 py-16">
         <div className="max-w-4xl mx-auto">
@@ -380,7 +373,6 @@ export default function TemplateResults() {
         </div>
       </main>
 
-      <Footer />
 
       {/* Auth Modal */}
       {showAuthModal && !isAuthenticated && (

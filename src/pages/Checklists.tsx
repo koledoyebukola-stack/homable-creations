@@ -6,8 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Loader2, ClipboardList, Plus, Gift } from 'lucide-react';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
 
 export default function Checklists() {
@@ -61,11 +59,9 @@ export default function Checklists() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#FAFAFA] flex flex-col">
-        <Header />
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
         </div>
-        <Footer />
       </div>
     );
   }
@@ -73,21 +69,18 @@ export default function Checklists() {
   if (error) {
     return (
       <div className="min-h-screen bg-[#FAFAFA] flex flex-col">
-        <Header />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <p className="text-red-600 mb-4">{error}</p>
             <Button onClick={loadChecklists}>Try Again</Button>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] flex flex-col">
-      <Header />
       
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
         {/* Header Section */}
@@ -251,7 +244,6 @@ export default function Checklists() {
         )}
       </main>
 
-      <Footer />
     </div>
   );
 }

@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -71,20 +69,17 @@ export default function DesignSpaceItems() {
   if (!analysis || !selectedOption) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-        <Header />
         <main className="flex-1 container mx-auto px-4 py-16">
           <div className="text-center">
             <p className="text-[#555555]">Loading...</p>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-      <Header />
 
       <main className="flex-1 container mx-auto px-4 py-16">
         <div className="max-w-6xl mx-auto">
@@ -357,7 +352,6 @@ export default function DesignSpaceItems() {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }

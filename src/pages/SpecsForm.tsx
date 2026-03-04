@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -237,7 +235,6 @@ export default function SpecsForm() {
   if (!config) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-        <Header />
         <main className="flex-1 container mx-auto px-4 py-16">
           <div className="max-w-2xl mx-auto text-center">
             <h1 className="text-3xl font-bold text-[#111111] mb-4">Category not found</h1>
@@ -247,7 +244,6 @@ export default function SpecsForm() {
             </Button>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -454,7 +450,6 @@ export default function SpecsForm() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-      <Header />
 
       <main className="flex-1 container mx-auto px-4 py-16">
         <div className="max-w-2xl mx-auto">
@@ -527,7 +522,6 @@ export default function SpecsForm() {
         </div>
       </main>
 
-      <Footer />
 
       {showAuthModal && (
         <AuthModal onSuccess={handleAuthSuccess} />

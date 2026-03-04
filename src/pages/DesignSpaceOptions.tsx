@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -150,7 +148,6 @@ export default function DesignSpaceOptions() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-        <Header />
         <main className="flex-1 container mx-auto px-4 py-16">
           <div className="max-w-2xl mx-auto">
             <Card className="p-8">
@@ -169,7 +166,6 @@ export default function DesignSpaceOptions() {
             </Card>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -178,7 +174,6 @@ export default function DesignSpaceOptions() {
   if (inspirationsLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-        <Header />
         <main className="flex-1 container mx-auto px-4 py-16">
           <div className="max-w-2xl mx-auto">
             <Card className="p-8">
@@ -197,7 +192,6 @@ export default function DesignSpaceOptions() {
             </Card>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -206,7 +200,6 @@ export default function DesignSpaceOptions() {
   if (deepLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-        <Header />
         <main className="flex-1 container mx-auto px-4 py-16">
           <div className="max-w-2xl mx-auto">
             <Card className="p-8">
@@ -225,7 +218,6 @@ export default function DesignSpaceOptions() {
             </Card>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -234,7 +226,6 @@ export default function DesignSpaceOptions() {
   if (viewMode === 'inspirations' && inspirations.length > 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-        <Header />
         <main className="flex-1 container mx-auto px-4 py-16">
           <div className="max-w-7xl mx-auto">
             {/* Header */}
@@ -300,7 +291,6 @@ export default function DesignSpaceOptions() {
             </div>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -309,7 +299,6 @@ export default function DesignSpaceOptions() {
   if (viewMode === 'deep-design' && deepDesign) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-        <Header />
         <main className="flex-1 container mx-auto px-4 py-16">
           <div className="max-w-5xl mx-auto">
             {/* Header */}
@@ -459,7 +448,6 @@ export default function DesignSpaceOptions() {
             </div>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -467,7 +455,6 @@ export default function DesignSpaceOptions() {
   // VIEW: Style Directions (STEP A result)
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-      <Header />
 
       <main className="flex-1 container mx-auto px-4 py-16">
         <div className="max-w-6xl mx-auto">
@@ -612,7 +599,6 @@ export default function DesignSpaceOptions() {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }

@@ -13,8 +13,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Image as ImageIcon, FileText, Plus, Sparkles, MessageCircle, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 
 const PRODUCT_CONTACT_INITIAL = 5;
 const ROOMS_VIEWED_LIMIT = 20;
@@ -162,11 +160,9 @@ export default function History() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-        <Header />
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
         </div>
-        <Footer />
       </div>
     );
   }
@@ -174,21 +170,18 @@ export default function History() {
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-        <Header />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <p className="text-red-600 mb-4">{error}</p>
             <Button onClick={loadHistory}>Try Again</Button>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-      <Header />
       
       <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
         {/* Header Section */}
@@ -451,7 +444,6 @@ export default function History() {
         )}
       </main>
 
-      <Footer />
     </div>
   );
 }

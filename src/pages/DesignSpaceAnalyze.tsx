@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -123,7 +121,6 @@ export default function DesignSpaceAnalyze() {
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-        <Header />
         <main className="flex-1 container mx-auto px-4 py-16">
           <div className="max-w-2xl mx-auto">
             <Card className="p-8">
@@ -145,7 +142,6 @@ export default function DesignSpaceAnalyze() {
             </Card>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -153,7 +149,6 @@ export default function DesignSpaceAnalyze() {
   if (analyzing) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-        <Header />
         <main className="flex-1 container mx-auto px-4 py-16">
           <div className="max-w-2xl mx-auto">
             <Card className="p-8">
@@ -169,14 +164,12 @@ export default function DesignSpaceAnalyze() {
             </Card>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-      <Header />
 
       <main className="flex-1 container mx-auto px-4 py-12">
         <div className="max-w-5xl mx-auto">
@@ -492,7 +485,6 @@ export default function DesignSpaceAnalyze() {
         </DialogContent>
       </Dialog>
 
-      <Footer />
     </div>
   );
 }

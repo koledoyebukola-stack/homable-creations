@@ -1,7 +1,5 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Instagram, MessageCircle, Store, Search, X } from 'lucide-react';
@@ -70,11 +68,9 @@ export default function StorefrontView() {
   if (data === undefined) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
-        <Header />
         <main className="flex-1 flex items-center justify-center py-24">
           <p className="text-gray-600">Loading…</p>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -82,7 +78,6 @@ export default function StorefrontView() {
   if (data === null) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
-        <Header />
         <main className="flex-1 flex flex-col items-center justify-center py-24 px-4 text-center">
           <h1 className="text-2xl font-bold text-gray-900">Storefront not found</h1>
           <p className="mt-2 text-gray-600">This page doesn’t exist or may have been removed.</p>
@@ -94,7 +89,6 @@ export default function StorefrontView() {
             </Button>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -104,7 +98,6 @@ export default function StorefrontView() {
   if (storefront.status === 'paused') {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
-        <Header />
         <main className="flex-1 flex flex-col items-center justify-center py-24 px-4 text-center">
           <h1 className="text-xl md:text-2xl font-bold text-gray-900">Temporarily unavailable</h1>
           <p className="mt-3 text-gray-600 max-w-md">
@@ -115,7 +108,6 @@ export default function StorefrontView() {
             Browse Other Vendors
           </Button>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -367,7 +359,6 @@ function StorefrontActive({
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header />
 
       <main className="flex-1">
         {/* Hero */}
@@ -746,7 +737,6 @@ function StorefrontActive({
         </div>
       )}
 
-      <Footer />
     </div>
   );
 }

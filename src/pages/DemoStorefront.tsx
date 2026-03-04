@@ -1,6 +1,4 @@
 import { useRef, useState, useMemo, useEffect } from 'react';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Instagram, MessageCircle, Search, X } from 'lucide-react';
@@ -89,7 +87,6 @@ export default function DemoStorefront() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header />
 
       <main className="flex-1">
         {/* Hero */}
@@ -333,7 +330,6 @@ export default function DemoStorefront() {
         </div>
       </div>
 
-      <Footer />
     </div>
   );
 }

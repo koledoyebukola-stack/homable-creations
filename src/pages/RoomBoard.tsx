@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Header from '@/components/Header';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -49,7 +48,6 @@ export default function RoomBoard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
-        <Header />
         <main className="container mx-auto px-4 py-16">
           <LoadingSpinner message="Loading your board..." />
         </main>
@@ -59,7 +57,6 @@ export default function RoomBoard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
-      <Header />
 
       <main className="container mx-auto px-4 py-16">
         <div className="max-w-7xl mx-auto">

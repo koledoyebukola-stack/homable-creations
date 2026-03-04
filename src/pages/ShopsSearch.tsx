@@ -1,6 +1,4 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Store, ArrowLeft } from 'lucide-react';
 import ComingSoonBanner from '@/components/ComingSoonBanner';
@@ -12,7 +10,6 @@ export default function ShopsSearch() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-stone-50">
-      <Header />
       <main className="flex-1 container mx-auto px-4 py-12 max-w-2xl">
         <div className="space-y-6">
           <div className="flex flex-wrap items-center gap-2">
@@ -65,7 +62,6 @@ export default function ShopsSearch() {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

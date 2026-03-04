@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Header from '@/components/Header';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -317,7 +316,6 @@ export default function ProductMatches() {
   if (loading || searching) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
-        <Header />
         <main className="container mx-auto px-4 py-16">
           <LoadingSpinner
             message={searching ? 'Finding the best deals...' : 'Loading products...'}
@@ -340,7 +338,6 @@ export default function ProductMatches() {
   if (isNigeria && item && isBuildableFurniture(item)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
-        <Header />
 
         <main className="container mx-auto px-4 py-16">
           <div className="max-w-4xl mx-auto">
@@ -713,7 +710,6 @@ export default function ProductMatches() {
   // Default view for non-Nigeria users OR non-buildable items (existing product search)
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
-      <Header />
 
       <main className="container mx-auto px-4 py-16">
         <div className="max-w-7xl mx-auto">

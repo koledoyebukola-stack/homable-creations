@@ -26,8 +26,6 @@ import {
   Pencil,
   ChevronDown
 } from 'lucide-react';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import ClaimModal from '@/components/ClaimModal';
 import EditClaimModal from '@/components/EditClaimModal';
 import { toast } from 'sonner';
@@ -220,11 +218,9 @@ export default function ChecklistGiftingView() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#FAFAFA] flex flex-col">
-        <Header />
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
         </div>
-        <Footer />
       </div>
     );
   }
@@ -232,7 +228,6 @@ export default function ChecklistGiftingView() {
   if (error || !checklist) {
     return (
       <div className="min-h-screen bg-[#FAFAFA] flex flex-col">
-        <Header />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <p className="text-red-600 mb-4">{error || 'Shopping list not found'}</p>
@@ -241,7 +236,6 @@ export default function ChecklistGiftingView() {
             </Button>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -363,7 +357,6 @@ export default function ChecklistGiftingView() {
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] flex flex-col">
-      <Header />
       
       <main className="flex-1 container mx-auto px-4 py-8 max-w-3xl">
         {/* Back Button */}
@@ -588,7 +581,6 @@ export default function ChecklistGiftingView() {
         />
       )}
 
-      <Footer />
     </div>
   );
 }
