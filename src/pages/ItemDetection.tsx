@@ -8,7 +8,6 @@ import ShareModal from '@/components/ShareModal';
 import VisualSearchModal from '@/components/VisualSearchModal';
 import ComingSoonBanner from '@/components/ComingSoonBanner';
 import CountryChangeConfirmationModal from '@/components/CountryChangeConfirmationModal';
-import { getSelectedCountry } from '@/components/LocationSelector';
 import { Button } from '@/components/ui/button';
 import CarpenterSpecModal from '@/components/CarpenterSpecModal';
 import { Badge } from '@/components/ui/badge';

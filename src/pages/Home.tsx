@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useState, useEffect, useRef } from 'react';
-import { getSelectedCountry } from '@/components/LocationSelector';
+import { useCountry } from '@/context/CountryContext';
 import { getExploreScenes } from '@/lib/api';
 import type { ExploreScene } from '@/lib/types';
 import ExploreSceneCard from '@/components/ExploreSceneCard';
@@ -102,18 +102,12 @@ export default function Home() {
   const navigate = useNavigate();
   const [carouselSlide, setCarouselSlide] = useState(0);
   const [exploreSlide, setExploreSlide] = useState(0);
-  const [country, setCountry] = useState<string>(() => getSelectedCountry());
+  const { country } = useCountry();
   const [exploreScenes, setExploreScenes] = useState<ExploreScene[]>([]);
   const [loadingExplore, setLoadingExplore] = useState(false);
   const [exploreCategoryFilter, setExploreCategoryFilter] = useState<ExploreRoomTypeFilter>('all');
   const [explorePriceFilter, setExplorePriceFilter] = useState<ExplorePriceFilter>('all');
   const exploreSectionRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    const handleLocationChange = () => setCountry(getSelectedCountry());
-    window.addEventListener('locationChanged', handleLocationChange as EventListener);
-    return () => window.removeEventListener('locationChanged', handleLocationChange as EventListener);
-  }, []);
 
   useEffect(() => {
     // Nigeria: load NG Explore scenes

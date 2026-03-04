@@ -11,20 +11,14 @@ import {
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { Upload, History, LogOut, LogIn, UserPlus, ShoppingCart, Store } from 'lucide-react';
-import LocationSelector, { getSelectedCountry } from './LocationSelector';
+import LocationSelector from './LocationSelector';
+import { useCountry } from '@/context/CountryContext';
 
 export default function Header() {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
-  // TEMP: Used to hide Upload Inspiration for Nigerian launch - re-enable once supply is sufficient (50+ vendors)
-  const [country, setCountry] = useState<string>(() => getSelectedCountry());
+  const { country } = useCountry();
   const isNigeria = country === 'NG';
-
-  useEffect(() => {
-    const handleLocationChange = () => setCountry(getSelectedCountry());
-    window.addEventListener('locationChanged', handleLocationChange as EventListener);
-    return () => window.removeEventListener('locationChanged', handleLocationChange as EventListener);
-  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {

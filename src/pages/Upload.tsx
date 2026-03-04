@@ -21,7 +21,7 @@ import { AlertCircle, Info, ChevronLeft, ChevronRight, TestTube } from 'lucide-r
 import SpecsCategorySelection from '@/components/specs/SpecsCategorySelection';
 import { trackPageView, trackAction, EVENTS } from '@/lib/analytics';
 import { trackNgEvent, NG_EVENTS } from '@/lib/analytics-ng';
-import { getSelectedCountry } from '@/components/LocationSelector';
+import { getSelectedCountry, useCountry } from '@/context/CountryContext';
 
 // Sample images organized by category - REMOVED HOLIDAY LOOKS
 const SAMPLE_CATEGORIES = [
@@ -199,19 +199,11 @@ export default function Upload() {
   const [exploreRoomTypeFilter, setExploreRoomTypeFilter] = useState<ExploreRoomTypeFilter>('all');
   const [explorePriceFilter, setExplorePriceFilter] = useState<ExplorePriceFilter>('all');
 
-  // Country: state so we re-render when location changes (same pattern as Home)
-  const [countryState, setCountryState] = useState<string>(() => getSelectedCountry());
+  const { country: selectorCountry } = useCountry();
   const testCountry = searchParams.get('test_country');
-  const country = testCountry || countryState;
+  const country = (testCountry as string | null) || selectorCountry || 'OTHER';
   const isNigeria = country === 'NG';
   const isCanada = country === 'CA';
-
-  // Sync country when user changes location in header
-  useEffect(() => {
-    const handleLocationChange = () => setCountryState(getSelectedCountry());
-    window.addEventListener('locationChanged', handleLocationChange as EventListener);
-    return () => window.removeEventListener('locationChanged', handleLocationChange as EventListener);
-  }, []);
 
   // Track homepage view on mount
   useEffect(() => {
@@ -350,8 +342,8 @@ export default function Upload() {
         return;
       }
       
-      // Get selected country from LocationSelector
-      const selectedCountry = getSelectedCountry();
+      // Get selected country from shared CountryProvider (fallback to storage helper)
+      const selectedCountry = selectorCountry || getSelectedCountry();
       console.log('[Upload] Using selected country:', selectedCountry);
       
       // Create board with appropriate name and selected country (or test_country if present)
@@ -489,8 +481,8 @@ export default function Upload() {
         return;
       }
       
-      // Get selected country from LocationSelector
-      const selectedCountry = getSelectedCountry();
+      // Get selected country from shared CountryProvider (fallback to storage helper)
+      const selectedCountry = selectorCountry || getSelectedCountry();
       console.log('[Upload] Using selected country:', selectedCountry);
       
       // Create board with style name and selected country (or test_country if present)

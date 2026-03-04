@@ -32,6 +32,7 @@ import DemoStorefront from './pages/DemoStorefront';
 import StorefrontView from './pages/StorefrontView';
 import ExploreScenePage from './pages/ExploreScenePage';
 import NotFound from './pages/NotFound';
+import { CountryProvider } from '@/context/CountryContext';
 
 const queryClient = new QueryClient();
 
@@ -181,7 +182,9 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <BrowserRouter>
-        <CaptureReferrerAndRoutes />
+        <CountryProvider>
+          <CaptureReferrerAndRoutes />
+        </CountryProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

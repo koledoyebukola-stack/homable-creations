@@ -187,7 +187,7 @@ function isTermInItemName(term: string, itemName: string): boolean {
  * Detect user's country code using IP-based geolocation
  * Uses multiple fallback services for reliability
  */
-async function detectUserCountry(): Promise<string> {
+export async function detectUserCountry(): Promise<string> {
   // Check cache first
   const cachedCountry = localStorage.getItem(COUNTRY_CACHE_KEY);
   const cachedExpiry = localStorage.getItem(COUNTRY_CACHE_EXPIRY);

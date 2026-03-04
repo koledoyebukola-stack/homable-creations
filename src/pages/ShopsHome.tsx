@@ -4,7 +4,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import ComingSoonBanner from '@/components/ComingSoonBanner';
-import { getSelectedCountry } from '@/components/LocationSelector';
+import { useCountry } from '@/context/CountryContext';
 import { getActiveStorefrontsByLocation } from '@/lib/api';
 import type { Storefront, VendorProduct } from '@/lib/types';
 
@@ -53,31 +53,18 @@ function formatCategoryLabel(category: string): string {
 
 export default function ShopsHome() {
   const navigate = useNavigate();
-  const [country, setCountry] = useState<string>(() => getSelectedCountry());
+  const { country } = useCountry();
   const [loading, setLoading] = useState<boolean>(true);
   const [storefronts, setStorefronts] = useState<Storefront[]>([]);
   const [products, setProducts] = useState<VendorProduct[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-
-  // Listen for global location changes from Header's LocationSelector
-  useEffect(() => {
-    const handleLocationChange = (event: Event) => {
-      const custom = event as CustomEvent<{ country?: string }>;
-      const newCountry = custom.detail?.country;
-      if (!newCountry) return;
-      setCountry(newCountry);
-    };
-
-    window.addEventListener('locationChanged', handleLocationChange as EventListener);
-    return () => window.removeEventListener('locationChanged', handleLocationChange as EventListener);
-  }, []);
 
   // Fetch storefronts + products for the active country
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
 
-    getActiveStorefrontsByLocation(country)
+    getActiveStorefrontsByLocation(country || 'OTHER')
       .then(result => {
         if (cancelled) return;
         setStorefronts(result.storefronts);

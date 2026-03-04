@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -7,6 +7,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Globe } from 'lucide-react';
+import { useCountry, type CountryCode } from '@/context/CountryContext';
 
 interface Location {
   code: string;
@@ -20,62 +21,23 @@ const LOCATIONS: Location[] = [
   { code: 'OTHER', name: 'Other Countries', flag: '🌍' },
 ];
 
-const STORAGE_KEY = 'homable_selected_country';
-
 export default function LocationSelector() {
-  const [selectedLocation, setSelectedLocation] = useState<Location>(LOCATIONS[0]);
-  const [isOpen, setIsOpen] = useState(false);
+  const { country, setCountry } = useCountry();
 
-  useEffect(() => {
-    // Load saved location from localStorage
-    const savedCountry = localStorage.getItem(STORAGE_KEY);
-    if (savedCountry) {
-      let effectiveCode = savedCountry;
-      if (savedCountry === 'US' || savedCountry === 'GB') {
-        effectiveCode = 'OTHER';
-      }
-      const location = LOCATIONS.find(loc => loc.code === effectiveCode) || LOCATIONS[0];
-      setSelectedLocation(location);
-      if (effectiveCode !== savedCountry) {
-        localStorage.setItem(STORAGE_KEY, effectiveCode);
-      }
-    } else {
-      // Try to detect location via IP (fallback to Nigeria)
-      detectLocation();
-    }
-  }, []);
-
-  const detectLocation = async () => {
-    try {
-      const response = await fetch('https://ipapi.co/json/');
-      const data = await response.json();
-      const countryCode = data.country_code;
-
-      const mappedCode =
-        countryCode === 'US' || countryCode === 'GB' ? 'OTHER' : countryCode;
-      const location = LOCATIONS.find(loc => loc.code === mappedCode);
-      if (location) {
-        setSelectedLocation(location);
-        localStorage.setItem(STORAGE_KEY, location.code);
-      }
-    } catch (error) {
-      console.error('[LocationSelector] Failed to detect location:', error);
-      localStorage.setItem(STORAGE_KEY, 'NG');
-    }
-  };
+  const selectedLocation: Location = useMemo(() => {
+    const effectiveCode: CountryCode = country ?? 'OTHER';
+    return (
+      LOCATIONS.find((loc) => loc.code === effectiveCode) ??
+      LOCATIONS.find((loc) => loc.code === 'OTHER')!
+    );
+  }, [country]);
 
   const handleLocationSelect = (location: Location) => {
-    setSelectedLocation(location);
-    localStorage.setItem(STORAGE_KEY, location.code);
-    setIsOpen(false);
-
-    window.dispatchEvent(new CustomEvent('locationChanged', {
-      detail: { country: location.code }
-    }));
+    setCountry(location.code as CountryCode);
   };
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+    <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
@@ -106,12 +68,4 @@ export default function LocationSelector() {
     </DropdownMenu>
   );
 }
-
-// Helper function to get current selected country
-export function getSelectedCountry(): string {
-  const stored = localStorage.getItem(STORAGE_KEY) || 'NG';
-  if (stored === 'US' || stored === 'GB') {
-    return 'OTHER';
-  }
-  return stored;
-}
+export { getSelectedCountry } from '@/context/CountryContext';
