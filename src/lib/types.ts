@@ -197,6 +197,9 @@ export interface VendorProduct {
   category: string | null;
   room: string | null;
   material: string | null;
+  dimension_width: number | null;
+  dimension_height: number | null;
+  dimension_unit: 'in' | 'ft' | 'cm' | 'm' | null;
   price_min: number | null;
   price_max: number | null;
   currency: string | null;

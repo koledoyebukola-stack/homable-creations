@@ -14,6 +14,12 @@ function formatPrice(min: number | null, max: number | null): string {
   return 'Price on request';
 }
 
+function formatDimensions(product: VendorProduct): string | null {
+  const { dimension_width, dimension_height, dimension_unit } = product;
+  if (!dimension_width || !dimension_height || !dimension_unit) return null;
+  return `${dimension_width} × ${dimension_height} ${dimension_unit}`;
+}
+
 function whatsappUrl(number: string): string {
   const digits = number.replace(/\D/g, '');
   return `https://wa.me/${digits}`;
@@ -123,6 +129,7 @@ export default function ShopsProductDetail() {
 
   const { storefront, product } = data;
   const whatsappBase = whatsappUrl(storefront.whatsapp_number);
+  const dimensions = formatDimensions(product);
 
   const handleWhatsAppClick = () => {
     const origin = window.location.origin;
@@ -259,6 +266,12 @@ export default function ShopsProductDetail() {
                         <div className="flex justify-between gap-3">
                           <span className="font-medium text-gray-500">Room</span>
                           <span className="text-right">{product.room}</span>
+                        </div>
+                      )}
+                      {dimensions && (
+                        <div className="flex justify-between gap-3">
+                          <span className="font-medium text-gray-500">Dimensions</span>
+                          <span className="text-right">{dimensions}</span>
                         </div>
                       )}
                       {product.material && (

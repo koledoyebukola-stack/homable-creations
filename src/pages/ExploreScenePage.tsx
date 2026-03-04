@@ -28,6 +28,12 @@ function formatVendorPrice(p: VendorProduct): string {
   return 'Price on request';
 }
 
+function formatVendorDimensions(p: VendorProduct): string | null {
+  const { dimension_width, dimension_height, dimension_unit } = p;
+  if (!dimension_width || !dimension_height || !dimension_unit) return null;
+  return `${dimension_width} × ${dimension_height} ${dimension_unit}`;
+}
+
 export default function ExploreScenePage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -424,6 +430,7 @@ export default function ExploreScenePage() {
                   {catalogItems.map((item) => {
                     const product = item.vendor_product;
                     if (!product) return null;
+                    const dimensions = formatVendorDimensions(product);
                     return (
                       <li key={item.id} className="flex justify-between items-baseline gap-3">
                         <span className="text-[#111111] truncate">{product.name}</span>
@@ -506,6 +513,7 @@ export default function ExploreScenePage() {
                   {furnitureItems.map((item) => {
                     const product = item.vendor_product;
                     if (!product) return null;
+                    const dimensions = formatVendorDimensions(product);
                     return (
                       <div
                         key={item.id}
@@ -571,6 +579,11 @@ export default function ExploreScenePage() {
                           <p className="text-xs text-gray-600 mt-1">
                             {formatVendorPrice(product)}
                           </p>
+                          {dimensions && (
+                            <p className="text-[11px] text-gray-500 mt-0.5">
+                              {dimensions}
+                            </p>
+                          )}
                           <p className="text-sm text-gray-500 mt-1.5">Tap to view details →</p>
                         </div>
                       </div>
@@ -587,6 +600,7 @@ export default function ExploreScenePage() {
                   {decorativeItems.map((item) => {
                     const product = item.vendor_product;
                     if (!product) return null;
+                    const dimensions = formatVendorDimensions(product);
                     return (
                       <div
                         key={item.id}
@@ -652,6 +666,11 @@ export default function ExploreScenePage() {
                           <p className="text-xs text-gray-600 mt-1">
                             {formatVendorPrice(product)}
                           </p>
+                          {dimensions && (
+                            <p className="text-[11px] text-gray-500 mt-0.5">
+                              {dimensions}
+                            </p>
+                          )}
                           <p className="text-sm text-gray-500 mt-1.5">Tap to view details →</p>
                         </div>
                       </div>
@@ -821,7 +840,9 @@ export default function ExploreScenePage() {
             <p className="text-sm text-gray-500 mb-4">Swipe to see more →</p>
             <div className="overflow-x-auto pb-1 scroll-pills-hide-scrollbar md:overflow-visible">
               <div className="flex gap-4 md:grid md:grid-cols-5 min-w-0 md:min-w-full">
-                {randomArtworkProducts.map((product) => (
+                {randomArtworkProducts.map((product) => {
+                  const dimensions = formatVendorDimensions(product);
+                  return (
                   <div
                     key={product.id}
                     role="button"
@@ -857,10 +878,16 @@ export default function ExploreScenePage() {
                         {product.name}
                       </h3>
                       <p className="text-xs text-gray-600 mt-1">{formatVendorPrice(product)}</p>
+                      {dimensions && (
+                        <p className="text-[11px] text-gray-500 mt-0.5">
+                          {dimensions}
+                        </p>
+                      )}
                       <p className="text-sm text-gray-500 mt-1.5">View details →</p>
                     </div>
                   </div>
-                ))}
+                );
+              })}
               </div>
             </div>
           </section>
