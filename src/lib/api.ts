@@ -142,6 +142,13 @@ export async function createBoard(
   const { data: { user } } = await supabase.auth.getUser();
   const userId = user?.id || null;
 
+  // Normalize UI country (e.g. 'CA' | 'NG' | 'OTHER') into a DB-safe ISO code for boards.country (VARCHAR(2)).
+  // Only 'CA' and 'NG' are stored; all other values (including 'OTHER') result in NULL.
+  let dbCountry: string | undefined;
+  if (testCountry === 'CA' || testCountry === 'NG') {
+    dbCountry = testCountry;
+  }
+
   const boardData: {
     user_id: string | null;
     name: string;
@@ -156,9 +163,9 @@ export async function createBoard(
     cover_image_url: sourceImageUrl,
   };
 
-  if (testCountry) {
-    boardData.country = testCountry;
-    console.log('Creating board with test country:', testCountry);
+  if (dbCountry) {
+    boardData.country = dbCountry;
+    console.log('Creating board with country:', dbCountry);
   }
   if (referrerCode != null && referrerCode !== '') {
     boardData.referrer_code = referrerCode;

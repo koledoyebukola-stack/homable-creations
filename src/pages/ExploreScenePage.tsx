@@ -50,6 +50,12 @@ export default function ExploreScenePage() {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [scrollDirection, setScrollDirection] = useState<'down' | 'up'>('down');
 
+  // Always start at top when navigating to a new explore scene
+  useEffect(() => {
+    if (!slug) return;
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [slug]);
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user: u } }) => {
       setUser(u);
