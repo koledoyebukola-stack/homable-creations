@@ -13,8 +13,6 @@ import type { User } from '@supabase/supabase-js';
 import { ExternalLink, ShoppingBag, Wrench, Instagram, ListChecks, Upload, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 
-const SCROLL_THRESHOLD_PX = 150;
-
 function formatNgn(value: number): string {
   return `₦${Number(value).toLocaleString('en-NG')}`;
 }
@@ -37,11 +35,9 @@ export default function ExploreScenePage() {
   const navigate = useNavigate();
   const [data, setData] = useState<{ scene: ExploreScene; items: ExploreSceneItemWithProduct[] } | null | undefined>(undefined);
 
-  // Auth gate (scroll-triggered): show modal when unauthenticated user scrolls past threshold
+  // Auth gate (Canadian explore): show modal only when unauthenticated user clicks a product card or "View on [retailer]"
   const [user, setUser] = useState<User | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
   const [showAuthGate, setShowAuthGate] = useState(false);
-  const scrollGateTriggered = useRef(false);
   const lastIncrementedSceneIdRef = useRef<string | null>(null);
   const [savingChecklist, setSavingChecklist] = useState(false);
   const [existingChecklist, setExistingChecklist] = useState<Checklist | null>(null);
@@ -53,7 +49,6 @@ export default function ExploreScenePage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user: u } }) => {
       setUser(u);
-      setAuthChecked(true);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
@@ -61,21 +56,7 @@ export default function ExploreScenePage() {
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (data === undefined || data === null || !authChecked || user !== null || scrollGateTriggered.current) return;
-    const handleScroll = () => {
-      if (window.scrollY > SCROLL_THRESHOLD_PX && !scrollGateTriggered.current) {
-        scrollGateTriggered.current = true;
-        setShowAuthGate(true);
-        document.body.style.overflow = 'hidden';
-        window.scrollTo(0, 0);
-      }
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [data, authChecked, user]);
-
-  // Restore scroll when gate is closed (auth success or unmount)
+  // Restore scroll when auth gate is closed (auth success or unmount)
   useEffect(() => {
     if (!showAuthGate) document.body.style.overflow = '';
     return () => {
@@ -701,6 +682,11 @@ export default function ExploreScenePage() {
                 }
 
                 const handleCardClick = () => {
+                  if (!user) {
+                    setShowAuthGate(true);
+                    document.body.style.overflow = 'hidden';
+                    return;
+                  }
                   if (isUnavailable && findSimilarUrl) {
                     window.open(findSimilarUrl, '_blank', 'noopener,noreferrer');
                   } else if (!isUnavailable && productUrl) {
@@ -969,13 +955,18 @@ export default function ExploreScenePage() {
         </button>
       )}
 
-      {/* Scroll-triggered auth gate: modal with blur overlay when unauthenticated user scrolls down */}
+      {/* Auth gate: show login when unauthenticated user clicks a Canadian product card or "View on [retailer]" */}
       {showAuthGate && (
         <AuthModal
           title="Sign in to continue"
-          subtitle="See the full breakdown of this room including prices, vendors, and shopping options"
-          onSuccess={() => setShowAuthGate(false)}
-          onClose={() => navigate('/')}
+          subtitle="Sign in to open product links and shop this look"
+          onSuccess={() => {
+            setShowAuthGate(false);
+          }}
+          onClose={() => {
+            setShowAuthGate(false);
+            document.body.style.overflow = '';
+          }}
         />
       )}
     </div>

@@ -25,6 +25,9 @@ export default function Footer() {
           <p className="text-xs text-white/80">
             Some links may be affiliate links, which help support Homable at no extra cost to you.
           </p>
+          <p className="text-xs text-white/80">
+            As an Amazon Associate I earn from qualifying purchases.
+          </p>
         </div>
       </div>
     </footer>
