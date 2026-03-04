@@ -1,7 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import ComingSoonBanner from '@/components/ComingSoonBanner';
 import { useCountry } from '@/context/CountryContext';
@@ -115,8 +113,6 @@ export default function ShopsHome() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      <Header />
-
       <main className="flex-1 flex flex-col">
         {/* 1. Category navigation strip (functional filters when marketplace is active) */}
         {hasActiveVendors && categoriesWithRepresentative.length > 0 && (
@@ -599,7 +595,6 @@ export default function ShopsHome() {
         </section>
       </main>
 
-      <Footer />
     </div>
   );
 }

@@ -32,7 +32,10 @@ import DemoStorefront from './pages/DemoStorefront';
 import StorefrontView from './pages/StorefrontView';
 import ExploreScenePage from './pages/ExploreScenePage';
 import NotFound from './pages/NotFound';
-import { CountryProvider } from '@/context/CountryContext';
+import { CountryProvider, useCountry } from '@/context/CountryContext';
+import { Button } from '@/components/ui/button';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 const queryClient = new QueryClient();
 
@@ -79,8 +82,57 @@ function CaptureReferrerAndRoutes() {
     }
   }, [location.search]);
 
+  const { country, setCountry } = useCountry();
+  const [otherBannerDismissed, setOtherBannerDismissed] = useState(false);
+
   return (
-    <Routes>
+    <>
+      <Header />
+
+      {/* Other market banner (Other only): between navbar and page content, session-only dismiss */}
+      {country === 'OTHER' && !otherBannerDismissed && (
+        <div className="bg-stone-800 text-white px-4 py-3 flex flex-wrap items-center justify-center gap-3 sm:gap-4 relative z-20">
+          <p className="text-sm sm:text-base text-center pr-8 sm:pr-10">
+            Homable Creations is predominantly available in two markets — Canada and Nigeria. Switch to get the full curated experience.
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="bg-white/15 hover:bg-white/25 text-white border-0 shrink-0"
+              onClick={() => {
+                setCountry('CA');
+              }}
+            >
+              <span className="mr-1">🇨🇦</span>
+              <span>Switch to Canada</span>
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="bg-white/15 hover:bg-white/25 text-white border-0 shrink-0"
+              onClick={() => {
+                setCountry('NG');
+              }}
+            >
+              <span className="mr-1">🇳🇬</span>
+              <span>Switch to Nigeria</span>
+            </Button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setOtherBannerDismissed(true)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+            aria-label="Dismiss banner"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/reset-password" element={<ResetPassword />} />
@@ -173,7 +225,10 @@ function CaptureReferrerAndRoutes() {
             element={<ChecklistGiftingView />}
           />
           <Route path="*" element={<NotFound />} />
-    </Routes>
+      </Routes>
+
+      <Footer />
+    </>
   );
 }
 

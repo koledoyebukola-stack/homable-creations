@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Store, ArrowLeft, MessageCircle } from 'lucide-react';
@@ -111,11 +109,9 @@ export default function ShopsProductDetail() {
   if (data === undefined) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
-        <Header />
         <main className="flex-1 flex items-center justify-center py-24">
           <p className="text-[#666]">Loading…</p>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -149,7 +145,6 @@ export default function ShopsProductDetail() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header />
       <main className="flex-1">
         <section className="container mx-auto max-w-4xl px-4 md:px-6 lg:px-8 py-6 md:py-8">
           <button

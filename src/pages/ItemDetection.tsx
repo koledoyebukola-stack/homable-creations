@@ -1,7 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Auth from '@/components/AuthModal';
 import ShareModal from '@/components/ShareModal';
@@ -963,19 +961,15 @@ export default function ItemDetection() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-        <Header />
         <main className="flex-1 container mx-auto px-4 py-16">
           <LoadingSpinner message="Analyzing your inspiration..." />
         </main>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-      <Header />
-
       <main className="flex-1 container mx-auto px-4 md:px-6 py-8 md:py-16">
         <div className="max-w-6xl mx-auto">
           {/* SECTION 1: Inspiration Header (Hero) */}
@@ -2325,7 +2319,6 @@ export default function ItemDetection() {
         />
       )}
 
-      <Footer />
     </div>
   );
 }

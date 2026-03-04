@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import ImageUploader from '@/components/ImageUploader';
 import StylePreviewModal from '@/components/StylePreviewModal';
 import { Button } from '@/components/ui/button';
@@ -505,8 +503,6 @@ export default function Upload() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
-      <Header />
-
       <main className="flex-1 container mx-auto px-4 py-16">
         <div className="max-w-3xl mx-auto">
           {/* Testing Mode Banner */}
@@ -920,8 +916,6 @@ export default function Upload() {
           )}
         </div>
       </main>
-
-      <Footer />
 
       {/* Style Preview Modal */}
       <StylePreviewModal

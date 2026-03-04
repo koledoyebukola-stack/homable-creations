@@ -1,7 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import AuthModal from '@/components/AuthModal';
@@ -284,11 +282,9 @@ export default function ExploreScenePage() {
   if (data === undefined) {
     return (
       <div className="min-h-screen flex flex-col bg-[#f9f9f9]">
-        <Header />
         <main className="flex-1 flex items-center justify-center py-24">
           <p className="text-[#555555]">Loading…</p>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -296,14 +292,12 @@ export default function ExploreScenePage() {
   if (data === null) {
     return (
       <div className="min-h-screen flex flex-col bg-[#f9f9f9]">
-        <Header />
         <main className="flex-1 flex flex-col items-center justify-center py-24 px-4">
           <p className="text-[#555555] mb-4">This room is not available.</p>
           <Button variant="outline" onClick={() => navigate('/upload?mode=explore')}>
             Browse all rooms
           </Button>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -953,8 +947,6 @@ export default function ExploreScenePage() {
           </div>
         </div>
       )}
-
-      <Footer />
 
       {/* Floating scroll navigation button (mobile only) */}
       {showScrollButton && (

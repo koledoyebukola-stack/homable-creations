@@ -1,8 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Upload, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import { useState, useEffect, useRef } from 'react';
 import { useCountry } from '@/context/CountryContext';
 import { getExploreScenes } from '@/lib/api';
@@ -102,8 +100,7 @@ export default function Home() {
   const navigate = useNavigate();
   const [carouselSlide, setCarouselSlide] = useState(0);
   const [exploreSlide, setExploreSlide] = useState(0);
-  const { country, setCountry } = useCountry();
-  const [otherCountriesBannerDismissed, setOtherCountriesBannerDismissed] = useState(false);
+  const { country } = useCountry();
   const [exploreScenes, setExploreScenes] = useState<ExploreScene[]>([]);
   const [loadingExplore, setLoadingExplore] = useState(false);
   const [exploreCategoryFilter, setExploreCategoryFilter] = useState<ExploreRoomTypeFilter>('all');
@@ -177,51 +174,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
-      <Header />
-
-      {/* Other Countries only: dismissible banner between navbar and hero (session-only dismiss) */}
-      {country === 'OTHER' && !otherCountriesBannerDismissed && (
-        <div className="bg-stone-800 text-white px-4 py-3 flex flex-wrap items-center justify-center gap-3 sm:gap-4 relative">
-          <p className="text-sm sm:text-base text-center pr-8 sm:pr-10">
-            Homable Creations is predominantly available in two markets — Canada and Nigeria. Switch to get the full curated experience.
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="bg-white/15 hover:bg-white/25 text-white border-0 shrink-0"
-              onClick={() => {
-                setCountry('CA');
-                navigate('/');
-              }}
-            >
-              Switch to Canada
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="bg-white/15 hover:bg-white/25 text-white border-0 shrink-0"
-              onClick={() => {
-                setCountry('NG');
-                navigate('/');
-              }}
-            >
-              Switch to Nigeria
-            </Button>
-          </div>
-          <button
-            type="button"
-            onClick={() => setOtherCountriesBannerDismissed(true)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-colors"
-            aria-label="Dismiss banner"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-      )}
-
       {/* Hero Section - 3-tier action hierarchy; two-column on desktop with carousel */}
       <section className="bg-[#f9f9f9] pt-10 pb-0 px-5 md:pt-14 md:pb-12 md:px-6">
         <div className="max-w-[560px] md:max-w-6xl mx-auto md:grid md:grid-cols-2 md:gap-12 lg:gap-16 md:items-center min-h-0">
