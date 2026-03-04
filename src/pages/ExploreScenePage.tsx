@@ -478,17 +478,32 @@ export default function ExploreScenePage() {
           <section className="mb-10 p-6 rounded-2xl bg-white border border-[#e5e5e5] shadow-sm">
             <h3 className="text-base font-semibold text-[#111111] mb-1">Items available to shop</h3>
             <p className="text-sm text-[#666666] mb-4">
-              Prices below; click any item to view it on the retailer&apos;s site.
+              Tap a row to jump to the product below. Prices below; click any card to view on the retailer&apos;s site.
             </p>
-            <ul className="space-y-2 text-[#333333]">
-              {canadianPricedItems.map((item) => (
-                <li key={item.id} className="flex justify-between items-baseline gap-3">
-                  <span className="text-[#111111] truncate">{item.name}</span>
-                  <span className="font-medium text-[#111111] flex-shrink-0">
-                    {formatCad(item.external_price_cad ?? 0)}
-                  </span>
-                </li>
-              ))}
+            <ul className="space-y-1 text-[#333333]">
+              {canadianPricedItems.map((item) => {
+                const retailer = item.external_retailer_name || 'Retailer';
+                return (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const el = document.getElementById(`card-${item.id}`);
+                        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }}
+                      className="w-full flex items-center justify-between gap-2 py-2.5 px-3 rounded-lg text-left transition-colors active:bg-gray-100 hover:bg-gray-50"
+                    >
+                      <span className="text-[#111111] truncate min-w-0 flex-1">{item.name}</span>
+                      <span className="flex-shrink-0 inline-block text-[10px] font-medium text-gray-600 bg-gray-200 px-2 py-0.5 rounded-full">
+                        {retailer}
+                      </span>
+                      <span className="font-medium text-[#111111] flex-shrink-0">
+                        {formatCad(item.external_price_cad ?? 0)}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
             <div className="flex justify-between items-baseline pt-3 mt-3 border-t border-[#e5e5e5]">
               <span className="font-semibold text-[#111111]">Total</span>
@@ -685,82 +700,79 @@ export default function ExploreScenePage() {
                   findSimilarUrl = `https://tovfurniture.com/search?q=${encodedQuery}`;
                 }
 
+                const handleCardClick = () => {
+                  if (isUnavailable && findSimilarUrl) {
+                    window.open(findSimilarUrl, '_blank', 'noopener,noreferrer');
+                  } else if (!isUnavailable && productUrl) {
+                    window.open(productUrl, '_blank', 'noopener,noreferrer');
+                  }
+                };
+
                 return (
                   <div
                     key={item.id}
+                    id={`card-${item.id}`}
                     className={`group bg-white rounded-2xl overflow-hidden border flex flex-col ${
                       isUnavailable
                         ? 'border-gray-300 bg-gray-50 opacity-90'
                         : 'border-[#e5e5e5] shadow-sm hover:shadow-lg transition-shadow'
                     }`}
                   >
-                    <div className="aspect-[4/5] sm:aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
-                      {item.external_image_url ? (
-                        <img
-                          src={item.external_image_url}
-                          alt={item.name}
-                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[#999] text-sm">
-                          No image
-                        </div>
-                      )}
-                      <div className="absolute top-2 left-2 space-y-1">
-                        <span className="inline-block bg-gray-900 text-white text-[10px] font-medium border-0 shadow-sm px-2 py-1 rounded-full">
-                          Sold by {retailer}
-                        </span>
-                        {isUnavailable && (
-                          <span className="inline-block bg-red-600 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                            Currently unavailable
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="px-2 pt-2 pb-2.5 sm:px-3 sm:pt-3 flex-1 flex flex-col">
-                      <h3 className="text-[12px] sm:text-sm font-semibold text-gray-900 leading-snug line-clamp-2 mb-1">
-                        {item.name}
-                      </h3>
-                      {price && (
-                        <p className="text-[11px] sm:text-xs text-gray-600 mb-2">
-                          {price}
-                        </p>
-                      )}
-
-                      <div className="mt-auto">
-                        {isUnavailable ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full rounded-lg text-[11px] sm:text-xs h-8 sm:h-9"
-                            disabled={!findSimilarUrl}
-                            onClick={() => {
-                              if (findSimilarUrl) {
-                                window.open(findSimilarUrl, '_blank', 'noopener,noreferrer');
-                              }
-                            }}
-                          >
-                            {findSimilarUrl
-                              ? `Find similar on ${retailer}`
-                              : 'Currently unavailable'}
-                          </Button>
+                    <button
+                      type="button"
+                      onClick={handleCardClick}
+                      className="flex flex-col flex-1 w-full text-left cursor-pointer min-w-0"
+                    >
+                      {/* Mobile: fixed ~200px image height; desktop: aspect ratio */}
+                      <div className="h-[200px] sm:h-auto sm:aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
+                        {item.external_image_url ? (
+                          <img
+                            src={item.external_image_url}
+                            alt={item.name}
+                            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                          />
                         ) : (
-                          <Button
-                            size="sm"
-                            className="w-full rounded-lg bg-[#111111] hover:bg-[#333] text-white border-0 text-[11px] sm:text-xs h-8 sm:h-9"
-                            disabled={!productUrl}
-                            onClick={() => {
-                              if (productUrl) {
-                                window.open(productUrl, '_blank', 'noopener,noreferrer');
-                              }
-                            }}
-                          >
-                            View on {retailer}
-                          </Button>
+                          <div className="w-full h-full flex items-center justify-center text-[#999] text-sm">
+                            No image
+                          </div>
                         )}
+                        <div className="absolute top-2 left-2 space-y-1">
+                          <span className="inline-block bg-gray-900 text-white text-[10px] font-medium border-0 shadow-sm px-2 py-1 rounded-full">
+                            Sold by {retailer}
+                          </span>
+                          {isUnavailable && (
+                            <span className="inline-block bg-red-600 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                              Currently unavailable
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
+
+                      <div className="px-2 pt-2 pb-2.5 sm:px-3 sm:pt-3 flex-1 flex flex-col">
+                        <h3 className="text-[12px] sm:text-sm font-semibold text-gray-900 leading-snug line-clamp-2 mb-1">
+                          {item.name}
+                        </h3>
+                        {price && (
+                          <p className="text-[11px] sm:text-xs text-gray-600 mb-2">
+                            {price}
+                          </p>
+                        )}
+
+                        <div className="mt-auto pointer-events-none">
+                          {isUnavailable ? (
+                            <span className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white text-[11px] sm:text-xs h-8 sm:h-9 px-3 w-full">
+                              {findSimilarUrl
+                                ? `Find similar on ${retailer}`
+                                : 'Currently unavailable'}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center justify-center rounded-lg bg-[#111111] text-white text-[11px] sm:text-xs h-8 sm:h-9 px-3 w-full">
+                              View on {retailer}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
                   </div>
                 );
               })}
