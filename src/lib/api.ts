@@ -1807,6 +1807,176 @@ export async function getRandomArtworkProducts(location: string = 'NG', limit: n
   return shuffled.slice(0, limit);
 }
 
+/** Product + storefront for "More Options to Love" carousels */
+export interface CategoryProductWithStorefront {
+  product: VendorProduct;
+  storefront: Storefront;
+}
+
+/**
+ * Fetch up to `limit` products in a category for explore "More Options to Love".
+ * Only returns results if there are ≥ minTotal products in the category (default 3).
+ * Prefers one product from each of 3 different storefronts when possible; randomizes selection.
+ */
+export async function getCategoryProductsForExplore(
+  location: string,
+  category: string,
+  limit: number = 3,
+  minTotal: number = 3
+): Promise<CategoryProductWithStorefront[]> {
+  const { data: storefronts, error: storefrontsError } = await supabase
+    .from('storefronts')
+    .select('id')
+    .eq('status', 'active')
+    .eq('location', location);
+
+  if (storefrontsError || !storefronts || storefronts.length === 0) {
+    return [];
+  }
+
+  const storefrontIds = storefronts.map((s: { id: string }) => s.id);
+
+  const { data: products, error: productsError } = await supabase
+    .from('vendor_products')
+    .select('*')
+    .in('storefront_id', storefrontIds)
+    .eq('category', category)
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  if (productsError || !products || products.length < minTotal) {
+    return [];
+  }
+
+  const list = products as VendorProduct[];
+
+  // Group by storefront_id
+  const byStorefront = new Map<string, VendorProduct[]>();
+  for (const p of list) {
+    const sid = p.storefront_id;
+    if (!byStorefront.has(sid)) byStorefront.set(sid, []);
+    byStorefront.get(sid)!.push(p);
+  }
+
+  // Shuffle storefront order for variety
+  const storefrontIdsWithProducts = [...byStorefront.keys()].sort(() => Math.random() - 0.5);
+
+  // Pick `limit` products: prefer one from each storefront (round-robin), random within each
+  const selected: VendorProduct[] = [];
+  const taken = new Set<string>();
+
+  for (let i = 0; i < limit; i++) {
+    const sid = storefrontIdsWithProducts[i % storefrontIdsWithProducts.length];
+    const pool = byStorefront.get(sid)!.filter((p) => !taken.has(p.id));
+    if (pool.length === 0) {
+      // This storefront exhausted; try next
+      for (const otherSid of storefrontIdsWithProducts) {
+        const otherPool = byStorefront.get(otherSid)!.filter((p) => !taken.has(p.id));
+        if (otherPool.length > 0) {
+          const pick = otherPool[Math.floor(Math.random() * otherPool.length)];
+          selected.push(pick);
+          taken.add(pick.id);
+          break;
+        }
+      }
+      continue;
+    }
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    selected.push(pick);
+    taken.add(pick.id);
+  }
+
+  if (selected.length === 0) return [];
+
+  const uniqueStorefrontIds = [...new Set(selected.map((p) => p.storefront_id))];
+  const { data: storefrontRows, error: storefrontFetchError } = await supabase
+    .from('storefronts')
+    .select('*')
+    .in('id', uniqueStorefrontIds);
+
+  if (storefrontFetchError || !storefrontRows || storefrontRows.length === 0) {
+    return [];
+  }
+
+  const storefrontMap = new Map<string, Storefront>();
+  (storefrontRows as Storefront[]).forEach((s) => storefrontMap.set(s.id, s));
+
+  return selected
+    .map((p) => {
+      const storefront = storefrontMap.get(p.storefront_id);
+      return storefront ? { product: p, storefront } : null;
+    })
+    .filter((x): x is CategoryProductWithStorefront => x != null)
+    .slice(0, limit);
+}
+
+/**
+ * Get ISO week number (1–53) for the given date.
+ */
+function getISOWeekNumber(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7; // Monday = 1, Sunday = 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
+
+/**
+ * Featured storefront with product count for "Featured Vendors This Week".
+ */
+export interface StorefrontWithProductCount extends Storefront {
+  product_count: number;
+}
+
+/**
+ * Fetch storefronts for "Featured Vendors This Week" carousel.
+ * Rotates weekly: (currentWeek * 3) % totalVendors gives start index; returns 3 consecutive (or count).
+ */
+export async function getFeaturedStorefrontsThisWeek(
+  location: string,
+  count: number = 3
+): Promise<StorefrontWithProductCount[]> {
+  const { data: storefronts, error: storefrontsError } = await supabase
+    .from('storefronts')
+    .select('*')
+    .eq('status', 'active')
+    .eq('location', location)
+    .order('name', { ascending: true });
+
+  if (storefrontsError || !storefronts || storefronts.length === 0) {
+    return [];
+  }
+
+  const list = storefronts as Storefront[];
+  const total = list.length;
+  const weekNumber = getISOWeekNumber(new Date());
+  const startIndex = (weekNumber * 3) % total;
+
+  const slice: Storefront[] = [];
+  for (let i = 0; i < count; i++) {
+    slice.push(list[(startIndex + i) % total]);
+  }
+
+  const sliceIds = slice.map((s) => s.id);
+  const { data: productCounts, error: countError } = await supabase
+    .from('vendor_products')
+    .select('storefront_id')
+    .in('storefront_id', sliceIds);
+
+  const countByStorefront = new Map<string, number>();
+  sliceIds.forEach((id) => countByStorefront.set(id, 0));
+  if (!countError && productCounts) {
+    (productCounts as { storefront_id: string }[]).forEach((row) => {
+      countByStorefront.set(row.storefront_id, (countByStorefront.get(row.storefront_id) ?? 0) + 1);
+    });
+  }
+
+  return slice.map((s) => ({
+    ...s,
+    product_count: countByStorefront.get(s.id) ?? 0,
+  }));
+}
+
 /**
  * Fetch a vendor product by its globally-unique slug, including parent storefront.
  * Returns null if not found or storefront missing.

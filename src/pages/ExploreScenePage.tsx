@@ -3,12 +3,21 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import AuthModal from '@/components/AuthModal';
-import { getExploreSceneBySlug, createChecklist, getChecklistByExploreSceneId, getRandomArtworkProducts } from '@/lib/api';
+import {
+  getExploreSceneBySlug,
+  createChecklist,
+  getChecklistByExploreSceneId,
+  getRandomArtworkProducts,
+  getCategoryProductsForExplore,
+  getFeaturedStorefrontsThisWeek,
+  type CategoryProductWithStorefront,
+  type StorefrontWithProductCount,
+} from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import { trackNgEvent, NG_EVENTS } from '@/lib/analytics-ng';
 import type { ExploreScene, ExploreSceneItemWithProduct, VendorProduct, Storefront, Checklist } from '@/lib/types';
 import type { User } from '@supabase/supabase-js';
-import { ExternalLink, ShoppingBag, Wrench, Instagram, ListChecks, Upload, ChevronDown, ChevronUp } from 'lucide-react';
+import { ExternalLink, ShoppingBag, Wrench, Instagram, ListChecks, Upload, ChevronDown, ChevronUp, Store } from 'lucide-react';
 import { toast } from 'sonner';
 
 function formatNgn(value: number): string {
@@ -46,6 +55,8 @@ export default function ExploreScenePage() {
   const [savingChecklist, setSavingChecklist] = useState(false);
   const [existingChecklist, setExistingChecklist] = useState<Checklist | null>(null);
   const [randomArtworkProducts, setRandomArtworkProducts] = useState<VendorProduct[]>([]);
+  const [moreOptionsSections, setMoreOptionsSections] = useState<Array<{ title: string; category: string; items: CategoryProductWithStorefront[] }>>([]);
+  const [featuredVendors, setFeaturedVendors] = useState<StorefrontWithProductCount[]>([]);
   const [isHeroImageOpen, setIsHeroImageOpen] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [scrollDirection, setScrollDirection] = useState<'down' | 'up'>('down');
@@ -171,6 +182,30 @@ export default function ExploreScenePage() {
     } else {
       setRandomArtworkProducts([]);
     }
+  }, [data]);
+
+  // Nigerian only: "More Options to Love" and "Featured Vendors This Week"
+  useEffect(() => {
+    if (!data || !('scene' in data) || (data.scene as ExploreScene).location !== 'NG') {
+      setMoreOptionsSections([]);
+      setFeaturedVendors([]);
+      return;
+    }
+    const categories: { title: string; category: string }[] = [
+      { title: 'Prefer a Different Seating?', category: 'seating' },
+      { title: 'Looking for More Artwork?', category: 'artwork' },
+      { title: 'Need Different Lighting for This Room?', category: 'lighting' },
+      { title: 'Need More Planter Options?', category: 'planters' },
+      { title: 'Need More Rug Options?', category: 'rugs' },
+    ];
+    Promise.all(
+      categories.map(({ title, category }) =>
+        getCategoryProductsForExplore('NG', category, 3, 3).then((items) => ({ title, category, items }))
+      )
+    ).then((results) => {
+      setMoreOptionsSections(results.filter((r) => r.items.length >= 3));
+    });
+    getFeaturedStorefrontsThisWeek('NG', 3).then(setFeaturedVendors);
   }, [data]);
 
   // Track explore scene view in history
@@ -949,6 +984,150 @@ export default function ExploreScenePage() {
                 </li>
               ))}
             </ul>
+          </section>
+        )}
+
+        {/* Nigerian only: More Options to Love — category carousels (≥3 products per category) */}
+        {isNigeriaScene && moreOptionsSections.length > 0 && (
+          <section className="mb-10">
+            <h2 className="text-xl font-semibold text-[#111111] mb-2">More Options to Love</h2>
+            <p className="text-sm text-gray-600 mb-6">
+              Explore more from Nigerian vendors in these categories.
+            </p>
+            <div className="space-y-10">
+              {moreOptionsSections.map(({ title, category, items }) => (
+                <div key={category}>
+                  <h3 className="text-base font-semibold text-[#111111] mb-3">{title}</h3>
+                  <div className="overflow-x-auto pb-1 scroll-pills-hide-scrollbar md:overflow-visible -mx-4 md:mx-0 px-4 md:px-0">
+                    <div className="flex gap-4 md:grid md:grid-cols-3 min-w-0 md:min-w-full">
+                      {items.map(({ product, storefront }) => {
+                        const dimensions = formatVendorDimensions(product);
+                        return (
+                          <div
+                            key={product.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => {
+                              if (!user) {
+                                setShowAuthGate(true);
+                                document.body.style.overflow = 'hidden';
+                                return;
+                              }
+                              trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
+                                product_id: product.id,
+                                product_name: product.name,
+                                vendor_id: storefront.id,
+                                explore_scene_id: scene.id,
+                              });
+                              navigate(
+                                `/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
+                              );
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                if (!user) {
+                                  setShowAuthGate(true);
+                                  document.body.style.overflow = 'hidden';
+                                  return;
+                                }
+                                navigate(
+                                  `/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
+                                );
+                              }
+                            }}
+                            className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer border border-[#e5e5e5] flex flex-col flex-shrink-0 w-[calc(50%-0.5rem)] min-w-[160px] md:w-full md:min-w-0"
+                          >
+                            <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
+                              {product.image_url ? (
+                                <img
+                                  src={product.image_url}
+                                  alt={product.name}
+                                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[#999] text-sm">No image</div>
+                              )}
+                              <div className="absolute top-2 left-2">
+                                <Badge className="bg-gray-900 text-white text-[10px] font-medium border-0 shadow-sm px-2 py-1 rounded-full">
+                                  {storefront.name.split(' ').slice(0, 2).join(' ')}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="px-2.5 pt-2.5 pb-3 md:px-3 md:pt-3">
+                              <h4 className="text-[13px] md:text-sm font-semibold text-gray-900 leading-snug line-clamp-2">
+                                {product.name}
+                              </h4>
+                              <p className="text-xs text-gray-600 mt-1">{formatVendorPrice(product)}</p>
+                              {dimensions && (
+                                <p className="text-[11px] text-gray-500 mt-0.5">{dimensions}</p>
+                              )}
+                              <p className="text-sm text-[#111111] font-medium mt-1.5">View Product →</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Nigerian only: Featured Vendors This Week */}
+        {isNigeriaScene && featuredVendors.length > 0 && (
+          <section className="mb-10">
+            <h2 className="text-xl font-semibold text-[#111111] mb-2">Featured Vendors This Week</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Discover these Nigerian vendors — rotation updates weekly.
+            </p>
+            <div className="overflow-x-auto pb-1 scroll-pills-hide-scrollbar md:overflow-visible -mx-4 md:mx-0 px-4 md:px-0">
+              <div className="flex gap-4 md:grid md:grid-cols-3 min-w-0 md:min-w-full">
+                {featuredVendors.map((vendor) => (
+                  <div
+                    key={vendor.id}
+                    className="bg-white rounded-2xl border border-[#e5e5e5] overflow-hidden shadow-sm hover:shadow-lg transition-shadow flex flex-col flex-shrink-0 w-[calc(50%-0.5rem)] min-w-[200px] md:w-full md:min-w-0"
+                  >
+                    <div className="aspect-[4/3] w-full bg-gray-100 flex items-center justify-center p-4">
+                      {vendor.logo_url ? (
+                        <img
+                          src={vendor.logo_url}
+                          alt={vendor.name}
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      ) : (
+                        <span className="text-2xl font-bold text-gray-400">
+                          {vendor.name
+                            .split(/\s+/)
+                            .map((w) => w[0])
+                            .filter(Boolean)
+                            .slice(0, 2)
+                            .join('')
+                            .toUpperCase() || 'V'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="px-3 pt-3 pb-4 flex flex-col flex-1">
+                      <h3 className="text-sm font-semibold text-[#111111] line-clamp-2">{vendor.name}</h3>
+                      <p className="text-xs text-gray-600 mt-1">
+                        {vendor.product_count} product{vendor.product_count !== 1 ? 's' : ''} available
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-3 rounded-xl border-[#e0e0e0] hover:border-black w-full"
+                        onClick={() => navigate(`/stores/${vendor.slug}`)}
+                      >
+                        <Store className="mr-2 h-4 w-4" />
+                        Visit Storefront
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </section>
         )}
 
