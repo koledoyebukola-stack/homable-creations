@@ -53,7 +53,7 @@ const MORE_OPTIONS_BY_ROOM_TYPE: Record<string, { title: string; category: strin
     { title: 'Need More Rug Options?', category: 'rugs' },
   ],
   bedroom: [
-    { title: 'Prefer a Different Bed?', category: 'beds' },
+    { title: 'Prefer a Different Bed?', category: 'bed' },
     { title: 'Looking for More Artwork?', category: 'artwork' },
     { title: 'Need Different Lighting for This Room?', category: 'lighting' },
     { title: 'Need More Rug Options?', category: 'rugs' },
