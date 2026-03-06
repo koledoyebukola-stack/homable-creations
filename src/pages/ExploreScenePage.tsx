@@ -43,6 +43,34 @@ function formatVendorDimensions(p: VendorProduct): string | null {
   return `${dimension_width} × ${dimension_height} ${dimension_unit}`;
 }
 
+/** Category sections for "More Options to Love" by room type. Default = living room. */
+const MORE_OPTIONS_BY_ROOM_TYPE: Record<string, { title: string; category: string }[]> = {
+  living_room: [
+    { title: 'Prefer a Different Seating?', category: 'seating' },
+    { title: 'Looking for More Artwork?', category: 'artwork' },
+    { title: 'Need Different Lighting for This Room?', category: 'lighting' },
+    { title: 'Need More Planter Options?', category: 'planters' },
+    { title: 'Need More Rug Options?', category: 'rugs' },
+  ],
+  bedroom: [
+    { title: 'Prefer a Different Bed?', category: 'beds' },
+    { title: 'Looking for More Artwork?', category: 'artwork' },
+    { title: 'Need Different Lighting for This Room?', category: 'lighting' },
+    { title: 'Need More Rug Options?', category: 'rugs' },
+  ],
+  dining_room: [
+    { title: 'Prefer a Different Dining?', category: 'dining set' },
+    { title: 'Looking for More Artwork?', category: 'artwork' },
+    { title: 'Need Different Lighting for This Room?', category: 'lighting' },
+    { title: 'Need More Rug Options?', category: 'rugs' },
+  ],
+};
+
+function getMoreOptionsCategories(roomType: string | null): { title: string; category: string }[] {
+  const key = roomType && MORE_OPTIONS_BY_ROOM_TYPE[roomType] ? roomType : 'living_room';
+  return MORE_OPTIONS_BY_ROOM_TYPE[key] ?? MORE_OPTIONS_BY_ROOM_TYPE.living_room;
+}
+
 export default function ExploreScenePage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -184,20 +212,15 @@ export default function ExploreScenePage() {
     }
   }, [data]);
 
-  // Nigerian only: "More Options to Love" and "Featured Vendors This Week"
+  // Nigerian only: "More Options to Love" (room-context aware) and "Featured Vendors This Week"
   useEffect(() => {
     if (!data || !('scene' in data) || (data.scene as ExploreScene).location !== 'NG') {
       setMoreOptionsSections([]);
       setFeaturedVendors([]);
       return;
     }
-    const categories: { title: string; category: string }[] = [
-      { title: 'Prefer a Different Seating?', category: 'seating' },
-      { title: 'Looking for More Artwork?', category: 'artwork' },
-      { title: 'Need Different Lighting for This Room?', category: 'lighting' },
-      { title: 'Need More Planter Options?', category: 'planters' },
-      { title: 'Need More Rug Options?', category: 'rugs' },
-    ];
+    const scene = data.scene as ExploreScene;
+    const categories = getMoreOptionsCategories(scene.room_type);
     Promise.all(
       categories.map(({ title, category }) =>
         getCategoryProductsForExplore('NG', category, 3, 3).then((items) => ({ title, category, items }))
