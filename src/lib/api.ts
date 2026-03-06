@@ -2239,6 +2239,7 @@ export async function getExploreScenes(
         ...s,
         catalog_budget_ngn: total,            // reused field: holds CAD total for CA
         minimum_item_price_ngn: minPrice,     // reused field: holds CAD minimum for CA
+        catalog_product_count: 0,             // CA uses external items, not catalog_product
       };
     });
   }
@@ -2254,7 +2255,7 @@ export async function getExploreScenes(
   const itemsList = (sceneItems || []) as { scene_id: string; vendor_product_id: string }[];
   const productIds = [...new Set(itemsList.map((i) => i.vendor_product_id))];
   if (productIds.length === 0) {
-    return sceneList.map((s) => ({ ...s, catalog_budget_ngn: 0, minimum_item_price_ngn: 0 }));
+    return sceneList.map((s) => ({ ...s, catalog_budget_ngn: 0, minimum_item_price_ngn: 0, catalog_product_count: 0 }));
   }
 
   const { data: products } = await supabase
@@ -2276,10 +2277,12 @@ export async function getExploreScenes(
 
   const budgetByScene: Record<string, number> = {};
   const minPriceByScene: Record<string, number[]> = {};
+  const countByScene: Record<string, number> = {};
   for (const item of itemsList) {
     const price = productPriceMap.get(item.vendor_product_id) ?? 0;
     budgetByScene[item.scene_id] = (budgetByScene[item.scene_id] ?? 0) + price;
-    
+    countByScene[item.scene_id] = (countByScene[item.scene_id] ?? 0) + 1;
+
     const priceMin = productPriceMinMap.get(item.vendor_product_id) ?? 0;
     if (!minPriceByScene[item.scene_id]) {
       minPriceByScene[item.scene_id] = [];
@@ -2296,6 +2299,7 @@ export async function getExploreScenes(
       ...s,
       catalog_budget_ngn: budgetByScene[s.id] ?? 0,
       minimum_item_price_ngn: minimumItemPrice,
+      catalog_product_count: countByScene[s.id] ?? 0,
     };
   });
 }

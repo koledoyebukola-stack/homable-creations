@@ -18,7 +18,8 @@ interface ExploreSceneCardProps {
 export default function ExploreSceneCard({ scene, onSelect, viewCount = 0, isTrending = false }: ExploreSceneCardProps) {
   const catalogBudget = Number(scene.catalog_budget_ngn) || 0;
   const minimumItemPrice = Number(scene.minimum_item_price_ngn) || 0;
-  const showBadgeOrViews = catalogBudget > 0 || viewCount > 0;
+  const catalogProductCount = Number(scene.catalog_product_count) || 0;
+  const showBadgeOrViews = catalogProductCount > 0 || viewCount > 0;
   const viewText = formatViewCount(viewCount);
   const viewLabel = isTrending ? `🔥 Trending: ${viewText}` : viewText;
 
@@ -49,9 +50,9 @@ export default function ExploreSceneCard({ scene, onSelect, viewCount = 0, isTre
         )}
         {showBadgeOrViews && (
           <div className="flex items-center justify-between mt-3">
-            {catalogBudget > 0 ? (
+            {catalogProductCount > 0 ? (
               <span className="inline-block text-xs font-medium px-2.5 py-1 rounded-full bg-blue-100 text-blue-800">
-                Available on Homable
+                {catalogProductCount} pieces to shop
               </span>
             ) : (
               <span />

@@ -223,6 +223,8 @@ export interface ExploreScene {
   catalog_budget_ngn: number;
   /** Minimum price_min from all vendor_products linked to this scene — shown as "Items from ₦X" */
   minimum_item_price_ngn: number;
+  /** Count of explore_scene_items where item_type = 'catalog_product' — shown as "{count} pieces to shop" */
+  catalog_product_count?: number;
   status: string;
   sort_order: number;
   /** Manual order for homepage Explore gallery; lower first, nulls last (then created_at DESC). */
