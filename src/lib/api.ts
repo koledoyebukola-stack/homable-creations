@@ -2558,7 +2558,6 @@ export interface CreateDesignRequestPayload {
   reference_code: string;
   email: string;
   room_type: string;
-  budget_ngn: number;
   style: string;
   notes?: string | null;
   photo_urls?: string[] | null;
@@ -2569,7 +2568,7 @@ export interface DesignRequestRow {
   reference_code: string;
   email: string;
   room_type: string;
-  budget_ngn: number;
+  budget_ngn: number | null;
   style: string;
   notes: string | null;
   photo_urls: string[] | null;
@@ -2618,7 +2617,6 @@ export async function createDesignRequest(
       reference_code: payload.reference_code,
       email: payload.email,
       room_type: payload.room_type,
-      budget_ngn: payload.budget_ngn,
       style: payload.style,
       notes: payload.notes ?? null,
       photo_urls: payload.photo_urls ?? null,
