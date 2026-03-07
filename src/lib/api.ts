@@ -2544,25 +2544,6 @@ export async function getInspirationsByProduct(productId: string): Promise<Explo
 
 // --- Design My Space (Beta): NG custom design requests ---
 
-const DESIGN_REQUEST_REF_PREFIX = 'HOM-';
-const DESIGN_REQUEST_REF_DIGITS = 4;
-
-function generateDesignRequestReferenceCode(): string {
-  const min = 1000;
-  const max = 9999;
-  const num = Math.floor(Math.random() * (max - min + 1)) + min;
-  return `${DESIGN_REQUEST_REF_PREFIX}${num}`;
-}
-
-export interface CreateDesignRequestPayload {
-  reference_code: string;
-  email: string;
-  room_type: string;
-  style: string;
-  notes?: string | null;
-  photo_urls?: string[] | null;
-}
-
 export interface DesignRequestRow {
   id: string;
   reference_code: string;
@@ -2578,14 +2559,26 @@ export interface DesignRequestRow {
 }
 
 /**
- * Upload design request room photos via Edge Function (service role bypasses storage RLS).
- * Returns array of storage paths for design_requests.photo_urls.
+ * Submit Design My Space form via Edge Function (insert + photo upload in one call, service role bypasses RLS).
  */
-export async function uploadDesignRequestPhotos(requestId: string, files: File[]): Promise<string[]> {
-  if (files.length === 0) return [];
+export async function submitDesignRequest(payload: {
+  email: string;
+  room_type: string;
+  style: string;
+  notes?: string | null;
+  photo_files?: File[];
+}): Promise<DesignRequestRow> {
   const formData = new FormData();
-  formData.append('requestId', requestId);
-  files.forEach((f) => formData.append('files', f));
+  formData.append('email', payload.email);
+  formData.append('room_type', payload.room_type);
+  formData.append('style', payload.style);
+  if (payload.notes != null && payload.notes !== '') {
+    formData.append('notes', payload.notes);
+  }
+  if (payload.photo_files?.length) {
+    payload.photo_files.forEach((f) => formData.append('files', f));
+  }
+
   const res = await fetch(`${SUPABASE_URL}/functions/v1/upload-design-request-photos`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
@@ -2593,77 +2586,8 @@ export async function uploadDesignRequestPhotos(requestId: string, files: File[]
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const msg = data?.error ?? res.statusText ?? 'Upload failed';
-    throw new Error(typeof msg === 'string' ? msg : 'Failed to upload photo');
-  }
-  return Array.isArray(data.paths) ? data.paths : [];
-}
-
-/**
- * Create a design request row. Caller must generate reference_code and request id (uuid).
- * On reference_code conflict, returns null so caller can retry with a new code.
- */
-export async function createDesignRequest(
-  requestId: string,
-  payload: CreateDesignRequestPayload
-): Promise<DesignRequestRow | null> {
-  const { data, error } = await supabase
-    .from('design_requests')
-    .insert({
-      id: requestId,
-      reference_code: payload.reference_code,
-      email: payload.email,
-      room_type: payload.room_type,
-      style: payload.style,
-      notes: payload.notes ?? null,
-      photo_urls: payload.photo_urls ?? null,
-      status: 'payment_pending',
-      country: 'NG',
-    })
-    .select()
-    .single();
-
-  if (error) {
-    if (error.code === '23505') {
-      // unique_violation (reference_code)
-      return null;
-    }
-    console.error('Create design request error:', error);
-    throw new Error(`Failed to create design request: ${error.message}`);
+    const msg = data?.error ?? res.statusText ?? 'Request failed';
+    throw new Error(typeof msg === 'string' ? msg : 'Failed to create design request');
   }
   return data as DesignRequestRow;
-}
-
-/**
- * Submit Design My Space form: generate id + reference code, upload photos, insert row.
- * Retries once if reference_code collision.
- */
-export async function submitDesignRequest(payload: Omit<CreateDesignRequestPayload, 'reference_code'> & { photo_files?: File[] }): Promise<DesignRequestRow> {
-  const requestId = crypto.randomUUID();
-  let referenceCode = generateDesignRequestReferenceCode();
-  let photoUrls: string[] | null = null;
-
-  if (payload.photo_files && payload.photo_files.length > 0) {
-    photoUrls = await uploadDesignRequestPhotos(requestId, payload.photo_files);
-  }
-
-  let row = await createDesignRequest(requestId, {
-    ...payload,
-    reference_code: referenceCode,
-    photo_urls: photoUrls,
-  });
-
-  if (!row) {
-    referenceCode = generateDesignRequestReferenceCode();
-    row = await createDesignRequest(requestId, {
-      ...payload,
-      reference_code: referenceCode,
-      photo_urls: photoUrls,
-    });
-  }
-
-  if (!row) {
-    throw new Error('Could not create design request. Please try again.');
-  }
-  return row;
 }
