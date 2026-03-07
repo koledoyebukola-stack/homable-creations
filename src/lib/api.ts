@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, SUPABASE_ANON_KEY, SUPABASE_URL } from './supabase';
 import type { Board, DetectedItem, Product, Checklist, ChecklistItem, ChecklistWithItems, HistoryItem, SpecsHistory, CarpenterSpec, Storefront, VendorProduct, ExploreScene, ExploreSceneItem, ExploreSceneItemWithProduct } from './types';
 
 interface RoomMaterials {
@@ -2578,28 +2578,25 @@ export interface DesignRequestRow {
 }
 
 /**
- * Upload design request room photos to Supabase Storage (bucket: design-requests).
- * Path: design-requests/{requestId}/{sanitized filename}
- * Returns array of storage paths (for private bucket; store in design_requests.photo_urls).
+ * Upload design request room photos via Edge Function (service role bypasses storage RLS).
+ * Returns array of storage paths for design_requests.photo_urls.
  */
 export async function uploadDesignRequestPhotos(requestId: string, files: File[]): Promise<string[]> {
-  const paths: string[] = [];
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const safeName = `photo_${i + 1}.${ext === 'jpeg' ? 'jpg' : ext}`;
-    const path = `design-requests/${requestId}/${safeName}`;
-    const { error } = await supabase.storage.from('design-requests').upload(path, file, {
-      cacheControl: '3600',
-      upsert: true,
-    });
-    if (error) {
-      console.error('Design request photo upload error:', error);
-      throw new Error(`Failed to upload photo: ${error.message}`);
-    }
-    paths.push(path);
+  if (files.length === 0) return [];
+  const formData = new FormData();
+  formData.append('requestId', requestId);
+  files.forEach((f) => formData.append('files', f));
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/upload-design-request-photos`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+    body: formData,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = data?.error ?? res.statusText ?? 'Upload failed';
+    throw new Error(typeof msg === 'string' ? msg : 'Failed to upload photo');
   }
-  return paths;
+  return Array.isArray(data.paths) ? data.paths : [];
 }
 
 /**
