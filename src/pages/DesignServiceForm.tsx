@@ -29,6 +29,13 @@ const BANK_NAME = '[Your bank name]';
 const ACCOUNT_NUMBER = '[Your account number]';
 const WHATSAPP_NUMBER = '2340000000000';
 
+const SEE_WHATS_POSSIBLE_IMAGES = [
+  { url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Coastal%20Calm%20Living%20Room.png', alt: 'Coastal Calm Living Room' },
+  { url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Golden%20Olive%20Living%20Room.png', alt: 'Golden Olive Living Room' },
+  { url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Urban%20Evergreen%20Living%20Room.png', alt: 'Urban Evergreen Living Room' },
+  { url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Noir%20Botanical%20Living%20Room.png', alt: 'Noir Botanical Living Room' },
+];
+
 const VALUE_PROPS = [
   'Custom design for your space',
   'Every item from verified Nigerian vendors',
@@ -208,17 +215,37 @@ export default function DesignServiceForm() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f9f9f9] via-gray-50 to-stone-50">
       <div className="max-w-[560px] mx-auto px-4 py-12 md:py-16">
-        <header className="text-center mb-12">
+        <header className="text-center mb-8">
           <span className="inline-block text-xs font-semibold uppercase tracking-wider text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full mb-4">
             Beta
           </span>
           <h1 className="text-3xl md:text-4xl lg:text-[2.5rem] font-bold text-[#111111] tracking-tight mb-3">
             Design My Space
           </h1>
-          <p className="text-lg md:text-xl text-[#555555] leading-relaxed max-w-md mx-auto">
-            Professional room design using real Nigerian vendors — at a fraction of designer costs.
+          <p className="text-lg md:text-xl text-[#555555] leading-relaxed max-w-lg mx-auto">
+            Your room, designed by experts, furnished by verified Nigerian vendors. Ready to buy in 48 hours.
           </p>
         </header>
+
+        <section className="mb-10">
+          <h2 className="text-lg font-semibold text-[#111111] mb-4">See what&apos;s possible</h2>
+          <div className="overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 scroll-pills-hide-scrollbar">
+            <div className="flex gap-4 w-max md:w-full md:grid md:grid-cols-4">
+              {SEE_WHATS_POSSIBLE_IMAGES.map(({ url, alt }) => (
+                <div
+                  key={url}
+                  className="flex-shrink-0 w-[260px] md:w-auto rounded-2xl overflow-hidden border border-[#e5e5e5] bg-white shadow-sm"
+                >
+                  <img
+                    src={url}
+                    alt={alt}
+                    className="w-full aspect-[4/3] object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
 
         <div className="space-y-8 mb-10">
           <ul className="space-y-3">
