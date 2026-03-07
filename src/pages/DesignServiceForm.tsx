@@ -25,9 +25,10 @@ const MAX_FILE_SIZE_MB = 5;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 const ACCEPTED_TYPES = 'image/jpeg,image/png';
 
-const BANK_NAME = '[Your bank name]';
-const ACCOUNT_NUMBER = '[Your account number]';
-const WHATSAPP_NUMBER = '2340000000000';
+const BANK_NAME = 'GTB';
+const ACCOUNT_NUMBER = '0655700244';
+const ACCOUNT_NAME = 'MARVEL SUPPLIES VENTURES';
+const WHATSAPP_NUMBER = '2347065813490';
 
 const SEE_WHATS_POSSIBLE_IMAGES = [
   { url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Coastal%20Calm%20Living%20Room.png', alt: 'Coastal Calm Living Room' },
@@ -188,7 +189,7 @@ export default function DesignServiceForm() {
                   <div className="flex justify-between"><dt className="text-[#666]">Amount</dt><dd className="font-semibold">₦15,000</dd></div>
                   <div className="flex justify-between"><dt className="text-[#666]">Bank</dt><dd>{BANK_NAME}</dd></div>
                   <div className="flex justify-between"><dt className="text-[#666]">Account number</dt><dd>{ACCOUNT_NUMBER}</dd></div>
-                  <div className="flex justify-between"><dt className="text-[#666]">Account name</dt><dd>Homable Creations</dd></div>
+                  <div className="flex justify-between"><dt className="text-[#666]">Account name</dt><dd>{ACCOUNT_NAME}</dd></div>
                   <div className="flex justify-between"><dt className="text-[#666]">Narration</dt><dd className="font-mono font-medium">{submitted.reference_code}</dd></div>
                 </dl>
               </div>
@@ -274,9 +275,11 @@ export default function DesignServiceForm() {
             ))}
           </ul>
 
-          <p className="text-xl md:text-2xl font-bold text-[#111111] leading-snug text-center md:text-left">
-            Can&apos;t afford interior designers? No problem. Get the same result for ₦15,000 instead of ₦200,000+.
-          </p>
+          <div className="rounded-2xl bg-emerald-600 px-6 py-5 text-center md:text-left">
+            <p className="text-xl md:text-2xl font-bold text-white leading-snug">
+              Can&apos;t afford interior designers? No problem. Get the same result for ₦15,000 instead of ₦200,000+.
+            </p>
+          </div>
 
           <section className="space-y-6">
             <h2 className="text-xl font-semibold text-[#111111]">How it works</h2>
@@ -307,7 +310,7 @@ export default function DesignServiceForm() {
           </section>
 
           <div className="flex flex-wrap items-baseline gap-2">
-            <span className="text-2xl font-bold text-[#111111]">Investment: ₦15,000</span>
+            <span className="text-2xl font-bold text-[#111111]">Cost: ₦15,000</span>
           </div>
         </div>
 
