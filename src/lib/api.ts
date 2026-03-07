@@ -2541,3 +2541,134 @@ export async function getInspirationsByProduct(productId: string): Promise<Explo
 
   return sceneList.map((s) => ({ ...s, catalog_budget_ngn: 0, minimum_item_price_ngn: 0 }));
 }
+
+// --- Design My Space (Beta): NG custom design requests ---
+
+const DESIGN_REQUEST_REF_PREFIX = 'HOM-';
+const DESIGN_REQUEST_REF_DIGITS = 4;
+
+function generateDesignRequestReferenceCode(): string {
+  const min = 1000;
+  const max = 9999;
+  const num = Math.floor(Math.random() * (max - min + 1)) + min;
+  return `${DESIGN_REQUEST_REF_PREFIX}${num}`;
+}
+
+export interface CreateDesignRequestPayload {
+  reference_code: string;
+  email: string;
+  room_type: string;
+  budget_ngn: number;
+  style: string;
+  notes?: string | null;
+  photo_urls?: string[] | null;
+}
+
+export interface DesignRequestRow {
+  id: string;
+  reference_code: string;
+  email: string;
+  room_type: string;
+  budget_ngn: number;
+  style: string;
+  notes: string | null;
+  photo_urls: string[] | null;
+  status: string;
+  country: string;
+  created_at: string;
+}
+
+/**
+ * Upload design request room photos to Supabase Storage (bucket: design-requests).
+ * Path: design-requests/{requestId}/{sanitized filename}
+ * Returns array of storage paths (for private bucket; store in design_requests.photo_urls).
+ */
+export async function uploadDesignRequestPhotos(requestId: string, files: File[]): Promise<string[]> {
+  const paths: string[] = [];
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const safeName = `photo_${i + 1}.${ext === 'jpeg' ? 'jpg' : ext}`;
+    const path = `design-requests/${requestId}/${safeName}`;
+    const { error } = await supabase.storage.from('design-requests').upload(path, file, {
+      cacheControl: '3600',
+      upsert: true,
+    });
+    if (error) {
+      console.error('Design request photo upload error:', error);
+      throw new Error(`Failed to upload photo: ${error.message}`);
+    }
+    paths.push(path);
+  }
+  return paths;
+}
+
+/**
+ * Create a design request row. Caller must generate reference_code and request id (uuid).
+ * On reference_code conflict, returns null so caller can retry with a new code.
+ */
+export async function createDesignRequest(
+  requestId: string,
+  payload: CreateDesignRequestPayload
+): Promise<DesignRequestRow | null> {
+  const { data, error } = await supabase
+    .from('design_requests')
+    .insert({
+      id: requestId,
+      reference_code: payload.reference_code,
+      email: payload.email,
+      room_type: payload.room_type,
+      budget_ngn: payload.budget_ngn,
+      style: payload.style,
+      notes: payload.notes ?? null,
+      photo_urls: payload.photo_urls ?? null,
+      status: 'payment_pending',
+      country: 'NG',
+    })
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === '23505') {
+      // unique_violation (reference_code)
+      return null;
+    }
+    console.error('Create design request error:', error);
+    throw new Error(`Failed to create design request: ${error.message}`);
+  }
+  return data as DesignRequestRow;
+}
+
+/**
+ * Submit Design My Space form: generate id + reference code, upload photos, insert row.
+ * Retries once if reference_code collision.
+ */
+export async function submitDesignRequest(payload: Omit<CreateDesignRequestPayload, 'reference_code'> & { photo_files?: File[] }): Promise<DesignRequestRow> {
+  const requestId = crypto.randomUUID();
+  let referenceCode = generateDesignRequestReferenceCode();
+  let photoUrls: string[] | null = null;
+
+  if (payload.photo_files && payload.photo_files.length > 0) {
+    photoUrls = await uploadDesignRequestPhotos(requestId, payload.photo_files);
+  }
+
+  let row = await createDesignRequest(requestId, {
+    ...payload,
+    reference_code: referenceCode,
+    photo_urls: photoUrls,
+  });
+
+  if (!row) {
+    referenceCode = generateDesignRequestReferenceCode();
+    row = await createDesignRequest(requestId, {
+      ...payload,
+      reference_code: referenceCode,
+      photo_urls: photoUrls,
+    });
+  }
+
+  if (!row) {
+    throw new Error('Could not create design request. Please try again.');
+  }
+  return row;
+}

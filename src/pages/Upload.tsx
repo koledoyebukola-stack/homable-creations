@@ -20,6 +20,7 @@ import SpecsCategorySelection from '@/components/specs/SpecsCategorySelection';
 import { trackPageView, trackAction, EVENTS } from '@/lib/analytics';
 import { trackNgEvent, NG_EVENTS } from '@/lib/analytics-ng';
 import { getSelectedCountry, useCountry } from '@/context/CountryContext';
+import DesignServiceForm from '@/pages/DesignServiceForm';
 
 // Sample images organized by category - REMOVED HOLIDAY LOOKS
 const SAMPLE_CATEGORIES = [
@@ -211,7 +212,11 @@ export default function Upload() {
   // Read tab from URL query parameter on mount
   useEffect(() => {
     const mode = searchParams.get('mode');
-    // TEMP: Nigerian launch - redirect inspiration/replicate/no-mode to explore (upload flow hidden until supply sufficient)
+    // NG + mode=inspiration → DesignServiceForm (no redirect). Other NG modes still redirect to explore.
+    if (isNigeria && mode === 'inspiration') {
+      setActiveTab('inspiration');
+      return;
+    }
     if (isNigeria && mode !== 'explore' && mode !== 'design') {
       setActiveTab('explore');
       const newParams = new URLSearchParams(searchParams);
@@ -500,6 +505,23 @@ export default function Upload() {
       setUploading(false);
     }
   };
+
+  // NG + mode=inspiration: show Design My Space (Beta) form only
+  const mode = searchParams.get('mode');
+  if (isNigeria && mode === 'inspiration') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">
+        {testCountry && (
+          <div className="mx-4 mt-4 p-4 bg-purple-50 border border-purple-200 rounded-xl">
+            <p className="text-sm font-medium text-purple-900">
+              Testing Mode: <span className="font-mono">{testCountry}</span>
+            </p>
+          </div>
+        )}
+        <DesignServiceForm />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50 flex flex-col">

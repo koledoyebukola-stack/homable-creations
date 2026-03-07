@@ -190,7 +190,7 @@ export default function Home() {
                 : HERO_DESCRIPTION_DEFAULT}
             </p>
 
-            {/* CTAs: Nigeria = Explore only (upload hidden for launch); Canada = Shop Curated Rooms primary; Other = Upload primary, Explore secondary */}
+            {/* CTAs: Nigeria = Shop Curated Rooms + Design My Space (Beta); Canada = Shop Curated Rooms primary; Other = Upload primary, Explore secondary */}
             <div className="flex flex-col md:flex-row md:gap-3 gap-4">
               {country === 'NG' ? (
                 <>
@@ -200,6 +200,13 @@ export default function Home() {
                     className="w-full md:flex-1 h-[56px] md:h-[60px] flex items-center justify-center rounded-xl bg-[#000000] text-white text-base md:text-[18px] font-semibold hover:bg-[#1a1a1a] hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-all duration-200"
                   >
                     Shop Curated Rooms
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/upload?mode=inspiration')}
+                    className="w-full md:flex-1 h-12 md:h-[60px] flex items-center justify-center rounded-xl bg-white text-black text-[15px] md:text-base font-medium border-[1.5px] border-[#e0e0e0] hover:border-black hover:bg-[#fafafa] transition-colors"
+                  >
+                    Design My Space <span className="ml-1.5 text-xs font-normal px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">Beta</span>
                   </button>
                   {/* TEMP: Hidden for Nigerian launch - re-enable once supply is sufficient (50+ vendors) */}
                   {SHOW_UPLOAD_INSPIRATION_FOR_NIGERIA && (
