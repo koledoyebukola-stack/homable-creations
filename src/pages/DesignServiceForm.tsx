@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { submitDesignRequest } from '@/lib/api';
 import type { DesignRequestRow } from '@/lib/api';
 import { toast } from 'sonner';
-import { Copy, Check, CheckCircle2, ImageIcon, FileText, Sparkles } from 'lucide-react';
+import { Copy, Check, CheckCircle2, ImageIcon, FileText, Upload, Sparkles, PackageCheck } from 'lucide-react';
 
 const ROOM_TYPES = [
   { value: 'living_room', label: 'Living Room' },
@@ -43,10 +43,25 @@ const VALUE_PROPS = [
   'Delivered within 48 hours of payment confirmation',
 ];
 
-const RECEIVE_ITEMS = [
-  'Custom room design image (layout and styling)',
-  'Total budget breakdown',
-  'Direct vendor contact links',
+const HOW_IT_WORKS_STEPS = [
+  {
+    number: 1,
+    icon: Upload,
+    title: 'Upload your space',
+    description: 'Share 1–2 photos of your living room, bedroom, or dining room.',
+  },
+  {
+    number: 2,
+    icon: Sparkles,
+    title: 'We design it for you',
+    description: 'Our team designs your space using real furniture and decor pieces from verified Nigerian vendors to match your style.',
+  },
+  {
+    number: 3,
+    icon: PackageCheck,
+    title: 'Receive your plan',
+    description: 'Get a custom design image, full shopping list with prices, and direct vendor contacts.',
+  },
 ];
 
 export default function DesignServiceForm() {
@@ -259,26 +274,40 @@ export default function DesignServiceForm() {
             ))}
           </ul>
 
-          <div className="bg-white rounded-2xl border border-[#e5e5e5] shadow-sm p-6">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-[#111111]/5 flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-[#111111]" />
-              </div>
-              <h2 className="text-lg font-semibold text-[#111111]">What you&apos;ll receive</h2>
+          <p className="text-xl md:text-2xl font-bold text-[#111111] leading-snug text-center md:text-left">
+            Can&apos;t afford interior designers? No problem. Get the same result for ₦15,000 instead of ₦200,000+.
+          </p>
+
+          <section className="space-y-6">
+            <h2 className="text-xl font-semibold text-[#111111]">How it works</h2>
+            <div className="grid gap-6 md:grid-cols-3">
+              {HOW_IT_WORKS_STEPS.map((step) => {
+                const Icon = step.icon;
+                return (
+                  <div
+                    key={step.number}
+                    className="relative rounded-2xl border-2 border-[#e5e5e5] bg-white p-6 shadow-sm transition-shadow hover:shadow-md hover:border-[#111111]/20"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-[#111111] text-white">
+                        <Icon className="h-6 w-6" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="mb-1 block text-xs font-bold uppercase tracking-wider text-[#666]">
+                          Step {step.number}
+                        </span>
+                        <h3 className="text-lg font-bold text-[#111111] mb-2">{step.title}</h3>
+                        <p className="text-[#555555] text-sm leading-relaxed">{step.description}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <ul className="space-y-2 text-[#555555] text-sm">
-              {RECEIVE_ITEMS.map((item) => (
-                <li key={item} className="flex items-start gap-2">
-                  <span className="text-[#111111] mt-0.5">•</span>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
+          </section>
 
           <div className="flex flex-wrap items-baseline gap-2">
-            <span className="text-2xl font-bold text-[#111111]">₦15,000</span>
-            <span className="text-sm text-[#666]">(Interior designers charge ₦200,000+)</span>
+            <span className="text-2xl font-bold text-[#111111]">Investment: ₦15,000</span>
           </div>
         </div>
 
