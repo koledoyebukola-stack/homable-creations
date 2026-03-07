@@ -1,5 +1,3 @@
--- Design My Space (Beta): design_requests table and storage bucket for NG custom design service
-
 BEGIN;
 
 -- design_requests: one row per design request (payment_pending → paid → in_progress → delivered)
