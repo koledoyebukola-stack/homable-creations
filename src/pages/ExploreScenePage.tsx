@@ -9,6 +9,7 @@ import {
   getChecklistByExploreSceneId,
   getRandomArtworkProducts,
   getCategoryProductsForExplore,
+  getCategoryProductsForExploreByPrice,
   getFeaturedStorefrontsThisWeek,
   type CategoryProductWithStorefront,
   type StorefrontWithProductCount,
@@ -221,12 +222,55 @@ export default function ExploreScenePage() {
     }
     const scene = data.scene as ExploreScene;
     const categories = getMoreOptionsCategories(scene.room_type);
-    Promise.all(
-      categories.map(({ title, category }) =>
-        getCategoryProductsForExplore('NG', category, 3, 3).then((items) => ({ title, category, items }))
-      )
-    ).then((results) => {
-      setMoreOptionsSections(results.filter((r) => r.items.length >= 3));
+    const promises: Promise<{ title: string; category: string; items: CategoryProductWithStorefront[] } | null>[] = [];
+
+    categories.forEach(({ title, category }) => {
+      if (category === 'seating' || category === 'bed') {
+        const label = category === 'seating' ? 'Seating' : 'Bed';
+
+        // More Affordable [Category] Options — cheapest items first
+        promises.push(
+          getCategoryProductsForExploreByPrice('NG', category, 'asc', 3).then((items) =>
+            items.length >= 3
+              ? {
+                  title: `More Affordable ${label} Options`,
+                  category,
+                  items,
+                }
+              : null,
+          ),
+        );
+
+        // Higher-End [Category] Options — most expensive items
+        promises.push(
+          getCategoryProductsForExploreByPrice('NG', category, 'desc', 3).then((items) =>
+            items.length >= 3
+              ? {
+                  title: `Higher-End ${label} Options`,
+                  category,
+                  items,
+                }
+              : null,
+          ),
+        );
+      } else {
+        // Default behavior for other categories (artwork, lighting, etc.)
+        promises.push(
+          getCategoryProductsForExplore('NG', category, 3, 3).then((items) =>
+            items.length >= 3
+              ? {
+                  title,
+                  category,
+                  items,
+                }
+              : null,
+          ),
+        );
+      }
+    });
+
+    Promise.all(promises).then((results) => {
+      setMoreOptionsSections(results.filter((r): r is { title: string; category: string; items: CategoryProductWithStorefront[] } => r !== null));
     });
     getFeaturedStorefrontsThisWeek('NG', 3).then(setFeaturedVendors);
   }, [data]);
@@ -1019,7 +1063,7 @@ export default function ExploreScenePage() {
             </p>
             <div className="space-y-10">
               {moreOptionsSections.map(({ title, category, items }) => (
-                <div key={category}>
+                <div key={`${category}-${title}`}>
                   <h3 className="text-base font-semibold text-[#111111] mb-3">{title}</h3>
                   <div className="overflow-x-auto pb-1 scroll-pills-hide-scrollbar md:overflow-visible -mx-4 md:mx-0 px-4 md:px-0">
                     <div className="flex gap-4 md:grid md:grid-cols-3 min-w-0 md:min-w-full">

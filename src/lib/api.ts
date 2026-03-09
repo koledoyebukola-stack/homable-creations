@@ -1911,6 +1911,67 @@ export async function getCategoryProductsForExplore(
 }
 
 /**
+ * Fetch up to `limit` products in a category for explore "More Options to Love",
+ * ordered by price_min for "More Affordable" / "Higher-End" sections.
+ */
+export async function getCategoryProductsForExploreByPrice(
+  location: string,
+  category: string,
+  sortDirection: 'asc' | 'desc',
+  limit: number = 3
+): Promise<CategoryProductWithStorefront[]> {
+  const { data: storefronts, error: storefrontsError } = await supabase
+    .from('storefronts')
+    .select('id')
+    .eq('status', 'active')
+    .eq('location', location);
+
+  if (storefrontsError || !storefronts || storefronts.length === 0) {
+    return [];
+  }
+
+  const storefrontIds = storefronts.map((s: { id: string }) => s.id);
+
+  const { data: products, error: productsError } = await supabase
+    .from('vendor_products')
+    .select('*')
+    .in('storefront_id', storefrontIds)
+    .eq('category', category)
+    .not('price_min', 'is', null)
+    .order('price_min', {
+      ascending: sortDirection === 'asc',
+      nullsLast: true,
+    })
+    .limit(limit);
+
+  if (productsError || !products || products.length < limit) {
+    return [];
+  }
+
+  const list = products as VendorProduct[];
+
+  const uniqueStorefrontIds = [...new Set(list.map((p) => p.storefront_id))];
+  const { data: storefrontRows, error: storefrontFetchError } = await supabase
+    .from('storefronts')
+    .select('*')
+    .in('id', uniqueStorefrontIds);
+
+  if (storefrontFetchError || !storefrontRows || storefrontRows.length === 0) {
+    return [];
+  }
+
+  const storefrontMap = new Map<string, Storefront>();
+  (storefrontRows as Storefront[]).forEach((s) => storefrontMap.set(s.id, s));
+
+  return list
+    .map((p) => {
+      const storefront = storefrontMap.get(p.storefront_id);
+      return storefront ? { product: p, storefront } : null;
+    })
+    .filter((x): x is CategoryProductWithStorefront => x != null);
+}
+
+/**
  * Get ISO week number (1–53) for the given date.
  */
 function getISOWeekNumber(date: Date): number {
