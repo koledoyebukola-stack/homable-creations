@@ -131,6 +131,23 @@ export default function ShopsProductDetail() {
   const whatsappBase = whatsappUrl(storefront.whatsapp_number);
   const dimensions = formatDimensions(product);
 
+  // Description text by vendor_type and offering_type (match StorefrontView banner logic)
+  const getProductDescription = (): string => {
+    if (storefront.vendor_type === 'carpenter') {
+      if (storefront.offering_type === 'imported') {
+        return 'Imported furniture. Contact vendor for availability and delivery options.';
+      }
+      if (storefront.offering_type === 'both') {
+        return 'Available as imported piece or custom-made to order. Contact vendor for options and pricing.';
+      }
+      return 'Custom-made furniture crafted to order. Contact vendor for exact dimensions and customization options.';
+    }
+    if (storefront.vendor_type === 'decor_store') {
+      return 'Home decor and styling pieces. Contact vendor for availability and pricing.';
+    }
+    return 'Contact vendor for availability and pricing.';
+  };
+
   const handleWhatsAppClick = () => {
     const origin = window.location.origin;
     const productUrl = `${origin}/shops/products/${product.slug}`;
@@ -281,8 +298,7 @@ export default function ShopsProductDetail() {
                         </div>
                       )}
                       <p className="pt-1 text-xs text-gray-500">
-                        Custom-made furniture crafted to order. Contact vendor for exact dimensions and
-                        customization options.
+                        {getProductDescription()}
                       </p>
                     </div>
                   </div>

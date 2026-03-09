@@ -348,14 +348,18 @@ function StorefrontActive({
 
   const whatsapp = whatsappUrl(storefront.whatsapp_number);
 
-  // Derive subtitle from vendor_type
-  const getVendorSubtitle = (vendorType: string | null | undefined): string | null => {
-    if (vendorType === 'carpenter') return 'Custom Furniture & Carpentry';
-    if (vendorType === 'decor_store') return 'Home Decor & Styling';
+  // Derive subtitle from vendor_type (and offering_type for carpenters)
+  const getVendorSubtitle = (): string | null => {
+    if (storefront.vendor_type === 'carpenter') {
+      if (storefront.offering_type === 'imported') return 'Imported Furniture';
+      if (storefront.offering_type === 'both') return 'Custom & Imported Furniture';
+      return 'Custom Furniture & Carpentry'; // custom or undefined
+    }
+    if (storefront.vendor_type === 'decor_store') return 'Home Decor & Styling';
     return null;
   };
 
-  const vendorSubtitle = getVendorSubtitle(storefront.vendor_type);
+  const vendorSubtitle = getVendorSubtitle();
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
