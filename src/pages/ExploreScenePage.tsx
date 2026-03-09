@@ -48,6 +48,7 @@ function formatVendorDimensions(p: VendorProduct): string | null {
 const MORE_OPTIONS_BY_ROOM_TYPE: Record<string, { title: string; category: string }[]> = {
   living_room: [
     { title: 'Prefer a Different Seating?', category: 'seating' },
+    { title: 'Prefer a Different Table?', category: 'table' },
     { title: 'Looking for More Artwork?', category: 'artwork' },
     { title: 'Need Different Lighting for This Room?', category: 'lighting' },
     { title: 'Need More Planter Options?', category: 'planters' },
@@ -225,8 +226,13 @@ export default function ExploreScenePage() {
     const promises: Promise<{ title: string; category: string; items: CategoryProductWithStorefront[] } | null>[] = [];
 
     categories.forEach(({ title, category }) => {
-      if (category === 'seating' || category === 'bed') {
-        const label = category === 'seating' ? 'Seating' : 'Bed';
+      if (category === 'seating' || category === 'bed' || category === 'table') {
+        const label =
+          category === 'seating'
+            ? 'Seating'
+            : category === 'bed'
+              ? 'Bed'
+              : 'Table';
 
         // More Affordable [Category] Options — cheapest items first
         promises.push(
