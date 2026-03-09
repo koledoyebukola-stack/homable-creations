@@ -14,6 +14,7 @@ const VENDOR = {
   instagram_handle: 'lagoshomedecor',
   whatsapp: 'https://wa.me/2348012345678',
   active_since: 'February 2026',
+  offeringType: 'custom' as const, // 'custom' | 'imported' | 'both'
 } as const;
 
 const PRODUCTS = [
@@ -127,10 +128,16 @@ export default function DemoStorefront() {
                 </a>
               </div>
               <div className="hidden md:flex flex-col items-end gap-3">
-                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#25D366]" />
-                  <span className="font-medium text-white text-xs">Custom orders available</span>
-                </div>
+                {VENDOR.offeringType === 'imported' ? (
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1">
+                    <span className="font-medium text-white text-xs">Imported</span>
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#25D366]" />
+                    <span className="font-medium text-white text-xs">Custom orders available</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -286,7 +293,7 @@ export default function DemoStorefront() {
                       />
                       <div className="absolute top-2 left-2">
                         <Badge className="bg-gray-900 text-white text-[10px] font-medium border-0 shadow-sm px-2 py-1 rounded-full">
-                          Custom order
+                          {VENDOR.offeringType === 'imported' ? 'Imported' : 'Custom order'}
                         </Badge>
                       </div>
                     </div>

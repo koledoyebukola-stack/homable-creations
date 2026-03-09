@@ -170,6 +170,8 @@ export interface HistoryItem {
 // Storefront (vendor catalog page)
 export type StorefrontVendorType = 'carpenter' | 'decor_store';
 export type StorefrontStatus = 'active' | 'paused';
+/** custom = build to order; imported = ready-made only; both = offers both. */
+export type StorefrontOfferingType = 'custom' | 'imported' | 'both';
 
 export interface Storefront {
   id: string;
@@ -184,6 +186,8 @@ export interface Storefront {
   instagram_handle: string | null;
   vendor_type: StorefrontVendorType;
   status: StorefrontStatus;
+  /** Drives "Custom orders available" vs "Imported" badge. Default 'custom'. */
+  offering_type?: StorefrontOfferingType;
   active_since: string | null;
   created_at: string;
   updated_at: string;

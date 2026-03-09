@@ -419,10 +419,16 @@ function StorefrontActive({
                 )}
               </div>
               <div className="hidden md:flex flex-col items-end gap-3">
-                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#25D366]" />
-                  <span className="font-medium text-white text-xs">Custom orders available</span>
-                </div>
+                {storefront.offering_type === 'imported' ? (
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1">
+                    <span className="font-medium text-white text-xs">Imported</span>
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#25D366]" />
+                    <span className="font-medium text-white text-xs">Custom orders available</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -657,7 +663,7 @@ function StorefrontActive({
                       )}
                       <div className="absolute top-2 left-2">
                         <Badge className="bg-gray-900 text-white text-[10px] font-medium border-0 shadow-sm px-2 py-1 rounded-full">
-                          Custom order
+                          {storefront.offering_type === 'imported' ? 'Imported' : 'Custom order'}
                         </Badge>
                       </div>
                     </div>

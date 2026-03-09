@@ -204,7 +204,7 @@ export default function ShopsProductDetail() {
                   {/* Trust badges */}
                   <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
                     <span className="inline-flex items-center rounded-full bg-gray-900 text-white px-3 py-1">
-                      Custom orders available
+                      {storefront.offering_type === 'imported' ? 'Imported' : 'Custom orders available'}
                     </span>
                     {storefront.location && (
                       <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-700 border border-gray-200 px-3 py-1">

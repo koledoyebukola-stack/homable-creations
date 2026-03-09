@@ -520,7 +520,7 @@ export default function ShopsHome() {
                             )}
                             <div className="absolute top-2 left-2">
                               <span className="inline-flex items-center rounded-full bg-black/80 text-white text-[10px] font-medium px-2 py-1 shadow-sm">
-                                Custom order
+                                {storefront?.offering_type === 'imported' ? 'Imported' : 'Custom order'}
                               </span>
                             </div>
                           </div>
