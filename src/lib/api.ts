@@ -1920,6 +1920,7 @@ export async function getCategoryProductsForExploreByPrice(
   sortDirection: 'asc' | 'desc',
   limit: number = 3
 ): Promise<CategoryProductWithStorefront[]> {
+  // First, find active storefronts in this location
   const { data: storefronts, error: storefrontsError } = await supabase
     .from('storefronts')
     .select('id')
@@ -1932,6 +1933,10 @@ export async function getCategoryProductsForExploreByPrice(
 
   const storefrontIds = storefronts.map((s: { id: string }) => s.id);
 
+  // Fetch a wider "price band" (e.g. 40 cheapest / most expensive items),
+  // then randomly sample `limit` items within that band to keep sections fresh.
+  const bandLimit = Math.max(limit * 10, limit); // e.g. 30 when limit=3
+
   const { data: products, error: productsError } = await supabase
     .from('vendor_products')
     .select('*')
@@ -1942,7 +1947,7 @@ export async function getCategoryProductsForExploreByPrice(
       ascending: sortDirection === 'asc',
       nullsLast: true,
     })
-    .limit(limit);
+    .limit(bandLimit);
 
   if (productsError || !products || products.length < limit) {
     return [];
@@ -1950,7 +1955,16 @@ export async function getCategoryProductsForExploreByPrice(
 
   const list = products as VendorProduct[];
 
-  const uniqueStorefrontIds = [...new Set(list.map((p) => p.storefront_id))];
+  // Randomly sample `limit` products from the price-ordered band
+  const pool = [...list];
+  const sampleCount = Math.min(limit, pool.length);
+  for (let i = 0; i < sampleCount; i++) {
+    const j = i + Math.floor(Math.random() * (pool.length - i));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const sampled = pool.slice(0, sampleCount);
+
+  const uniqueStorefrontIds = [...new Set(sampled.map((p) => p.storefront_id))];
   const { data: storefrontRows, error: storefrontFetchError } = await supabase
     .from('storefronts')
     .select('*')
@@ -1963,7 +1977,7 @@ export async function getCategoryProductsForExploreByPrice(
   const storefrontMap = new Map<string, Storefront>();
   (storefrontRows as Storefront[]).forEach((s) => storefrontMap.set(s.id, s));
 
-  return list
+  return sampled
     .map((p) => {
       const storefront = storefrontMap.get(p.storefront_id);
       return storefront ? { product: p, storefront } : null;
