@@ -122,7 +122,7 @@ export default function Home() {
   const [browseStorefronts, setBrowseStorefronts] = useState<Storefront[]>([]);
   const [browseProducts, setBrowseProducts] = useState<VendorProduct[]>([]);
   const [loadingBrowseProducts, setLoadingBrowseProducts] = useState(false);
-  const [browseProductsCategory, setBrowseProductsCategory] = useState<BrowseProductsCategoryValue>('all');
+  const [browseProductsCategory, setBrowseProductsCategory] = useState<BrowseProductsCategoryValue>('planters');
 
   useEffect(() => {
     // Nigeria: load NG Explore scenes
