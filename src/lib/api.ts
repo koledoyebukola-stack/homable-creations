@@ -1933,55 +1933,45 @@ export async function getCategoryProductsForExploreByPrice(
 
   const storefrontIds = storefronts.map((s: { id: string }) => s.id);
 
-  // For tables, when the catalog is still small, keep the sections strictly ordered by price
-  // (no randomization) so "More Affordable" vs "Higher-End" remain intuitive.
+  // For tables, keep sections strictly ordered by price (no randomization)
+  // so "More Affordable" vs "Higher-End" remain intuitive while the catalog is small.
   if (category === 'table') {
-    const { count: totalCount } = await supabase
+    const { data: fixedProducts, error: fixedError } = await supabase
       .from('vendor_products')
-      .select('*', { count: 'exact', head: true })
+      .select('*')
       .in('storefront_id', storefrontIds)
       .eq('category', category)
-      .not('price_min', 'is', null);
+      .not('price_min', 'is', null)
+      .order('price_min', {
+        ascending: sortDirection === 'asc',
+        nullsLast: true,
+      })
+      .limit(limit);
 
-    const THRESHOLD = 10; // below this, use fixed cheapest/most expensive items
-    if ((totalCount ?? 0) < THRESHOLD) {
-      const { data: fixedProducts, error: fixedError } = await supabase
-        .from('vendor_products')
-        .select('*')
-        .in('storefront_id', storefrontIds)
-        .eq('category', category)
-        .not('price_min', 'is', null)
-        .order('price_min', {
-          ascending: sortDirection === 'asc',
-          nullsLast: true,
-        })
-        .limit(limit);
-
-      if (fixedError || !fixedProducts || fixedProducts.length < limit) {
-        return [];
-      }
-
-      const fixedList = fixedProducts as VendorProduct[];
-      const uniqueStorefrontIds = [...new Set(fixedList.map((p) => p.storefront_id))];
-      const { data: storefrontRows, error: storefrontFetchError } = await supabase
-        .from('storefronts')
-        .select('*')
-        .in('id', uniqueStorefrontIds);
-
-      if (storefrontFetchError || !storefrontRows || storefrontRows.length === 0) {
-        return [];
-      }
-
-      const storefrontMap = new Map<string, Storefront>();
-      (storefrontRows as Storefront[]).forEach((s) => storefrontMap.set(s.id, s));
-
-      return fixedList
-        .map((p) => {
-          const storefront = storefrontMap.get(p.storefront_id);
-          return storefront ? { product: p, storefront } : null;
-        })
-        .filter((x): x is CategoryProductWithStorefront => x != null);
+    if (fixedError || !fixedProducts || fixedProducts.length < limit) {
+      return [];
     }
+
+    const fixedList = fixedProducts as VendorProduct[];
+    const uniqueStorefrontIds = [...new Set(fixedList.map((p) => p.storefront_id))];
+    const { data: storefrontRows, error: storefrontFetchError } = await supabase
+      .from('storefronts')
+      .select('*')
+      .in('id', uniqueStorefrontIds);
+
+    if (storefrontFetchError || !storefrontRows || storefrontRows.length === 0) {
+      return [];
+    }
+
+    const storefrontMap = new Map<string, Storefront>();
+    (storefrontRows as Storefront[]).forEach((s) => storefrontMap.set(s.id, s));
+
+    return fixedList
+      .map((p) => {
+        const storefront = storefrontMap.get(p.storefront_id);
+        return storefront ? { product: p, storefront } : null;
+      })
+      .filter((x): x is CategoryProductWithStorefront => x != null);
   }
 
   // Fetch a wider "price band" (e.g. 40 cheapest / most expensive items),
