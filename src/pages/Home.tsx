@@ -96,6 +96,23 @@ function formatViewCount(count: number): string {
   return `${Math.round(count / 1000)}k views`;
 }
 
+function getVendorInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const first = parts[0]?.[0] ?? '';
+  const second = parts[1]?.[0] ?? '';
+  const initials = (first + second).toUpperCase();
+  return initials || 'V';
+}
+
+function getVendorColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i += 1) {
+    hash = (hash * 31 + name.charCodeAt(i)) | 0;
+  }
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 70%, 40%)`;
+}
+
 function formatPrice(min: number | null, max: number | null): string {
   if (min != null && max != null && min !== max) return `₦${min.toLocaleString('en-NG')} – ₦${max.toLocaleString('en-NG')}`;
   if (min != null) return `From ₦${min.toLocaleString('en-NG')}`;
@@ -509,9 +526,29 @@ export default function Home() {
                             No image
                           </div>
                         )}
-                        <div className="absolute top-2 left-2">
-                          <span className="inline-flex items-center rounded-full bg-black/80 text-white text-[10px] font-medium px-2 py-1 shadow-sm line-clamp-1 max-w-[90%]">
-                            {storefront ? storefront.name.split(' ').slice(0, 2).join(' ') : 'Vendor'}
+                        <div className="absolute top-2 left-2 max-w-[90%]">
+                          <span className="inline-flex items-center rounded-full bg-black/80 text-white text-[10px] font-medium px-2 py-1 shadow-sm">
+                            <span
+                              className="relative h-6 w-6 rounded-full border border-white/70 overflow-hidden flex items-center justify-center text-[10px] font-semibold mr-1"
+                              style={{ backgroundColor: getVendorColor(storefront?.name ?? 'Vendor') }}
+                            >
+                              <span className="z-0">
+                                {getVendorInitials(storefront?.name ?? 'Vendor')}
+                              </span>
+                              {storefront?.logo_url && (
+                                <img
+                                  src={storefront.logo_url}
+                                  alt={storefront.name}
+                                  className="absolute inset-0 w-full h-full object-cover rounded-full"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                  }}
+                                />
+                              )}
+                            </span>
+                            <span className="truncate max-w-[80px]">
+                              {storefront?.name ?? 'Vendor'}
+                            </span>
                           </span>
                         </div>
                       </div>
@@ -519,11 +556,6 @@ export default function Home() {
                         <h3 className="text-[13px] md:text-sm font-semibold text-gray-900 leading-snug line-clamp-2">
                           {product.name}
                         </h3>
-                        {storefront && (
-                          <p className="mt-0.5 text-[11px] text-gray-500 line-clamp-1">
-                            {storefront.name}
-                          </p>
-                        )}
                         <p className="text-xs text-gray-700 mt-1">
                           {formatPrice(product.price_min, product.price_max)}
                         </p>
