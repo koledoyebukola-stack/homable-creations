@@ -1933,9 +1933,9 @@ export async function getCategoryProductsForExploreByPrice(
 
   const storefrontIds = storefronts.map((s: { id: string }) => s.id);
 
-  // For tables, keep sections strictly ordered by price (no randomization)
+  // For tables and beds, keep sections strictly ordered by price (no randomization)
   // so "More Affordable" vs "Higher-End" remain intuitive while the catalog is small.
-  if (category === 'table') {
+  if (category === 'table' || category === 'bed') {
     const { data: fixedProducts, error: fixedError } = await supabase
       .from('vendor_products')
       .select('*')
