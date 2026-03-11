@@ -6,26 +6,8 @@ import { useCountry } from '@/context/CountryContext';
 import { getActiveStorefrontsByLocation } from '@/lib/api';
 import type { Storefront, VendorProduct } from '@/lib/types';
 
-const FEATURE_CARDS = [
-  {
-    title: 'Vendor discovery',
-    description: 'Find local furniture makers and shops near you.',
-    image: '/assets/sample-afro-modern-dining-3.jpg',
-  },
-  {
-    title: 'Local shopping',
-    description: 'Browse furniture and decor from your inspiration.',
-    image: '/assets/furniture-collection.jpg',
-  },
-  {
-    title: 'Direct connection',
-    description: 'Contact vendors directly—no checkout on Homable.',
-    image: '/assets/sample-afro-modern-bedroom-2.jpg',
-  },
-] as const;
-
 const HERO_IMAGE =
-  'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/storefront-assets/Shops%20Banner.png';
+  'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/storefront-assets/Decor%20store%20banner.png';
 
 function formatPrice(min: number | null, max: number | null): string {
   if (min != null && max != null && min !== max) return `₦${min.toLocaleString()} – ₦${max.toLocaleString()}`;
@@ -106,7 +88,7 @@ export default function ShopsHome() {
     return counts;
   }, [products]);
 
-  // Map categories -> representative product (for category nav images)
+  // Map categories -> representative product
   const categoriesWithRepresentative = useMemo(() => {
     const map = new Map<string, VendorProduct>();
     for (const p of products) {
@@ -128,70 +110,20 @@ export default function ShopsHome() {
   // Full grid products (after category filter; can be paged later if needed)
   const gridProducts = useMemo(() => filteredProducts, [filteredProducts]);
 
+  const orderedCategories = useMemo(() => {
+    const existing = categoriesWithRepresentative.map(([category]) => category);
+    const fixedOrder = ['planters', 'artwork', 'mirror', 'seating', 'table', 'bed'];
+    const primary = fixedOrder.filter((cat) => existing.includes(cat));
+    const secondary = existing
+      .filter((cat) => !fixedOrder.includes(cat))
+      .sort((a, b) => a.localeCompare(b));
+    return [...primary, ...secondary];
+  }, [categoriesWithRepresentative]);
+
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <main className="flex-1 flex flex-col">
-        {/* 1. Category navigation strip (functional filters when marketplace is active) */}
-        {hasActiveVendors && categoriesWithRepresentative.length > 0 && (
-          <section
-            className="border-b border-gray-100 bg-[#fafaf9] py-4 md:py-5"
-            aria-label="Browse by category"
-          >
-            <div className="overflow-x-auto overflow-y-hidden">
-              <div className="flex gap-3 px-4 md:px-6 lg:px-8 pb-1">
-                {/* All category */}
-                <button
-                  type="button"
-                  onClick={() => setSelectedCategory(null)}
-                  className={`flex-shrink-0 w-[92px] md:w-[96px] rounded-xl border ${
-                    selectedCategory === null
-                      ? 'border-gray-900 bg-white shadow-sm'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
-                  } flex flex-col items-center pt-3 pb-2 transition-colors`}
-                >
-                  <div className="h-[72px] w-[72px] rounded-lg bg-gray-100 flex items-center justify-center text-[11px] text-gray-500">
-                    All
-                  </div>
-                  <p className="mt-2 text-[11px] text-gray-800 font-medium">All</p>
-                </button>
-
-                {categoriesWithRepresentative.map(([category, rep]) => (
-                  <button
-                    key={category}
-                    type="button"
-                    onClick={() => setSelectedCategory(category)}
-                    className={`flex-shrink-0 w-[92px] md:w-[96px] rounded-xl border ${
-                      selectedCategory === category
-                        ? 'border-gray-900 bg-white shadow-sm'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
-                    } flex flex-col items-center pt-3 pb-2 transition-colors`}
-                  >
-                    <div className="h-[72px] w-[72px] rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center">
-                      {rep.image_url ? (
-                        <img
-                          src={rep.image_url}
-                          alt={formatCategoryLabel(category)}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                          draggable={false}
-                        />
-                      ) : (
-                        <span className="text-[11px] text-gray-500 px-1 text-center">
-                          {formatCategoryLabel(category)}
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-2 text-[11px] text-gray-800 font-medium text-center">
-                      {formatCategoryLabel(category)}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* 2. Hero: full-width image + text overlay (CTA + marketplace messaging) */}
+        {/* Hero: full-width image + text overlay (CTA + marketplace messaging) */}
         <section className="relative w-full min-h-[420px] md:min-h-[520px] lg:min-h-[600px]">
           <div className="absolute inset-0">
             <img
@@ -221,33 +153,55 @@ export default function ShopsHome() {
                 Homable Shops
               </h1>
               {hasActiveVendors ? (
-                <>
-                  <p className="mt-4 text-lg md:text-xl lg:text-2xl text-white/95 leading-relaxed max-w-md drop-shadow-sm">
-                    Discover local furniture vendors. Browse verified craftsmen and connect directly to get exactly what you want.
-                  </p>
-                  <p className="mt-3 text-sm md:text-base text-white/85 max-w-md">
-                    Available now in your selected market. Upload an inspiration to start planning your space.
-                  </p>
-                </>
+                <p className="mt-4 text-lg md:text-xl lg:text-2xl text-white/95 leading-relaxed max-w-md drop-shadow-sm">
+                  Discover local furniture vendors. Browse verified craftsmen and connect directly to get exactly what you want.
+                </p>
               ) : (
-                <>
-                  <p className="mt-4 text-lg md:text-xl lg:text-2xl text-white/95 leading-relaxed max-w-md drop-shadow-sm">
-                    Discover local furniture vendors from your inspiration. Connect directly with sellers near you to get exactly what you want.
-                  </p>
-                  <p className="mt-3 text-sm md:text-base text-white/85 max-w-md">
-                    Launching soon in more markets. Upload an inspiration to get notified.
-                  </p>
-                </>
+                <p className="mt-4 text-lg md:text-xl lg:text-2xl text-white/95 leading-relaxed max-w-md drop-shadow-sm">
+                  Discover local furniture vendors in your market. Connect directly with sellers near you to get exactly what you want.
+                </p>
               )}
-              <Button
-                onClick={() => navigate('/upload')}
-                className="mt-6 bg-white text-black hover:bg-white/90 rounded-full font-medium shadow-lg cursor-pointer"
-              >
-                Upload Inspiration
-              </Button>
             </div>
           </div>
         </section>
+
+        {/* Category filters: text pills below hero */}
+        {hasActiveVendors && orderedCategories.length > 0 && (
+          <section
+            className="border-b border-gray-100 bg-[#fafaf9] py-4 md:py-5"
+            aria-label="Browse by category"
+          >
+            <div className="overflow-x-auto overflow-y-hidden">
+              <div className="flex gap-2 px-4 md:px-6 lg:px-8 pb-1 scroll-pills-hide-scrollbar">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory(null)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    selectedCategory === null
+                      ? 'bg-[#111111] text-white'
+                      : 'bg-white text-[#555555] hover:bg-gray-100 border border-[#e0e0e0]'
+                  }`}
+                >
+                  All
+                </button>
+                {orderedCategories.map((category) => (
+                  <button
+                    key={category}
+                    type="button"
+                    onClick={() => setSelectedCategory(category)}
+                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                      selectedCategory === category
+                        ? 'bg-[#111111] text-white'
+                        : 'bg-white text-[#555555] hover:bg-gray-100 border border-[#e0e0e0]'
+                    }`}
+                  >
+                    {formatCategoryLabel(category)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* 3. Active marketplace sections (only when vendors exist for this location) */}
         {hasActiveVendors && (
@@ -338,178 +292,7 @@ export default function ShopsHome() {
               </section>
             )}
 
-            {/* 3b. Vendor spotlight / vendor grid */}
-            <section className="border-t border-[#E5DED2] bg-[#F5F3EF] py-10 md:py-16" aria-label="Vendors in your area">
-              <div className="container mx-auto px-4 md:px-6 lg:px-8">
-                <div className="flex items-baseline justify-between gap-3 mb-6 md:mb-8">
-                  <div>
-                    <h2 className="text-xl md:text-2xl lg:text-3xl font-semibold text-gray-900">
-                      {storefronts.length === 1 ? 'Launch partner spotlight' : 'Our vendors'}
-                    </h2>
-                    <p className="mt-2 text-xs md:text-sm text-gray-700 max-w-xl leading-relaxed">
-                      {storefronts.length === 1
-                        ? 'Meet our first craftsman in this market. See their work, understand their style, and reach out directly.'
-                        : 'Browse active furniture vendors in your selected market.'}
-                    </p>
-                  </div>
-                </div>
-                {storefronts.length === 1 ? (
-                  // Single vendor: premium spotlight layout
-                  <div className="grid grid-cols-1">
-                    {storefronts.map(storefront => {
-                      const count = productCountsByStorefront[storefront.id] ?? 0;
-                      return (
-                        <article
-                          key={storefront.id}
-                          className="rounded-3xl bg-gradient-to-r from-[#F5F3EF] via-[#F2EAE3] to-[#F5F3EF] shadow-[0_22px_60px_rgba(15,23,42,0.25)] overflow-hidden px-5 py-6 md:px-8 md:py-8 flex flex-col md:flex-row gap-6 md:gap-8 items-start"
-                        >
-                          <div className="flex flex-col items-center md:items-start gap-4 md:w-1/3">
-                            <div className="inline-flex items-center rounded-full bg-[#E6D6C3] text-[#7B4B26] text-[11px] font-medium px-3 py-1">
-                              Launch partner
-                            </div>
-                            <div className="relative">
-                              <div className="h-24 w-24 md:h-32 md:w-32 rounded-full border-4 border-[#F3E6D7] bg-black/80 overflow-hidden shadow-[0_16px_40px_rgba(15,23,42,0.45)] flex items-center justify-center text-white font-semibold text-xl">
-                                {storefront.logo_url ? (
-                                  <img src={storefront.logo_url} alt={storefront.name} className="w-full h-full object-cover" />
-                                ) : (
-                                  storefront.name.slice(0, 2).toUpperCase()
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex-1 flex flex-col gap-4">
-                            <div>
-                              <h3 className="text-xl md:text-2xl lg:text-3xl font-semibold text-[#1F2933]">
-                                {storefront.name}
-                              </h3>
-                              <p className="mt-1 text-sm md:text-base text-[#4B5563]">
-                                {(storefront.location_display || storefront.location || 'Local vendor')} ·{' '}
-                                {storefront.vendor_type === 'carpenter' ? 'Custom furniture & carpentry' : 'Home decor & styling'}
-                              </p>
-                            </div>
-                            {storefront.description && (
-                              <p className="text-sm md:text-[15px] text-[#374151] leading-relaxed md:leading-7">
-                                {storefront.description}
-                              </p>
-                            )}
-                            <div className="flex flex-wrap gap-2 text-[11px] md:text-xs text-gray-700">
-                              <span className="inline-flex items-center rounded-full bg-white/80 border border-[#E5D9C8] px-3 py-1">
-                                {count > 0 ? `${count} piece${count === 1 ? '' : 's'} in catalog` : 'Catalog publishing soon'}
-                              </span>
-                              {storefront.active_since && (
-                                <span className="inline-flex items-center rounded-full bg-white/70 border border-[#E5D9C8] px-3 py-1">
-                                  Active since{' '}
-                                  {new Date(storefront.active_since).toLocaleDateString(undefined, {
-                                    month: 'short',
-                                    year: 'numeric',
-                                  })}
-                                </span>
-                              )}
-                            </div>
-                            <div className="mt-2 flex flex-wrap items-center gap-3">
-                              <Button
-                                className="rounded-full text-xs md:text-sm px-5 py-2.5 bg-[#111827] hover:bg-[#020617] text-white shadow-md"
-                                onClick={() => navigate(`/stores/${storefront.slug}`)}
-                              >
-                                View storefront
-                              </Button>
-                              {storefront.instagram_handle && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    window.open(
-                                      `https://instagram.com/${storefront.instagram_handle!.replace(/^@/, '')}`,
-                                      '_blank'
-                                    )
-                                  }
-                                  className="inline-flex items-center text-xs md:text-sm text-[#4B5563] hover:text-[#111827]"
-                                >
-                                  <span className="mr-1">Instagram</span>
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  // Multi-vendor grid
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                    {storefronts.map(storefront => {
-                      const count = productCountsByStorefront[storefront.id] ?? 0;
-                      return (
-                        <article
-                          key={storefront.id}
-                          className="rounded-2xl bg-white/95 border border-[#E5DED2] shadow-sm hover:shadow-lg transition-shadow duration-200 overflow-hidden flex flex-col"
-                        >
-                          <div className="p-4 md:p-5 flex-1 flex flex-col">
-                            <div className="flex items-center gap-3">
-                              <div className="h-12 w-12 md:h-14 md:w-14 rounded-full border border-[#E5DED2] overflow-hidden bg-black/80 flex items-center justify-center text-white font-semibold text-sm md:text-base">
-                                {storefront.logo_url ? (
-                                  <img src={storefront.logo_url} alt={storefront.name} className="w-full h-full object-cover" />
-                                ) : (
-                                  storefront.name.slice(0, 2).toUpperCase()
-                                )}
-                              </div>
-                              <div className="min-w-0">
-                                <h3 className="text-sm md:text-base font-semibold text-gray-900 truncate">
-                                  {storefront.name}
-                                </h3>
-                                <p className="text-xs text-gray-600 truncate">
-                                  {(storefront.location_display || storefront.location || 'Local vendor')} ·{' '}
-                                  {storefront.vendor_type === 'carpenter' ? 'Custom furniture' : 'Home decor'}
-                                </p>
-                              </div>
-                            </div>
-                            {storefront.description && (
-                              <p className="mt-3 text-xs md:text-sm text-gray-700 line-clamp-3 leading-relaxed">
-                                {storefront.description}
-                              </p>
-                            )}
-                            <div className="mt-3 flex items-center gap-2 text-[11px] md:text-xs text-gray-600">
-                              <span className="inline-flex items-center rounded-full border border-gray-200 px-2.5 py-1 bg-gray-50">
-                                {count > 0 ? `${count} piece${count === 1 ? '' : 's'} in catalog` : 'Catalog publishing soon'}
-                              </span>
-                              {storefront.active_since && (
-                                <span className="hidden md:inline text-gray-500">
-                                  Active since{' '}
-                                  {new Date(storefront.active_since).toLocaleDateString(undefined, {
-                                    month: 'short',
-                                    year: 'numeric',
-                                  })}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="border-t border-gray-100 bg-gray-50/60 px-4 md:px-5 py-3 flex justify-between items-center">
-                            <Button
-                              variant="outline"
-                              className="rounded-full text-xs md:text-sm px-4 py-2"
-                              onClick={() => navigate(`/stores/${storefront.slug}`)}
-                            >
-                              View storefront
-                            </Button>
-                            {storefront.instagram_handle && (
-                              <a
-                                href={`https://instagram.com/${storefront.instagram_handle.replace(/^@/, '')}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[11px] md:text-xs text-gray-600 hover:text-gray-900"
-                              >
-                                @{storefront.instagram_handle.replace(/^@/, '')}
-                              </a>
-                            )}
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </section>
-
-            {/* 3c. Full products grid from vendors in this location */}
+            {/* Full products grid from vendors in this location */}
             {gridProducts.length > 0 && (
               <section className="border-t border-gray-100 bg-white py-10 md:py-16" aria-label="Browse all products">
                 <div className="container mx-auto px-4 md:px-6 lg:px-8">
