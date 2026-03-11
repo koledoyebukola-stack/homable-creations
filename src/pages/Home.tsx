@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Upload } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Upload, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useCountry } from '@/context/CountryContext';
@@ -140,6 +140,8 @@ export default function Home() {
   const [browseProducts, setBrowseProducts] = useState<VendorProduct[]>([]);
   const [loadingBrowseProducts, setLoadingBrowseProducts] = useState(false);
   const [browseProductsCategory, setBrowseProductsCategory] = useState<BrowseProductsCategoryValue>('planters');
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [scrollDirection, setScrollDirection] = useState<'down' | 'up'>('down');
 
   useEffect(() => {
     // Nigeria: load NG Explore scenes
@@ -217,6 +219,30 @@ export default function Home() {
     observer.observe(el);
     return () => observer.disconnect();
   }, [country, loadingExplore]);
+
+  // Floating scroll navigation button on mobile (up/down based on scroll position)
+  useEffect(() => {
+    if (country !== 'NG') return;
+    const handleScroll = () => {
+      const doc = document.documentElement;
+      const scrollTop = window.scrollY || doc.scrollTop;
+      const maxScroll = doc.scrollHeight - window.innerHeight;
+
+      if (maxScroll <= 0) {
+        setShowScrollButton(false);
+        return;
+      }
+
+      setShowScrollButton(true);
+
+      const ratio = maxScroll > 0 ? scrollTop / maxScroll : 0;
+      setScrollDirection(ratio < 0.5 ? 'down' : 'up');
+    };
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [country]);
 
   const nextCarousel = () => {
     setCarouselSlide((prev) => (prev + 1) % CAROUSEL_EXAMPLES.length);
@@ -1011,6 +1037,30 @@ export default function Home() {
           </Button>
         </div>
       </section>
+      {/* Floating scroll navigation button (mobile only, NG homepage) */}
+      {country === 'NG' && showScrollButton && (
+        <button
+          type="button"
+          className="fixed bottom-20 right-4 z-40 md:hidden rounded-full bg-black text-white p-3 shadow-lg border border-black/10 flex items-center justify-center"
+          onClick={() => {
+            if (scrollDirection === 'down') {
+              window.scrollTo({
+                top: document.documentElement.scrollHeight,
+                behavior: 'smooth',
+              });
+            } else {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          }}
+          aria-label={scrollDirection === 'down' ? 'Scroll to bottom' : 'Scroll to top'}
+        >
+          {scrollDirection === 'down' ? (
+            <ChevronDown className="w-5 h-5" />
+          ) : (
+            <ChevronUp className="w-5 h-5" />
+          )}
+        </button>
+      )}
 
     </div>
   );

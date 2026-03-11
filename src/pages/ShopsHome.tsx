@@ -104,9 +104,6 @@ export default function ShopsHome() {
     return products.filter(p => p.category === selectedCategory);
   }, [products, selectedCategory]);
 
-  // Featured products preview: first 6 items for hero/preview section (after category filter)
-  const previewProducts = useMemo(() => filteredProducts.slice(0, 6), [filteredProducts]);
-
   // Full grid products (after category filter; can be paged later if needed)
   const gridProducts = useMemo(() => filteredProducts, [filteredProducts]);
 
@@ -124,7 +121,7 @@ export default function ShopsHome() {
     <div className="min-h-screen flex flex-col bg-white">
       <main className="flex-1 flex flex-col">
         {/* Hero: full-width image + text overlay (CTA + marketplace messaging) */}
-        <section className="relative w-full min-h-[420px] md:min-h-[520px] lg:min-h-[600px]">
+        <section className="relative w-full min-h-[320px] md:min-h-[420px] lg:min-h-[480px]">
           <div className="absolute inset-0">
             <img
               src={HERO_IMAGE}
@@ -137,7 +134,7 @@ export default function ShopsHome() {
               aria-hidden
             />
           </div>
-          <div className="relative container mx-auto px-4 md:px-6 lg:px-8 h-full min-h-[420px] md:min-h-[520px] lg:min-h-[600px] flex items-center">
+          <div className="relative container mx-auto px-4 md:px-6 lg:px-8 h-full min-h-[320px] md:min-h-[420px] lg:min-h-[480px] flex items-center">
             <div className="max-w-xl py-12 md:py-16">
               {hasActiveVendors ? (
                 <div className="inline-flex items-center rounded-full bg-emerald-500/95 text-white text-xs px-3 py-1 shadow-sm mb-4">
@@ -152,15 +149,9 @@ export default function ShopsHome() {
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white tracking-tight drop-shadow-sm">
                 Homable Shops
               </h1>
-              {hasActiveVendors ? (
-                <p className="mt-4 text-lg md:text-xl lg:text-2xl text-white/95 leading-relaxed max-w-md drop-shadow-sm">
-                  Discover local furniture vendors. Browse verified craftsmen and connect directly to get exactly what you want.
-                </p>
-              ) : (
-                <p className="mt-4 text-lg md:text-xl lg:text-2xl text-white/95 leading-relaxed max-w-md drop-shadow-sm">
-                  Discover local furniture vendors in your market. Connect directly with sellers near you to get exactly what you want.
-                </p>
-              )}
+              <p className="mt-4 text-lg md:text-xl lg:text-2xl text-white/95 leading-relaxed max-w-md drop-shadow-sm">
+                Browse verified local vendors — furniture, décor, and more. Connect directly and get exactly what you want.
+              </p>
             </div>
           </div>
         </section>
@@ -206,92 +197,6 @@ export default function ShopsHome() {
         {/* 3. Active marketplace sections (only when vendors exist for this location) */}
         {hasActiveVendors && (
           <>
-            {/* 3a. Featured products preview (hero pieces) */}
-            {previewProducts.length > 0 && (
-              <section
-                className="border-t border-gray-100 bg-[#FAFAF8] py-10 md:py-14"
-                aria-label="Featured pieces from this market"
-              >
-                <div className="container mx-auto px-4 md:px-6 lg:px-8">
-                  <div className="flex items-baseline justify-between gap-3 mb-6 md:mb-8">
-                    <div>
-                      <h2 className="text-xl md:text-2xl lg:text-3xl font-semibold text-gray-900">
-                        Crafted in {countryName}
-                      </h2>
-                      <p className="mt-2 text-xs md:text-sm text-gray-600 max-w-md leading-relaxed">
-                        A first look at some of the custom pieces available in your market. See the work before you meet the maker.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-                    {previewProducts.map((product, index) => {
-                      const storefront = storefronts.find(sf => sf.id === product.storefront_id);
-                      return (
-                        <article
-                          key={product.id}
-                          className="group bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-200 text-left cursor-pointer transform hover:-translate-y-0.5 flex flex-col"
-                          onClick={() => navigate(`/shops/products/${product.slug}`)}
-                        >
-                          <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-3xl flex-shrink-0">
-                            {product.image_url ? (
-                              <img
-                                src={product.image_url}
-                                alt={product.name}
-                                className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-                                loading={index < 4 ? 'eager' : 'lazy'}
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                                No image
-                              </div>
-                            )}
-                            {storefront && (
-                              <div className="absolute top-2 left-2 max-w-[90%]">
-                                <span className="inline-flex items-center rounded-full bg-black/80 text-white text-[10px] font-medium px-2 py-1 shadow-sm">
-                                  <span
-                                    className="relative h-6 w-6 rounded-full border border-white/70 overflow-hidden flex items-center justify-center text-[10px] font-semibold mr-1"
-                                    style={{ backgroundColor: getVendorColor(storefront.name) }}
-                                  >
-                                    <span className="z-0">
-                                      {getVendorInitials(storefront.name)}
-                                    </span>
-                                    {storefront.logo_url && (
-                                      <img
-                                        src={storefront.logo_url}
-                                        alt={storefront.name}
-                                        className="absolute inset-0 w-full h-full object-cover rounded-full"
-                                        onError={(e) => {
-                                          e.currentTarget.style.display = 'none';
-                                        }}
-                                      />
-                                    )}
-                                  </span>
-                                  <span className="truncate max-w-[80px]">
-                                    {storefront.name}
-                                  </span>
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="px-3 pt-3 pb-4">
-                            <h3 className="text-sm md:text-[15px] font-semibold text-gray-900 leading-snug line-clamp-2">
-                              {product.name}
-                            </h3>
-                            <p className="mt-1 text-xs text-gray-800">
-                              {formatPrice(product.price_min, product.price_max)}
-                            </p>
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-                  <p className="mt-6 text-xs md:text-sm text-gray-600 text-center md:text-left">
-                    Meet the craftsman behind these pieces ↓
-                  </p>
-                </div>
-              </section>
-            )}
-
             {/* Full products grid from vendors in this location */}
             {gridProducts.length > 0 && (
               <section className="border-t border-gray-100 bg-white py-10 md:py-16" aria-label="Browse all products">
