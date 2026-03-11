@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useCountry } from '@/context/CountryContext';
-import { getExploreScenes } from '@/lib/api';
-import type { ExploreScene } from '@/lib/types';
+import { getExploreScenes, getActiveStorefrontsByLocation } from '@/lib/api';
+import type { ExploreScene, Storefront, VendorProduct } from '@/lib/types';
 import ExploreSceneCard from '@/components/ExploreSceneCard';
 import {
   EXPLORE_CATEGORY_PILLS,
@@ -96,6 +96,16 @@ function formatViewCount(count: number): string {
   return `${Math.round(count / 1000)}k views`;
 }
 
+function formatPrice(min: number | null, max: number | null): string {
+  if (min != null && max != null && min !== max) return `₦${min.toLocaleString('en-NG')} – ₦${max.toLocaleString('en-NG')}`;
+  if (min != null) return `From ₦${min.toLocaleString('en-NG')}`;
+  if (max != null) return `From ₦${max.toLocaleString('en-NG')}`;
+  return 'Price on request';
+}
+
+const BROWSE_PRODUCTS_CATEGORIES = ['planters', 'artwork'] as const;
+const BROWSE_PRODUCTS_LIMIT = 8;
+
 export default function Home() {
   const navigate = useNavigate();
   const [carouselSlide, setCarouselSlide] = useState(0);
@@ -106,6 +116,11 @@ export default function Home() {
   const [exploreCategoryFilter, setExploreCategoryFilter] = useState<ExploreRoomTypeFilter>('all');
   const [explorePriceFilter, setExplorePriceFilter] = useState<ExplorePriceFilter>('all');
   const exploreSectionRef = useRef<HTMLElement | null>(null);
+
+  const [browseStorefronts, setBrowseStorefronts] = useState<Storefront[]>([]);
+  const [browseProducts, setBrowseProducts] = useState<VendorProduct[]>([]);
+  const [loadingBrowseProducts, setLoadingBrowseProducts] = useState(false);
+  const [browseProductsCategory, setBrowseProductsCategory] = useState<'all' | 'planters' | 'artwork'>('all');
 
   useEffect(() => {
     // Nigeria: load NG Explore scenes
@@ -129,6 +144,31 @@ export default function Home() {
     // Other markets: no Explore scenes yet
     setExploreScenes([]);
   }, [country]);
+
+  useEffect(() => {
+    if (country !== 'NG') {
+      setBrowseStorefronts([]);
+      setBrowseProducts([]);
+      return;
+    }
+    setLoadingBrowseProducts(true);
+    getActiveStorefrontsByLocation('NG')
+      .then(({ storefronts, products }) => {
+        setBrowseStorefronts(storefronts);
+        const inScope = products.filter((p) => p.category && BROWSE_PRODUCTS_CATEGORIES.includes(p.category as 'planters' | 'artwork'));
+        setBrowseProducts(inScope);
+      })
+      .finally(() => setLoadingBrowseProducts(false));
+  }, [country]);
+
+  const browseDisplayProducts = useMemo(() => {
+    let list = browseProducts;
+    if (browseProductsCategory !== 'all') {
+      list = list.filter((p) => p.category === browseProductsCategory);
+    }
+    const shuffled = [...list].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, BROWSE_PRODUCTS_LIMIT);
+  }, [browseProducts, browseProductsCategory]);
 
   // Nigerian journey: track homepage landing (NG only)
   useEffect(() => {
@@ -203,10 +243,10 @@ export default function Home() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => navigate('/upload?mode=inspiration')}
+                    onClick={() => navigate('/shops')}
                     className="w-full md:flex-1 h-12 md:h-[60px] flex items-center justify-center rounded-xl bg-white text-black text-[15px] md:text-base font-medium border-[1.5px] border-[#e0e0e0] hover:border-black hover:bg-[#fafafa] transition-colors"
                   >
-                    Design My Space <span className="ml-1.5 text-xs font-normal px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">Beta</span>
+                    Browse Local Products
                   </button>
                   {/* TEMP: Hidden for Nigerian launch - re-enable once supply is sufficient (50+ vendors) */}
                   {SHOW_UPLOAD_INSPIRATION_FOR_NIGERIA && (
@@ -279,7 +319,19 @@ export default function Home() {
                   />
                 ))}
               </div>
-              <p className="text-center md:text-left text-sm text-[#666666] mt-2 md:mt-2.5 md:pl-0.5">Thousands of rooms designed</p>
+              <p className="text-center md:text-left text-sm text-[#666666] mt-2 md:mt-2.5 md:pl-0.5">
+                Get your room redesigned in 48 hours ·{' '}
+                <a
+                  href="/upload?mode=inspiration"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('/upload?mode=inspiration');
+                  }}
+                  className="font-medium text-[#111111] hover:underline underline-offset-2"
+                >
+                  Learn More
+                </a>
+              </p>
             </div>
           </div>
         </div>
@@ -357,14 +409,15 @@ export default function Home() {
                       const matchPrice = matchesExplorePriceFilter(catalogBudget, explorePriceFilter);
                       return matchCategory && matchPrice;
                     });
+                  const displayScenes = filtered.slice(0, 10);
                   const maxViewCount =
-                    filtered.length > 0
-                      ? Math.max(0, ...filtered.map((s) => s.view_count ?? 0))
+                    displayScenes.length > 0
+                      ? Math.max(0, ...displayScenes.map((s) => s.view_count ?? 0))
                       : 0;
-                  if (filtered.length > 0) {
+                  if (displayScenes.length > 0) {
                     return (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                        {filtered.map((scene) => (
+                        {displayScenes.map((scene) => (
                           <ExploreSceneCard
                             key={scene.id}
                             scene={scene}
@@ -390,6 +443,104 @@ export default function Home() {
                 </div>
               </>
             )}
+          </div>
+        </section>
+      )}
+
+      {/* Browse Local Products (Nigeria only) - planters & artwork */}
+      {country === 'NG' && (
+        <section className="bg-gradient-to-br from-gray-50 to-stone-50 pt-10 pb-16 md:pt-12 md:pb-12 px-4 md:px-6">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-2">
+              Browse Local Products
+            </h2>
+            <p className="text-center text-[#555555] text-lg mb-6 max-w-2xl mx-auto">
+              Discover planters and artwork from verified Nigerian vendors
+            </p>
+
+            <div className="flex gap-2 overflow-x-auto pb-2 md:overflow-visible md:flex-wrap md:justify-center scroll-pills-hide-scrollbar mb-6">
+              {(['all', 'planters', 'artwork'] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setBrowseProductsCategory(value)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    browseProductsCategory === value
+                      ? 'bg-[#111111] text-white'
+                      : 'bg-white text-[#555555] hover:bg-gray-100 border border-[#e0e0e0]'
+                  }`}
+                >
+                  {value === 'all' ? 'All' : value === 'planters' ? 'Planters' : 'Artwork'}
+                </button>
+              ))}
+            </div>
+
+            {loadingBrowseProducts ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                  <div key={i} className="aspect-[3/4] rounded-xl bg-gray-200 animate-pulse" />
+                ))}
+              </div>
+            ) : browseDisplayProducts.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                {browseDisplayProducts.map((product) => {
+                  const storefront = browseStorefronts.find((sf) => sf.id === product.storefront_id);
+                  return (
+                    <article
+                      key={product.id}
+                      onClick={() => navigate(`/shops/products/${product.slug}`)}
+                      className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer flex flex-col"
+                    >
+                      <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
+                        {product.image_url ? (
+                          <img
+                            src={product.image_url}
+                            alt={product.name}
+                            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                            No image
+                          </div>
+                        )}
+                        <div className="absolute top-2 left-2">
+                          <span className="inline-flex items-center rounded-full bg-black/80 text-white text-[10px] font-medium px-2 py-1 shadow-sm">
+                            {storefront?.offering_type === 'imported' ? 'Imported' : 'Custom order'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="px-2.5 pt-2.5 pb-3 md:px-3 md:pt-3">
+                        <h3 className="text-[13px] md:text-sm font-semibold text-gray-900 leading-snug line-clamp-2">
+                          {product.name}
+                        </h3>
+                        {storefront && (
+                          <p className="mt-0.5 text-[11px] text-gray-500 line-clamp-1">
+                            {storefront.name}
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-700 mt-1">
+                          {formatPrice(product.price_min, product.price_max)}
+                        </p>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-center text-[#666666] text-sm py-8">
+                No products in these categories right now. Browse all vendors for more.
+              </p>
+            )}
+
+            <div className="text-center mt-8">
+              <Button
+                onClick={() => navigate('/shops')}
+                className="bg-[#111111] hover:bg-[#333] text-white rounded-xl font-medium px-8"
+              >
+                Browse All Products
+              </Button>
+            </div>
           </div>
         </section>
       )}
