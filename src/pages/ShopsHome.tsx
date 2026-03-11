@@ -396,42 +396,6 @@ export default function ShopsHome() {
             )}
           </>
         )}
-
-        {/* 4. Secondary feature cards / How it works (always visible) */}
-        <section
-          className="border-t border-gray-100 bg-[#fafaf9] py-12 md:py-16"
-          aria-label="How Homable Shops works"
-        >
-          <div className="container mx-auto px-4 md:px-6 lg:px-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-              {FEATURE_CARDS.map(({ title, description, image }) => (
-                <div
-                  key={title}
-                  className="rounded-xl overflow-hidden bg-white border border-gray-100 shadow-sm opacity-90 cursor-default select-none"
-                  style={{ cursor: 'default' }}
-                  role="article"
-                  aria-label={title}
-                >
-                  <div className="aspect-[4/3] bg-gray-200">
-                    <img
-                      src={image}
-                      alt=""
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                      draggable={false}
-                    />
-                  </div>
-                  <div className="p-4 md:p-5">
-                    <h3 className="font-semibold text-[#111]">{title}</h3>
-                    <p className="mt-1 text-sm text-[#555] leading-relaxed">
-                      {description}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
       </main>
 
     </div>
