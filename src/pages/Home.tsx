@@ -103,7 +103,8 @@ function formatPrice(min: number | null, max: number | null): string {
   return 'Price on request';
 }
 
-const BROWSE_PRODUCTS_CATEGORIES = ['planters', 'artwork'] as const;
+const BROWSE_PRODUCTS_CATEGORIES = ['planters', 'artwork', 'mirror', 'seating', 'table', 'bed'] as const;
+type BrowseProductsCategoryValue = 'all' | (typeof BROWSE_PRODUCTS_CATEGORIES)[number];
 const BROWSE_PRODUCTS_LIMIT = 8;
 
 export default function Home() {
@@ -116,11 +117,12 @@ export default function Home() {
   const [exploreCategoryFilter, setExploreCategoryFilter] = useState<ExploreRoomTypeFilter>('all');
   const [explorePriceFilter, setExplorePriceFilter] = useState<ExplorePriceFilter>('all');
   const exploreSectionRef = useRef<HTMLElement | null>(null);
+  const browseSectionRef = useRef<HTMLElement | null>(null);
 
   const [browseStorefronts, setBrowseStorefronts] = useState<Storefront[]>([]);
   const [browseProducts, setBrowseProducts] = useState<VendorProduct[]>([]);
   const [loadingBrowseProducts, setLoadingBrowseProducts] = useState(false);
-  const [browseProductsCategory, setBrowseProductsCategory] = useState<'all' | 'planters' | 'artwork'>('all');
+  const [browseProductsCategory, setBrowseProductsCategory] = useState<BrowseProductsCategoryValue>('all');
 
   useEffect(() => {
     // Nigeria: load NG Explore scenes
@@ -155,7 +157,7 @@ export default function Home() {
     getActiveStorefrontsByLocation('NG')
       .then(({ storefronts, products }) => {
         setBrowseStorefronts(storefronts);
-        const inScope = products.filter((p) => p.category && BROWSE_PRODUCTS_CATEGORIES.includes(p.category as 'planters' | 'artwork'));
+        const inScope = products.filter((p) => p.category && BROWSE_PRODUCTS_CATEGORIES.includes(p.category as (typeof BROWSE_PRODUCTS_CATEGORIES)[number]));
         setBrowseProducts(inScope);
       })
       .finally(() => setLoadingBrowseProducts(false));
@@ -243,7 +245,7 @@ export default function Home() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => navigate('/shops')}
+                    onClick={() => browseSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}
                     className="w-full md:flex-1 h-12 md:h-[60px] flex items-center justify-center rounded-xl bg-white text-black text-[15px] md:text-base font-medium border-[1.5px] border-[#e0e0e0] hover:border-black hover:bg-[#fafafa] transition-colors"
                   >
                     Browse Local Products
@@ -320,7 +322,7 @@ export default function Home() {
                 ))}
               </div>
               <p className="text-center md:text-left text-sm text-[#666666] mt-2 md:mt-2.5 md:pl-0.5">
-                Get your room redesigned in 48 hours ·{' '}
+                Get your space redesigned in <span className="font-semibold text-amber-600">48 hours</span> ·{' '}
                 <a
                   href="/upload?mode=inspiration"
                   onClick={(e) => {
@@ -447,19 +449,22 @@ export default function Home() {
         </section>
       )}
 
-      {/* Browse Local Products (Nigeria only) - planters & artwork */}
+      {/* Browse Local Products (Nigeria only) */}
       {country === 'NG' && (
-        <section className="bg-gradient-to-br from-gray-50 to-stone-50 pt-10 pb-16 md:pt-12 md:pb-12 px-4 md:px-6">
+        <section
+          ref={browseSectionRef}
+          className="bg-gradient-to-br from-gray-50 to-stone-50 pt-10 pb-16 md:pt-12 md:pb-12 px-4 md:px-6"
+        >
           <div className="max-w-6xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-2">
               Browse Local Products
             </h2>
             <p className="text-center text-[#555555] text-lg mb-6 max-w-2xl mx-auto">
-              Discover planters and artwork from verified Nigerian vendors
+              Shop handpicked pieces from trusted local vendors
             </p>
 
             <div className="flex gap-2 overflow-x-auto pb-2 md:overflow-visible md:flex-wrap md:justify-center scroll-pills-hide-scrollbar mb-6">
-              {(['all', 'planters', 'artwork'] as const).map((value) => (
+              {(['all', ...BROWSE_PRODUCTS_CATEGORIES] as const).map((value) => (
                 <button
                   key={value}
                   type="button"
@@ -470,7 +475,7 @@ export default function Home() {
                       : 'bg-white text-[#555555] hover:bg-gray-100 border border-[#e0e0e0]'
                   }`}
                 >
-                  {value === 'all' ? 'All' : value === 'planters' ? 'Planters' : 'Artwork'}
+                  {value === 'all' ? 'All' : value === 'planters' ? 'Planters' : value === 'artwork' ? 'Artwork' : value === 'mirror' ? 'Mirrors' : value === 'seating' ? 'Seating' : value === 'table' ? 'Tables' : 'Beds'}
                 </button>
               ))}
             </div>
@@ -505,8 +510,8 @@ export default function Home() {
                           </div>
                         )}
                         <div className="absolute top-2 left-2">
-                          <span className="inline-flex items-center rounded-full bg-black/80 text-white text-[10px] font-medium px-2 py-1 shadow-sm">
-                            {storefront?.offering_type === 'imported' ? 'Imported' : 'Custom order'}
+                          <span className="inline-flex items-center rounded-full bg-black/80 text-white text-[10px] font-medium px-2 py-1 shadow-sm line-clamp-1 max-w-[90%]">
+                            {storefront ? storefront.name.split(' ').slice(0, 2).join(' ') : 'Vendor'}
                           </span>
                         </div>
                       </div>
@@ -764,7 +769,7 @@ export default function Home() {
 
             <div className="text-center mt-12">
               <Button
-                onClick={() => navigate('/upload?mode=inspiration')}
+                onClick={() => navigate(country === 'NG' ? '/upload?mode=explore' : '/upload?mode=inspiration')}
                 size="lg"
                 className="bg-white hover:bg-[#fafafa] text-black border-[1.5px] border-[#e0e0e0] hover:border-black px-8 rounded-xl font-medium"
               >

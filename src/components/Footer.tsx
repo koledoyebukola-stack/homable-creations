@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom';
 import { Mail, Instagram } from 'lucide-react';
+import { useCountry } from '@/context/CountryContext';
 
 export default function Footer() {
+  const { country } = useCountry();
+
   return (
     <footer className="bg-black py-6">
       <div className="container mx-auto px-4 md:px-6">
@@ -22,12 +25,16 @@ export default function Footer() {
             <span>·</span>
             <Link to="/privacy-policy" className="hover:text-gray-300 transition-colors">Privacy Policy</Link>
           </p>
-          <p className="text-xs text-white/80">
-            Some links may be affiliate links, which help support Homable at no extra cost to you.
-          </p>
-          <p className="text-xs text-white/80">
-            As an Amazon Associate I earn from qualifying purchases.
-          </p>
+          {country !== 'NG' && (
+            <>
+              <p className="text-xs text-white/80">
+                Some links may be affiliate links, which help support Homable at no extra cost to you.
+              </p>
+              <p className="text-xs text-white/80">
+                As an Amazon Associate I earn from qualifying purchases.
+              </p>
+            </>
+          )}
         </div>
       </div>
     </footer>
