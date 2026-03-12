@@ -230,7 +230,7 @@ export default function DesignServiceForm() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f9f9f9] via-gray-50 to-stone-50">
-      <div className="max-w-[560px] mx-auto px-4 py-12 md:py-16">
+      <div className="max-w-[560px] md:max-w-3xl lg:max-w-4xl mx-auto px-4 py-12 md:py-16">
         <header className="text-center mb-8">
           <span className="inline-block text-xs font-semibold uppercase tracking-wider text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full mb-4">
             Beta
