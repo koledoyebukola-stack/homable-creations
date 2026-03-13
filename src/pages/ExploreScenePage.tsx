@@ -88,6 +88,7 @@ export default function ExploreScenePage() {
   const [moreOptionsSections, setMoreOptionsSections] = useState<Array<{ title: string; category: string; items: CategoryProductWithStorefront[] }>>([]);
   const [featuredVendors, setFeaturedVendors] = useState<StorefrontWithProductCount[]>([]);
   const [isHeroImageOpen, setIsHeroImageOpen] = useState(false);
+  const [showHeroTapHint, setShowHeroTapHint] = useState(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [scrollDirection, setScrollDirection] = useState<'down' | 'up'>('down');
 
@@ -474,6 +475,7 @@ export default function ExploreScenePage() {
             className="relative -mx-4 md:mx-0 w-[calc(100%+2rem)] md:w-full aspect-[16/10] md:aspect-[16/9] rounded-none md:rounded-2xl overflow-hidden mb-6 cursor-zoom-in"
             onClick={() => {
               if (scene.hero_image_url) {
+                if (showHeroTapHint) setShowHeroTapHint(false);
                 setIsHeroImageOpen(true);
               }
             }}
@@ -483,6 +485,13 @@ export default function ExploreScenePage() {
               alt={scene.title}
               className="w-full h-full object-cover object-center"
             />
+            {scene.hero_image_url && showHeroTapHint && (
+              <div className="absolute bottom-3 inset-x-0 flex justify-center md:hidden">
+                <div className="px-3 py-1 rounded-full bg-black/60 text-[11px] text-white">
+                  tap to expand
+                </div>
+              </div>
+            )}
           </div>
           <h1 className="text-3xl md:text-4xl font-bold text-[#111111] mb-2">{scene.title}</h1>
           {scene.description && (
@@ -1209,24 +1218,24 @@ export default function ExploreScenePage() {
       {/* Full-screen hero image overlay */}
       {isHeroImageOpen && scene.hero_image_url && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 md:p-8 transition-opacity"
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-0 md:p-8 transition-opacity"
           onClick={() => setIsHeroImageOpen(false)}
         >
           <div
-            className="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center"
+            className="relative w-full h-full md:max-w-5xl md:max-h-[90vh] md:flex md:items-center md:justify-center"
             onClick={e => e.stopPropagation()}
           >
             <button
               type="button"
               onClick={() => setIsHeroImageOpen(false)}
-              className="absolute top-3 right-3 rounded-full bg-black/60 hover:bg-black text-white p-2 text-xs md:text-sm"
+              className="absolute top-3 right-3 rounded-full bg-black/60 hover:bg-black text-white p-2 text-xs md:text-sm z-10"
             >
               ×
             </button>
             <img
               src={scene.hero_image_url}
               alt={scene.title}
-              className="w-full h-full object-contain object-center rounded-xl shadow-2xl"
+              className="w-full h-auto max-h-full object-contain object-center rounded-none md:rounded-xl md:shadow-2xl"
             />
           </div>
         </div>
