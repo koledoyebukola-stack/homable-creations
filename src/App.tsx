@@ -31,6 +31,7 @@ import ShopsProductDetail from './pages/ShopsProductDetail';
 import DemoStorefront from './pages/DemoStorefront';
 import StorefrontView from './pages/StorefrontView';
 import ExploreScenePage from './pages/ExploreScenePage';
+import AiRoomGenerator from './pages/AiRoomGenerator';
 import NotFound from './pages/NotFound';
 import { CountryProvider, useCountry } from '@/context/CountryContext';
 import { Button } from '@/components/ui/button';
@@ -160,6 +161,8 @@ function CaptureReferrerAndRoutes() {
           <Route path="/stores/:slug/:category" element={<StorefrontView />} />
           {/* Dynamic storefront - real data from Supabase */}
           <Route path="/stores/:slug" element={<StorefrontView />} />
+          {/* AI Room Generator — 4-step flow (mock payment in Phase 1) */}
+          <Route path="/ai-room-generator" element={<AiRoomGenerator />} />
           {/* Other results pages require authentication */}
           <Route
             path="/products/:boardId/:itemId"
