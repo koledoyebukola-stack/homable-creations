@@ -1,5 +1,5 @@
 /** Room type filter for Explore. Values match explore_scenes.room_type. */
-export type ExploreRoomTypeFilter = 'all' | 'living_room' | 'bedroom' | 'dining' | 'office';
+export type ExploreRoomTypeFilter = 'all' | 'living_room' | 'bedroom' | 'dining' | 'office' | 'wall_styling';
 
 export const EXPLORE_CATEGORY_PILLS: { value: ExploreRoomTypeFilter; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -7,6 +7,7 @@ export const EXPLORE_CATEGORY_PILLS: { value: ExploreRoomTypeFilter; label: stri
   { value: 'bedroom', label: 'Bedroom' },
   { value: 'dining', label: 'Dining' },
   { value: 'office', label: 'Home Office' },
+  { value: 'wall_styling', label: 'Wall Styling' },
 ];
 
 /** Price filter by catalog_budget_ngn (Nigerian Naira). */

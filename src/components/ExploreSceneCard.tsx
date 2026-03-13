@@ -22,6 +22,7 @@ export default function ExploreSceneCard({ scene, onSelect, viewCount = 0, isTre
   const showBadgeOrViews = catalogProductCount > 0 || viewCount > 0;
   const viewText = formatViewCount(viewCount);
   const viewLabel = isTrending ? `🔥 Trending: ${viewText}` : viewText;
+  const isWallStyling = scene.room_type === 'wall_styling';
 
   return (
     <button
@@ -37,6 +38,11 @@ export default function ExploreSceneCard({ scene, onSelect, viewCount = 0, isTre
         />
       </div>
       <div className="p-4">
+        {isWallStyling && (
+          <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 text-[11px] font-medium px-2 py-0.5 mb-1">
+            Wall idea
+          </span>
+        )}
         <h3 className="text-xl md:text-2xl font-bold text-[#111111] mb-2 line-clamp-2">{scene.title}</h3>
         {minimumItemPrice > 0 && (
           <p className="text-base font-semibold text-[#111111] mb-1">
