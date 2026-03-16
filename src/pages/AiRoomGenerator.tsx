@@ -302,8 +302,7 @@ export default function AiRoomGenerator() {
         {step === 2 && (
           <section className="space-y-6" aria-label="Pick a mood">
             <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Sparkles className="w-5 h-5" />
+              <h2 className="text-lg font-semibold text-gray-900">
                 Pick a mood
               </h2>
               <p className="mt-2 text-gray-600 text-sm">
@@ -315,14 +314,32 @@ export default function AiRoomGenerator() {
                     key={m.id}
                     type="button"
                     onClick={() => setMoodId(m.id)}
-                    className={`rounded-xl border-2 p-4 text-left transition-all ${
+                    className={`rounded-xl border-2 p-4 text-left transition-all flex items-center gap-3 ${
                       moodId === m.id
                         ? 'border-[#111] bg-gray-50 ring-2 ring-[#111] ring-offset-2'
                         : 'border-gray-200 hover:border-gray-300 bg-white'
                     }`}
                   >
-                    <span className="font-semibold text-gray-900">{m.label}</span>
-                    <p className="mt-1 text-xs text-gray-600">{m.subtitle}</p>
+                    <div
+                      className="w-8 h-8 rounded-md flex-shrink-0 border border-transparent"
+                      style={
+                        m.id === 'afro_luxe'
+                          ? { backgroundColor: '#1e1e1e' }
+                          : m.id === 'warm_earthy'
+                          ? { backgroundColor: '#c4704a' }
+                          : m.id === 'minimal_lagos'
+                          ? { backgroundColor: '#f0ece4', borderColor: '#d0ccc4' }
+                          : m.id === 'bold_colourful'
+                          ? {
+                              backgroundImage: 'linear-gradient(135deg, #1a6b6b 0%, #1a6b6b 50%, #d4a017 50%, #d4a017 100%)',
+                            }
+                          : {}
+                      }
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="font-semibold text-gray-900 block truncate">{m.label}</span>
+                      <p className="mt-1 text-xs text-gray-600">{m.subtitle}</p>
+                    </div>
                   </button>
                 ))}
               </div>
