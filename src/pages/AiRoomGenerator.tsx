@@ -5,13 +5,26 @@ import { getActiveStorefrontsByLocation } from '@/lib/api';
 import type { Storefront, VendorProduct } from '@/lib/types';
 import { AI_ROOM_MOODS, AI_ROOM_MOOD_BY_ID } from '@/lib/ai-room-moods';
 import type { AiRoomMoodId } from '@/lib/ai-room-moods';
-import { Upload, Sparkles, CreditCard, ImageIcon, Share2, Bookmark, ChevronRight } from 'lucide-react';
+import { Upload, Sparkles, CreditCard, ImageIcon, Share2, Bookmark, ChevronRight, Check, Shield } from 'lucide-react';
 import { toast } from 'sonner';
+import { AI_ROOM_PRODUCTS_MIN } from '@/lib/ai-room-generate-types';
 
 const LOCATION = 'NG';
 const PRICE_KOBO = 200_000; // ₦2,000
 const PLACEHOLDER_AI_IMAGE =
   'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Noir%20Botanical%20Living%20Room.png';
+
+/** Sample empty Nigerian room photos — user can tap one instead of uploading. Replace URLs with your own assets. */
+const SAMPLE_ROOM_PHOTOS: { id: string; label: string; url: string }[] = [
+  { id: 'living', label: 'Living room', url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Coastal%20Calm%20Living%20Room.png' },
+  { id: 'bedroom', label: 'Bedroom', url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Urban%20Evergreen%20Living%20Room.png' },
+  { id: 'office', label: 'Home office', url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Golden%20Olive%20Living%20Room.png' },
+  { id: 'dining', label: 'Dining room', url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Noir%20Botanical%20Living%20Room.png' },
+  { id: 'wall', label: 'Empty wall', url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/The%20Statement%20Wall.png' },
+];
+
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+const ACCEPTED_TYPES = ['image/jpeg', 'image/png'];
 
 function formatNgn(value: number): string {
   return `₦${Number(value).toLocaleString('en-NG')}`;
@@ -25,10 +38,6 @@ function formatPrice(product: VendorProduct): string {
   if (price_min != null) return `From ${formatNgn(price_min)}`;
   if (price_max != null) return `From ${formatNgn(price_max)}`;
   return 'Price on request';
-}
-
-function formatCategoryLabel(category: string): string {
-  return category.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function getVendorInitials(name: string): string {
@@ -47,34 +56,6 @@ function getVendorColor(name: string): string {
   return `hsl(${hue}, 70%, 40%)`;
 }
 
-/** Compute Essential / Recommended / Premium budget tiers from products in mood categories. */
-function computeBudgetTiers(
-  products: VendorProduct[],
-  moodCategories: string[]
-): { essential: number; recommended: number; premium: number } {
-  const byCategory = new Map<string, number[]>();
-  for (const p of products) {
-    const cat = p.category;
-    if (!cat || !moodCategories.includes(cat)) continue;
-    const price = p.price_min ?? p.price_max ?? 0;
-    if (price <= 0) continue;
-    if (!byCategory.has(cat)) byCategory.set(cat, []);
-    byCategory.get(cat)!.push(price);
-  }
-  let essential = 0,
-    recommended = 0,
-    premium = 0;
-  byCategory.forEach((prices) => {
-    prices.sort((a, b) => a - b);
-    const len = prices.length;
-    if (len === 0) return;
-    essential += prices[0] ?? 0;
-    recommended += prices[Math.floor(len * 0.5)] ?? prices[0] ?? 0;
-    premium += prices[len - 1] ?? 0;
-  });
-  return { essential, recommended, premium };
-}
-
 type Step = 1 | 2 | 3 | 4;
 
 export default function AiRoomGenerator() {
@@ -82,9 +63,14 @@ export default function AiRoomGenerator() {
   const [step, setStep] = useState<Step>(1);
   const [roomFile, setRoomFile] = useState<File | null>(null);
   const [roomPreviewUrl, setRoomPreviewUrl] = useState<string | null>(null);
+  /** 'upload' = user selected file, 'sample' = user picked a sample room photo */
+  const [roomSource, setRoomSource] = useState<'upload' | 'sample' | null>(null);
+  const [roomPhotoError, setRoomPhotoError] = useState<string | null>(null);
   const [moodId, setMoodId] = useState<AiRoomMoodId | null>(null);
   const [paying, setPaying] = useState(false);
   const [mockGenerationId, setMockGenerationId] = useState<string | null>(null);
+  /** Products passed to OpenAI for this generation (mock: 5–6 from productsByMood at pay time) */
+  const [productsInRender, setProductsInRender] = useState<VendorProduct[]>([]);
 
   const [storefronts, setStorefronts] = useState<Storefront[]>([]);
   const [products, setProducts] = useState<VendorProduct[]>([]);
@@ -122,31 +108,48 @@ export default function AiRoomGenerator() {
     return products.filter((p) => p.category && mood.categories.includes(p.category));
   }, [products, mood]);
 
-  const budgetTiers = useMemo(() => {
-    if (!mood) return { essential: 0, recommended: 0, premium: 0 };
-    return computeBudgetTiers(products, mood.categories);
-  }, [products, mood]);
+  /** Minimum spend = sum of price_min of products in this render */
+  const minimumSpend = useMemo(
+    () => productsInRender.reduce((sum, p) => sum + (p.price_min ?? p.price_max ?? 0), 0),
+    [productsInRender],
+  );
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!['image/jpeg', 'image/png'].includes(file.type)) {
+    setRoomPhotoError(null);
+    if (!ACCEPTED_TYPES.includes(file.type)) {
       toast.error('Please choose a JPEG or PNG image.');
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
+    if (file.size > MAX_FILE_SIZE_BYTES) {
       toast.error('Image must be under 10MB.');
       return;
     }
-    if (roomPreviewUrl) URL.revokeObjectURL(roomPreviewUrl);
+    if (roomPreviewUrl && roomSource === 'upload') URL.revokeObjectURL(roomPreviewUrl);
     setRoomFile(file);
     setRoomPreviewUrl(URL.createObjectURL(file));
+    setRoomSource('upload');
+  };
+
+  /** Same guardrail as Analyze flow: when backend says image is not a room, show this. */
+  const setNotRoomError = () => setRoomPhotoError('Please upload a photo of a room or space.');
+
+  const handleSampleRoomSelect = (url: string) => {
+    setRoomPhotoError(null);
+    if (roomPreviewUrl && roomSource === 'upload') URL.revokeObjectURL(roomPreviewUrl);
+    setRoomFile(null);
+    setRoomPreviewUrl(url);
+    setRoomSource('sample');
   };
 
   const handleMockPay = async () => {
     setPaying(true);
     await new Promise((r) => setTimeout(r, 800));
     setMockGenerationId(`mock-${crypto.randomUUID()}`);
+    const count = Math.min(AI_ROOM_PRODUCTS_MIN + Math.floor(Math.random() * 2), Math.max(productsByMood.length, AI_ROOM_PRODUCTS_MIN), 6);
+    const shuffled = [...productsByMood].sort(() => Math.random() - 0.5);
+    setProductsInRender(shuffled.slice(0, count));
     setStep(4);
     setPaying(false);
     toast.success('Payment simulated. Your room is ready!');
@@ -165,11 +168,14 @@ export default function AiRoomGenerator() {
   };
 
   const resetFlow = () => {
-    if (roomPreviewUrl) URL.revokeObjectURL(roomPreviewUrl);
+    if (roomPreviewUrl && roomSource === 'upload') URL.revokeObjectURL(roomPreviewUrl);
     setRoomFile(null);
     setRoomPreviewUrl(null);
+    setRoomSource(null);
+    setRoomPhotoError(null);
     setMoodId(null);
     setMockGenerationId(null);
+    setProductsInRender([]);
     setStep(1);
   };
 
@@ -228,9 +234,36 @@ export default function AiRoomGenerator() {
                   </>
                 )}
               </label>
+              {roomPhotoError && (
+                <p className="mt-3 text-sm text-red-600" role="alert">
+                  {roomPhotoError}
+                </p>
+              )}
+              <div className="mt-6">
+                <p className="text-sm font-medium text-gray-700">Don&apos;t have a photo?</p>
+                <p className="text-xs text-gray-500 mt-0.5">Tap a sample room to use instead.</p>
+                <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                  {SAMPLE_ROOM_PHOTOS.map((sample) => (
+                    <button
+                      key={sample.id}
+                      type="button"
+                      onClick={() => handleSampleRoomSelect(sample.url)}
+                      className={`rounded-xl overflow-hidden border-2 aspect-[4/3] bg-gray-100 transition-all ${
+                        roomPreviewUrl === sample.url ? 'border-[#111] ring-2 ring-[#111] ring-offset-2' : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <img src={sample.url} alt={sample.label} className="w-full h-full object-cover" />
+                      <span className="sr-only">{sample.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  Living room · Bedroom · Home office · Dining room · Empty wall
+                </p>
+              </div>
               <div className="mt-6 flex justify-end">
                 <Button
-                  disabled={!roomFile}
+                  disabled={!roomPreviewUrl}
                   onClick={() => setStep(2)}
                   className="rounded-full bg-[#111] text-white hover:bg-gray-800"
                 >
@@ -310,14 +343,39 @@ export default function AiRoomGenerator() {
                       <p className="text-sm text-gray-600">{mood.subtitle}</p>
                     </div>
                   )}
-                  <p className="mt-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                    AI reimagines your space for inspiration — not an exact architectural render.
-                  </p>
                   <div className="mt-4 flex items-baseline gap-2">
                     <span className="text-2xl font-bold text-gray-900">{formatNgn(PRICE_KOBO / 100)}</span>
                     <span className="text-gray-500 text-sm">per generation</span>
                   </div>
                 </div>
+              </div>
+              <div className="mt-8">
+                <h3 className="text-base font-semibold text-gray-900">What you get for ₦2,000</h3>
+                <ul className="mt-3 space-y-2 text-sm text-gray-700">
+                  <li className="flex items-start gap-2">
+                    <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                    <span>AI room transformation in your chosen style</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                    <span>Real verified Nigerian vendor products built into your render — not AI invented furniture</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                    <span>Every item is sourceable and available to buy today</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                    <span>Interior decorators charge ₦150,000–₦500,000 for a mood board. This is ₦2,000.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Shield className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                    <span>Payment secured by Paystack — Nigeria&apos;s most trusted payment gateway</span>
+                  </li>
+                </ul>
+                <p className="mt-4 text-xs text-gray-500">
+                  AI-generated results may vary based on photo quality. All vendor products shown are real and available.
+                </p>
               </div>
               <div className="mt-8 flex justify-between">
                 <Button variant="outline" onClick={() => setStep(2)} className="rounded-full">
@@ -340,10 +398,10 @@ export default function AiRoomGenerator() {
             <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
               <h2 className="text-lg font-semibold text-gray-900">Your reimagined room</h2>
               <p className="mt-1 text-sm text-gray-600">
-                Before and after. Budget and vendor sections use real data for your chosen mood.
+                Before and after. Every product in your render is from verified Nigerian vendors.
               </p>
 
-              {/* Before / After */}
+              {/* 1. Before / After */}
               <div className="mt-6 grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs font-medium text-gray-500 mb-2">Before</p>
@@ -366,11 +424,8 @@ export default function AiRoomGenerator() {
                   </div>
                 </div>
               </div>
-              <p className="mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2">
-                AI reimagines your space for inspiration — not an exact architectural render.
-              </p>
 
-              {/* Share + Save */}
+              {/* 2. Share + Save */}
               <div className="mt-6 flex flex-wrap gap-3">
                 <Button variant="outline" onClick={handleShare} className="rounded-full">
                   <Share2 className="w-4 h-4 mr-2" />
@@ -380,37 +435,82 @@ export default function AiRoomGenerator() {
                   <Bookmark className="w-4 h-4 mr-2" />
                   Save to profile
                 </Button>
-                <Button variant="ghost" onClick={resetFlow} className="rounded-full text-gray-600">
-                  Generate another room
-                </Button>
               </div>
             </div>
 
-            {/* Budget tiers — real data */}
-            {mood && (budgetTiers.essential > 0 || budgetTiers.recommended > 0 || budgetTiers.premium > 0) && (
+            {/* 3. Products in your render */}
+            {productsInRender.length > 0 && (
               <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
-                <h3 className="text-base font-semibold text-gray-900">Estimated budget tiers</h3>
+                <h3 className="text-base font-semibold text-gray-900">Products in your render</h3>
                 <p className="mt-1 text-sm text-gray-600">
-                  Based on real products matching the {mood.label} mood.
+                  These exact products were used to generate your room.
                 </p>
-                <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="rounded-xl bg-gray-50 border border-gray-200 p-4">
-                    <p className="text-xs font-medium text-gray-500">Essential</p>
-                    <p className="mt-1 text-xl font-bold text-gray-900">{formatNgn(budgetTiers.essential)}</p>
-                  </div>
-                  <div className="rounded-xl bg-gray-50 border border-gray-200 p-4">
-                    <p className="text-xs font-medium text-gray-500">Recommended</p>
-                    <p className="mt-1 text-xl font-bold text-gray-900">{formatNgn(budgetTiers.recommended)}</p>
-                  </div>
-                  <div className="rounded-xl bg-gray-50 border border-gray-200 p-4">
-                    <p className="text-xs font-medium text-gray-500">Premium</p>
-                    <p className="mt-1 text-xl font-bold text-gray-900">{formatNgn(budgetTiers.premium)}</p>
-                  </div>
+                <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {productsInRender.map((product) => {
+                    const storefront = storefronts.find((sf) => sf.id === product.storefront_id);
+                    return (
+                      <button
+                        key={product.id}
+                        type="button"
+                        onClick={() => navigate(`/shops/products/${product.slug}`)}
+                        className="rounded-2xl border border-gray-200 overflow-hidden text-left hover:border-gray-300 hover:shadow-lg transition-all flex flex-col"
+                      >
+                        <div className="aspect-[3/4] bg-gray-100 relative">
+                          {product.image_url ? (
+                            <img
+                              src={product.image_url}
+                              alt={product.name}
+                              className="w-full h-full object-cover object-center"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">No image</div>
+                          )}
+                          {storefront && (
+                            <div className="absolute top-2 left-2 max-w-[90%]">
+                              <span className="inline-flex items-center rounded-full bg-black/80 text-white text-[10px] font-medium px-2 py-1">
+                                <span
+                                  className="relative h-6 w-6 rounded-full border border-white/70 overflow-hidden flex items-center justify-center text-[10px] font-semibold mr-1 flex-shrink-0"
+                                  style={{ backgroundColor: getVendorColor(storefront.name) }}
+                                >
+                                  {storefront.logo_url ? (
+                                    <img src={storefront.logo_url} alt="" className="w-full h-full object-cover" />
+                                  ) : (
+                                    getVendorInitials(storefront.name)
+                                  )}
+                                </span>
+                                <span className="truncate max-w-[80px]">{storefront.name}</span>
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="px-2.5 pt-2.5 pb-3">
+                          <h4 className="text-[13px] font-semibold text-gray-900 leading-snug line-clamp-2">{product.name}</h4>
+                          <p className="text-xs text-gray-700 mt-1">{formatPrice(product)}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-4">
+                  <Button variant="outline" className="rounded-full" onClick={() => navigate('/shops')}>
+                    See more products
+                  </Button>
                 </div>
               </div>
             )}
 
-            {/* Furniture makers — real carpenters */}
+            {/* 4. Minimum spend to achieve this look */}
+            {(productsInRender.length > 0 || minimumSpend > 0) && (
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
+                <p className="text-sm font-medium text-gray-500">Minimum spend to achieve this look</p>
+                <p className="mt-1 text-2xl font-bold text-gray-900">{formatNgn(minimumSpend)}</p>
+                <p className="mt-2 text-xs text-gray-500">
+                  Based on {productsInRender.length} vendor product{productsInRender.length !== 1 ? 's' : ''} featured in your render.
+                </p>
+              </div>
+            )}
+
+            {/* 5. Furniture makers — real carpenters */}
             {carpenters.length > 0 && (
               <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
                 <h3 className="text-base font-semibold text-gray-900">Furniture makers</h3>
@@ -476,63 +576,15 @@ export default function AiRoomGenerator() {
               </div>
             )}
 
-            {/* See similar items — real products by mood */}
-            {productsByMood.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
-                <h3 className="text-base font-semibold text-gray-900">See similar items</h3>
-                <p className="mt-1 text-sm text-gray-600">Products matching the {mood?.label ?? 'selected'} mood.</p>
-                <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {productsByMood.slice(0, 8).map((product) => {
-                    const storefront = storefronts.find((sf) => sf.id === product.storefront_id);
-                    return (
-                      <button
-                        key={product.id}
-                        type="button"
-                        onClick={() => navigate(`/shops/products/${product.slug}`)}
-                        className="rounded-xl border border-gray-200 overflow-hidden text-left hover:border-gray-300 hover:shadow-md transition-all"
-                      >
-                        <div className="aspect-[3/4] bg-gray-100 relative">
-                          {product.image_url ? (
-                            <img
-                              src={product.image_url}
-                              alt={product.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">No image</div>
-                          )}
-                          {storefront && (
-                            <span
-                              className="absolute top-1.5 left-1.5 rounded-full bg-black/80 text-white text-[10px] font-medium px-2 py-0.5 truncate max-w-[90%]"
-                              style={{ backgroundColor: getVendorColor(storefront.name) }}
-                            >
-                              {storefront.name}
-                            </span>
-                          )}
-                        </div>
-                        <div className="p-2">
-                          <p className="text-xs font-medium text-gray-900 line-clamp-2">{product.name}</p>
-                          <p className="text-xs text-gray-600 mt-0.5">{formatPrice(product)}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="mt-4">
-                  <Button
-                    variant="outline"
-                    className="rounded-full"
-                    onClick={() => navigate('/shops')}
-                  >
-                    Browse all products
-                  </Button>
-                </div>
-              </div>
-            )}
-
             {loadingData && (
               <p className="text-center text-sm text-gray-500">Loading vendors and products…</p>
             )}
+
+            <div className="flex justify-center pt-4">
+              <Button variant="outline" onClick={resetFlow} className="rounded-full text-gray-700">
+                Generate another room
+              </Button>
+            </div>
           </section>
         )}
       </main>
