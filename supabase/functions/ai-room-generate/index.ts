@@ -488,8 +488,17 @@ Deno.serve(async (req: Request) => {
     });
 
     if (!openaiRes.ok) {
-      const text = await openaiRes.text();
-      console.error('[ai-room-generate] OpenAI error:', openaiRes.status, text);
+      console.log(
+        '[ai-room-generate] OpenAI response status:',
+        openaiRes.status,
+        openaiRes.statusText,
+      );
+      const rawErrorText = await openaiRes.text();
+      console.log(
+        '[ai-room-generate] OpenAI raw text:',
+        rawErrorText.substring(0, 2000),
+      );
+      console.error('[ai-room-generate] OpenAI error:', openaiRes.status);
       return jsonResponse(
         {
           error: 'generation_failed',
@@ -500,11 +509,17 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const openaiJson = await openaiRes.json();
     console.log(
-      '[ai-room-generate] OpenAI raw response:',
-      JSON.stringify(openaiJson?.output, null, 2),
+      '[ai-room-generate] OpenAI response status:',
+      openaiRes.status,
+      openaiRes.statusText,
     );
+    const rawText = await openaiRes.text();
+    console.log(
+      '[ai-room-generate] OpenAI raw text:',
+      rawText.substring(0, 2000),
+    );
+    const openaiJson = JSON.parse(rawText);
     const imageBase64 = openaiJson?.output
       ?.filter((o: any) => o.type === 'image')
       ?.map((o: any) => o.image_base64)[0];
