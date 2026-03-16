@@ -8,6 +8,7 @@ import type { AiRoomMoodId } from '@/lib/ai-room-moods';
 import { Upload, Sparkles, CreditCard, ImageIcon, Share2, Bookmark, ChevronRight, Check, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { AI_ROOM_PRODUCTS_MIN } from '@/lib/ai-room-generate-types';
+import { supabase } from '@/lib/supabase';
 
 const LOCATION = 'NG';
 const PRICE_KOBO = 200_000; // ₦2,000
@@ -80,6 +81,8 @@ type Step = 1 | 2 | 3 | 4;
 
 export default function AiRoomGenerator() {
   const navigate = useNavigate();
+  const [authLoading, setAuthLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [step, setStep] = useState<Step>(1);
   const [roomFile, setRoomFile] = useState<File | null>(null);
   const [roomPreviewUrl, setRoomPreviewUrl] = useState<string | null>(null);
@@ -95,6 +98,19 @@ export default function AiRoomGenerator() {
   const [storefronts, setStorefronts] = useState<Storefront[]>([]);
   const [products, setProducts] = useState<VendorProduct[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+
+  // Require login before showing wizard
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (cancelled) return;
+      setIsAuthenticated(!!user);
+      setAuthLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -202,6 +218,34 @@ export default function AiRoomGenerator() {
   return (
     <div className="min-h-screen flex flex-col bg-[#fafaf9]">
       <main className="flex-1 container mx-auto px-4 md:px-6 py-8 md:py-12 max-w-4xl">
+        {authLoading ? (
+          <div className="min-h-[50vh] flex items-center justify-center text-sm text-gray-500">
+            Checking your account…
+          </div>
+        ) : !isAuthenticated ? (
+          <section className="max-w-lg mx-auto bg-white rounded-2xl border border-gray-200 p-6 md:p-8 text-center">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">First, create a free account</h1>
+            <p className="mt-3 text-sm text-gray-600">
+              Your AI room generation will be saved to your history automatically so you can always find it.
+            </p>
+            <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+              <Button
+                className="rounded-full px-6"
+                onClick={() => navigate('/auth?mode=signup&redirect=/ai-room-generator')}
+              >
+                Sign up — it&apos;s free
+              </Button>
+              <Button
+                variant="outline"
+                className="rounded-full px-6"
+                onClick={() => navigate('/auth?mode=signin&redirect=/ai-room-generator')}
+              >
+                Log in
+              </Button>
+            </div>
+          </section>
+        ) : (
+        <>
         <header className="text-center mb-8 md:mb-12">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">AI Room Generator</h1>
           <p className="mt-2 text-gray-600 text-sm md:text-base">
@@ -472,9 +516,9 @@ export default function AiRoomGenerator() {
                   <Share2 className="w-4 h-4 mr-2" />
                   Share my room
                 </Button>
-                <Button variant="outline" onClick={handleSave} className="rounded-full">
+                <Button variant="outline" onClick={() => navigate('/history')} className="rounded-full">
                   <Bookmark className="w-4 h-4 mr-2" />
-                  Save to profile
+                  View in history
                 </Button>
               </div>
             </div>
@@ -484,7 +528,7 @@ export default function AiRoomGenerator() {
               <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
                 <h3 className="text-base font-semibold text-gray-900">Products in your render</h3>
                 <p className="mt-1 text-sm text-gray-600">
-                  These exact products were used to generate your room.
+                  These exact products were used to generate your room. Tap any item to contact the vendor directly.
                 </p>
                 <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {productsInRender.map((product) => {
@@ -627,6 +671,8 @@ export default function AiRoomGenerator() {
               </Button>
             </div>
           </section>
+        )}
+        </>
         )}
       </main>
     </div>
