@@ -14,13 +14,33 @@ const PRICE_KOBO = 200_000; // ₦2,000
 const PLACEHOLDER_AI_IMAGE =
   'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Noir%20Botanical%20Living%20Room.png';
 
-/** Sample empty Nigerian room photos — user can tap one instead of uploading. Replace URLs with your own assets. */
+/** Sample empty Nigerian room photos — user can tap one instead of uploading. */
 const SAMPLE_ROOM_PHOTOS: { id: string; label: string; url: string }[] = [
-  { id: 'living', label: 'Living room', url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Coastal%20Calm%20Living%20Room.png' },
-  { id: 'bedroom', label: 'Bedroom', url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Urban%20Evergreen%20Living%20Room.png' },
-  { id: 'office', label: 'Home office', url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Golden%20Olive%20Living%20Room.png' },
-  { id: 'dining', label: 'Dining room', url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Noir%20Botanical%20Living%20Room.png' },
-  { id: 'wall', label: 'Empty wall', url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/The%20Statement%20Wall.png' },
+  {
+    id: 'living',
+    label: 'Living room',
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Empty%20Nigerian%20Living%20Room.png',
+  },
+  {
+    id: 'bedroom',
+    label: 'Bedroom',
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Empty%20Nigerian%20Bedroom.png',
+  },
+  {
+    id: 'office',
+    label: 'Home office',
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Empty%20Nigerian%20Living%20Room.png',
+  },
+  {
+    id: 'dining',
+    label: 'Dining room',
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Empty%20Nigerian%20Dining%20Room.png',
+  },
+  {
+    id: 'wall',
+    label: 'Bare wall',
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Bare%20Wall%20For%20Wall%20Styling.png',
+  },
 ];
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
@@ -248,12 +268,16 @@ export default function AiRoomGenerator() {
                       key={sample.id}
                       type="button"
                       onClick={() => handleSampleRoomSelect(sample.url)}
-                      className={`rounded-xl overflow-hidden border-2 aspect-[4/3] bg-gray-100 transition-all ${
+                      className={`relative rounded-xl overflow-hidden border-2 aspect-[4/3] bg-gray-100 transition-all ${
                         roomPreviewUrl === sample.url ? 'border-[#111] ring-2 ring-[#111] ring-offset-2' : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
                       <img src={sample.url} alt={sample.label} className="w-full h-full object-cover" />
-                      <span className="sr-only">{sample.label}</span>
+                      <div className="absolute bottom-1.5 left-1.5">
+                        <span className="inline-flex items-center rounded-full bg-black/75 text-white text-[10px] font-medium px-2 py-0.5">
+                          {sample.label}
+                        </span>
+                      </div>
                     </button>
                   ))}
                 </div>
