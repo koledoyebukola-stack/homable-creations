@@ -451,23 +451,6 @@ Deno.serve(async (req: Request) => {
 
   const fullPrompt = `${layoutInstruction}\n\n${moodPromptTemplate}\n\n${productsInstruction}\n\n${qualityInstruction}`;
 
-  const content: any[] = [
-    {
-      type: 'input_text',
-      text: fullPrompt,
-    },
-    {
-      type: 'input_image',
-      image_url: original_image_url.trim(),
-    },
-    ...moodProducts
-      .filter((p) => p.image_url)
-      .map((p) => ({
-        type: 'input_image',
-        image_url: p.image_url!,
-      })),
-  ];
-
   let generatedImageUrl: string | null = null;
 
   try {
@@ -478,11 +461,27 @@ Deno.serve(async (req: Request) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-image-1',
+        model: 'gpt-4.1',
+        tools: [{ type: 'image_generation' }],
         input: [
           {
             role: 'user',
-            content,
+            content: [
+              {
+                type: 'input_text',
+                text: fullPrompt,
+              },
+              {
+                type: 'input_image',
+                image_url: original_image_url.trim(),
+              },
+              ...moodProducts
+                .filter((p) => p.image_url)
+                .map((p) => ({
+                  type: 'input_image',
+                  image_url: p.image_url!,
+                })),
+            ],
           },
         ],
       }),
@@ -502,6 +501,10 @@ Deno.serve(async (req: Request) => {
     }
 
     const openaiJson = await openaiRes.json();
+    console.log(
+      '[ai-room-generate] OpenAI raw response:',
+      JSON.stringify(openaiJson?.output, null, 2),
+    );
     const imageBase64 = openaiJson?.output
       ?.filter((o: any) => o.type === 'image')
       ?.map((o: any) => o.image_base64)[0];
