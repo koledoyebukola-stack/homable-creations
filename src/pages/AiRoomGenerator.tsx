@@ -19,22 +19,22 @@ const SAMPLE_ROOM_PHOTOS: { id: string; label: string; url: string }[] = [
   {
     id: 'living',
     label: 'Living room',
-    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Empty%20Nigerian%20Living%20Room.png',
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Updated%20Living%20Room.png',
   },
   {
     id: 'bedroom',
     label: 'Bedroom',
-    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Empty%20Nigerian%20Bedroom.png',
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Updated%20bedroom.png',
   },
   {
     id: 'office',
     label: 'Home office',
-    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Empty%20Nigerian%20Living%20Room.png',
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Nigerian%20Home%20Office.png',
   },
   {
     id: 'dining',
     label: 'Dining room',
-    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Empty%20Nigerian%20Dining%20Room.png',
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Updated%20Dining%20Room.png',
   },
   {
     id: 'wall',
