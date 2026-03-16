@@ -9,6 +9,7 @@ import { Upload, Sparkles, CreditCard, ImageIcon, Share2, Bookmark, ChevronRight
 import { toast } from 'sonner';
 import { AI_ROOM_PRODUCTS_MIN } from '@/lib/ai-room-generate-types';
 import { supabase } from '@/lib/supabase';
+import type { User } from '@supabase/supabase-js';
 
 const LOCATION = 'NG';
 const PRICE_KOBO = 200_000; // ₦2,000
@@ -83,6 +84,7 @@ export default function AiRoomGenerator() {
   const navigate = useNavigate();
   const [authLoading, setAuthLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   const [step, setStep] = useState<Step>(1);
   const [roomFile, setRoomFile] = useState<File | null>(null);
   const [roomPreviewUrl, setRoomPreviewUrl] = useState<string | null>(null);
@@ -94,6 +96,8 @@ export default function AiRoomGenerator() {
   const [mockGenerationId, setMockGenerationId] = useState<string | null>(null);
   /** Products passed to OpenAI for this generation (mock: 5–6 from productsByMood at pay time) */
   const [productsInRender, setProductsInRender] = useState<VendorProduct[]>([]);
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [minimumSpend, setMinimumSpend] = useState<number | null>(null);
 
   const [storefronts, setStorefronts] = useState<Storefront[]>([]);
   const [products, setProducts] = useState<VendorProduct[]>([]);
@@ -104,6 +108,7 @@ export default function AiRoomGenerator() {
     let cancelled = false;
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (cancelled) return;
+      setUser(user);
       setIsAuthenticated(!!user);
       setAuthLoading(false);
     });
@@ -144,12 +149,6 @@ export default function AiRoomGenerator() {
     return products.filter((p) => p.category && mood.categories.includes(p.category));
   }, [products, mood]);
 
-  /** Minimum spend = sum of price_min of products in this render */
-  const minimumSpend = useMemo(
-    () => productsInRender.reduce((sum, p) => sum + (p.price_min ?? p.price_max ?? 0), 0),
-    [productsInRender],
-  );
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -179,16 +178,38 @@ export default function AiRoomGenerator() {
     setRoomSource('sample');
   };
 
-  const handleMockPay = async () => {
+  const handlePayAndGenerate = async () => {
+    if (!roomPreviewUrl || !moodId || !user?.id) return;
     setPaying(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setMockGenerationId(`mock-${crypto.randomUUID()}`);
-    const count = Math.min(AI_ROOM_PRODUCTS_MIN + Math.floor(Math.random() * 2), Math.max(productsByMood.length, AI_ROOM_PRODUCTS_MIN), 6);
-    const shuffled = [...productsByMood].sort(() => Math.random() - 0.5);
-    setProductsInRender(shuffled.slice(0, count));
-    setStep(4);
-    setPaying(false);
-    toast.success('Payment simulated. Your room is ready!');
+
+    try {
+      const reference = `test_${crypto.randomUUID()}`;
+
+      const { data, error } = await supabase.functions.invoke('ai-room-generate', {
+        body: {
+          mood: moodId,
+          paystack_reference: reference,
+          original_image_url: roomPreviewUrl,
+          user_id: user.id,
+          test_mode: true,
+        },
+      });
+
+      if (error || !data) {
+        console.error('ai-room-generate error', error);
+        toast.error('Room generation failed. Please try again.');
+        return;
+      }
+
+      setGeneratedImageUrl(data.generated_image_url || null);
+      setProductsInRender(data.products || []);
+      setMinimumSpend(
+        typeof data.minimum_spend === 'number' ? data.minimum_spend : null,
+      );
+      setStep(4);
+    } finally {
+      setPaying(false);
+    }
   };
 
   const handleShare = () => {
@@ -212,6 +233,8 @@ export default function AiRoomGenerator() {
     setMoodId(null);
     setMockGenerationId(null);
     setProductsInRender([]);
+    setGeneratedImageUrl(null);
+    setMinimumSpend(null);
     setStep(1);
   };
 
@@ -468,10 +491,10 @@ export default function AiRoomGenerator() {
                 </Button>
                 <Button
                   disabled={paying}
-                  onClick={handleMockPay}
+                  onClick={handlePayAndGenerate}
                   className="rounded-full bg-[#111] text-white hover:bg-gray-800"
                 >
-                  {paying ? 'Processing…' : 'Pay ₦2,000 (mock)'}
+                  {paying ? 'Processing…' : 'Generate my room'}
                 </Button>
               </div>
             </div>
@@ -502,7 +525,7 @@ export default function AiRoomGenerator() {
                   <p className="text-xs font-medium text-gray-500 mb-2">After (AI — placeholder)</p>
                   <div className="aspect-[4/3] rounded-xl overflow-hidden bg-gray-100">
                     <img
-                      src={PLACEHOLDER_AI_IMAGE}
+                      src={generatedImageUrl || PLACEHOLDER_AI_IMAGE}
                       alt="AI-generated room (placeholder)"
                       className="w-full h-full object-cover"
                     />
