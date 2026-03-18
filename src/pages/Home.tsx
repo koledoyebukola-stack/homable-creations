@@ -517,8 +517,7 @@ export default function Home() {
                               onClick={() =>
                                 setExploreDisplayCount((prev) => Math.min(prev + 6, filtered.length))
                               }
-                              variant="outline"
-                              className="rounded-xl border-[#e0e0e0] hover:border-black"
+                              className="rounded-xl bg-black text-white hover:bg-gray-900"
                             >
                               Load more
                             </Button>

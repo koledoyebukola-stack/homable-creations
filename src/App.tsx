@@ -90,45 +90,49 @@ function CaptureReferrerAndRoutes() {
     <>
       <Header />
 
-      {/* Other market banner (Other only): between navbar and page content, session-only dismiss */}
+      {/* Other market banner (Other only): full-screen overlay, session-only dismiss */}
       {country === 'OTHER' && !otherBannerDismissed && (
-        <div className="bg-stone-800 text-white px-4 py-3 flex flex-wrap items-center justify-center gap-3 sm:gap-4 relative z-20">
-          <p className="text-sm sm:text-base text-center pr-8 sm:pr-10">
-            Homable Creations is predominantly available in two markets — Canada and Nigeria. Switch to get the full curated experience.
+        <div className="fixed inset-0 z-50 bg-stone-900 text-white flex flex-col items-center justify-center px-6 text-center">
+          <button
+            type="button"
+            onClick={() => setOtherBannerDismissed(true)}
+            className="absolute top-4 right-4 p-2 rounded-md text-white/70 hover:text-white hover:bg-white/10 transition-colors text-2xl leading-none"
+            aria-label="Dismiss banner"
+          >
+            ×
+          </button>
+          <p className="text-lg sm:text-xl font-semibold mb-3 max-w-md">
+            Homable Creations is available in Canada and Nigeria
           </p>
-          <div className="flex items-center gap-2">
+          <p className="text-sm sm:text-base text-white/70 mb-8 max-w-sm">
+            Switch to get the full curated experience for your market.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center gap-3">
             <Button
               type="button"
-              variant="secondary"
-              size="sm"
-              className="bg-white/15 hover:bg-white/25 text-white border-0 shrink-0"
-              onClick={() => {
-                setCountry('CA');
-              }}
+              size="lg"
+              className="bg-white text-stone-900 hover:bg-gray-100 border-0 w-48"
+              onClick={() => setCountry('CA')}
             >
-              <span className="mr-1">🇨🇦</span>
+              <span className="mr-2">🇨🇦</span>
               <span>Switch to Canada</span>
             </Button>
             <Button
               type="button"
-              variant="secondary"
-              size="sm"
-              className="bg-white/15 hover:bg-white/25 text-white border-0 shrink-0"
-              onClick={() => {
-                setCountry('NG');
-              }}
+              size="lg"
+              className="bg-white text-stone-900 hover:bg-gray-100 border-0 w-48"
+              onClick={() => setCountry('NG')}
             >
-              <span className="mr-1">🇳🇬</span>
+              <span className="mr-2">🇳🇬</span>
               <span>Switch to Nigeria</span>
             </Button>
           </div>
           <button
             type="button"
             onClick={() => setOtherBannerDismissed(true)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-colors"
-            aria-label="Dismiss banner"
+            className="mt-8 text-sm text-white/50 hover:text-white/80 underline transition-colors"
           >
-            ×
+            Continue anyway
           </button>
         </div>
       )}
