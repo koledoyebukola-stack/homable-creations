@@ -11,6 +11,8 @@ import {
   getCategoryProductsForExplore,
   getCategoryProductsForExploreByPrice,
   getFeaturedStorefrontsThisWeek,
+  getCarpenterStorefronts,
+  getProductsForTvWallCompleteTheLook,
   type CategoryProductWithStorefront,
   type StorefrontWithProductCount,
 } from '@/lib/api';
@@ -73,6 +75,23 @@ function getMoreOptionsCategories(roomType: string | null): { title: string; cat
   return MORE_OPTIONS_BY_ROOM_TYPE[key] ?? MORE_OPTIONS_BY_ROOM_TYPE.living_room;
 }
 
+const TV_WALL_IMAGE_FILENAMES = [
+  'Soft Life Minimalist',
+  'Midnight Blu Premium',
+  'Bookshelf Wall',
+  'Full Option',
+  'Oga At The Top',
+  'Arch Of Grace',
+  'Vibes on Vibes',
+  'Marble No Be Small',
+  'Wood Flute',
+];
+
+function isTvWallScene(scene: ExploreScene): boolean {
+  const url = scene.hero_image_url ?? '';
+  return TV_WALL_IMAGE_FILENAMES.some((name) => url.includes(name) || url.includes(encodeURIComponent(name)));
+}
+
 export default function ExploreScenePage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -87,6 +106,8 @@ export default function ExploreScenePage() {
   const [randomArtworkProducts, setRandomArtworkProducts] = useState<VendorProduct[]>([]);
   const [moreOptionsSections, setMoreOptionsSections] = useState<Array<{ title: string; category: string; items: CategoryProductWithStorefront[] }>>([]);
   const [featuredVendors, setFeaturedVendors] = useState<StorefrontWithProductCount[]>([]);
+  const [tvWallCarpenters, setTvWallCarpenters] = useState<Storefront[]>([]);
+  const [tvWallCompleteTheLook, setTvWallCompleteTheLook] = useState<CategoryProductWithStorefront[]>([]);
   const [isHeroImageOpen, setIsHeroImageOpen] = useState(false);
   const [showHeroTapHint, setShowHeroTapHint] = useState(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -280,6 +301,14 @@ export default function ExploreScenePage() {
       setMoreOptionsSections(results.filter((r): r is { title: string; category: string; items: CategoryProductWithStorefront[] } => r !== null));
     });
     getFeaturedStorefrontsThisWeek('NG', 3).then(setFeaturedVendors);
+
+    if (data && 'scene' in data && isTvWallScene(data.scene)) {
+      getCarpenterStorefronts().then(setTvWallCarpenters);
+      getProductsForTvWallCompleteTheLook().then(setTvWallCompleteTheLook);
+    } else {
+      setTvWallCarpenters([]);
+      setTvWallCompleteTheLook([]);
+    }
   }, [data]);
 
   // Track explore scene view in history
@@ -1150,6 +1179,151 @@ export default function ExploreScenePage() {
                         );
                       })}
                     </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* TV Wall only: Verified Carpenters */}
+        {isNigeriaScene && isTvWallScene(scene) && tvWallCarpenters.length > 0 && (
+          <section className="mb-10">
+            <h2 className="text-xl font-semibold text-[#111111] mb-2">Verified Carpenters who can build this</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Contact directly for pricing and build time
+            </p>
+            <div className="overflow-x-auto pb-1 scroll-pills-hide-scrollbar md:overflow-visible -mx-4 md:mx-0 px-4 md:px-0">
+              <div className="flex gap-4 md:grid md:grid-cols-3 min-w-0 md:min-w-full">
+                {tvWallCarpenters.map((vendor) => (
+                  <div
+                    key={vendor.id}
+                    className="bg-white rounded-2xl border border-[#e5e5e5] overflow-hidden shadow-sm hover:shadow-lg transition-shadow flex flex-col flex-shrink-0 w-[calc(50%-0.5rem)] min-w-[200px] md:w-full md:min-w-0 cursor-pointer"
+                    onClick={() => navigate(`/stores/${vendor.slug}`)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        navigate(`/stores/${vendor.slug}`);
+                      }
+                    }}
+                  >
+                    <div className="aspect-[4/3] w-full bg-gray-100 flex items-center justify-center p-4">
+                      {vendor.logo_url ? (
+                        <img
+                          src={vendor.logo_url}
+                          alt={vendor.name}
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      ) : (
+                        <span className="text-2xl font-bold text-gray-400">
+                          {vendor.name
+                            .split(/\s+/)
+                            .map((w) => w[0])
+                            .filter(Boolean)
+                            .slice(0, 2)
+                            .join('')
+                            .toUpperCase() || 'V'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="px-3 pt-3 pb-4 flex flex-col flex-1">
+                      <h3 className="text-sm font-semibold text-[#111111] line-clamp-2">{vendor.name}</h3>
+                      <p className="text-xs text-gray-500 mt-1">Custom builds · Contact for pricing</p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-3 rounded-xl border-[#e0e0e0] hover:border-black w-full"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/stores/${vendor.slug}`);
+                        }}
+                      >
+                        <Store className="mr-2 h-4 w-4" />
+                        Visit Storefront
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* TV Wall only: Complete the look */}
+        {isNigeriaScene && isTvWallScene(scene) && tvWallCompleteTheLook.length > 0 && (
+          <section className="mb-10">
+            <h2 className="text-xl font-semibold text-[#111111] mb-2">Complete the look</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Shoppable pieces to style your TV wall
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+              {tvWallCompleteTheLook.map(({ product, storefront }) => (
+                <div
+                  key={product.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    if (!user) {
+                      setShowAuthGate(true);
+                      document.body.style.overflow = 'hidden';
+                      return;
+                    }
+                    trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
+                      product_id: product.id,
+                      product_name: product.name,
+                      vendor_id: storefront.id,
+                    });
+                    navigate(`/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      if (!user) {
+                        setShowAuthGate(true);
+                        document.body.style.overflow = 'hidden';
+                        return;
+                      }
+                      trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
+                        product_id: product.id,
+                        product_name: product.name,
+                        vendor_id: storefront.id,
+                      });
+                      navigate(`/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`);
+                    }
+                  }}
+                  className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer border border-[#e5e5e5] flex flex-col"
+                >
+                  <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
+                    {product.image_url ? (
+                      <img
+                        src={product.image_url}
+                        alt={product.name}
+                        className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[#999] text-sm">No image</div>
+                    )}
+                    <div className="absolute top-2 left-2">
+                      <Badge className="bg-gray-900 text-white text-[10px] font-medium border-0 shadow-sm px-2 py-1 rounded-full">
+                        Sold by {storefront.name ? storefront.name.split(' ').slice(0, 2).join(' ') : 'vendor'}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="px-2.5 pt-2.5 pb-3 md:px-3 md:pt-3">
+                    <h3 className="text-[13px] md:text-sm font-semibold text-gray-900 leading-snug">
+                      {product.name}
+                    </h3>
+                    <p className="text-xs text-gray-600 mt-1">
+                      {formatVendorPrice(product)}
+                    </p>
+                    {formatVendorDimensions(product) && (
+                      <p className="text-[11px] text-gray-500 mt-0.5">
+                        {formatVendorDimensions(product)}
+                      </p>
+                    )}
                   </div>
                 </div>
               ))}

@@ -2045,6 +2045,79 @@ export interface StorefrontWithProductCount extends Storefront {
 }
 
 /**
+ * Fetch all active carpenter storefronts (vendor_type = 'carpenter', status = 'active').
+ * Used for TV Wall scene "Verified Carpenters who can build this" section.
+ */
+export async function getCarpenterStorefronts(): Promise<Storefront[]> {
+  const { data: storefronts, error } = await supabase
+    .from('storefronts')
+    .select('*')
+    .eq('status', 'active')
+    .eq('vendor_type', 'carpenter')
+    .order('name', { ascending: true });
+
+  if (error) {
+    console.error('Failed to fetch carpenter storefronts:', error);
+    return [];
+  }
+  return (storefronts || []) as Storefront[];
+}
+
+/**
+ * Fetch products in artwork, lighting, mirror, planters categories from active storefronts.
+ * Used for TV Wall scene "Complete the look" section.
+ */
+export async function getProductsForTvWallCompleteTheLook(
+  limit: number = 24
+): Promise<CategoryProductWithStorefront[]> {
+  const { data: storefronts, error: storefrontsError } = await supabase
+    .from('storefronts')
+    .select('id')
+    .eq('status', 'active');
+
+  if (storefrontsError || !storefronts || storefronts.length === 0) {
+    return [];
+  }
+
+  const storefrontIds = storefronts.map((s: { id: string }) => s.id);
+  const categories = ['artwork', 'lighting', 'mirror', 'planters'];
+
+  const { data: products, error: productsError } = await supabase
+    .from('vendor_products')
+    .select('*')
+    .in('storefront_id', storefrontIds)
+    .in('category', categories)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+    .limit(limit);
+
+  if (productsError || !products || products.length === 0) {
+    return [];
+  }
+
+  const productList = products as VendorProduct[];
+  const uniqueStorefrontIds = [...new Set(productList.map((p) => p.storefront_id))];
+  const { data: storefrontRows, error: storefrontFetchError } = await supabase
+    .from('storefronts')
+    .select('*')
+    .in('id', uniqueStorefrontIds);
+
+  if (storefrontFetchError || !storefrontRows || storefrontRows.length === 0) {
+    return [];
+  }
+
+  const storefrontMap = new Map<string, Storefront>();
+  (storefrontRows as Storefront[]).forEach((s) => storefrontMap.set(s.id, s));
+
+  return productList
+    .map((p) => {
+      const storefront = storefrontMap.get(p.storefront_id);
+      return storefront ? { product: p, storefront } : null;
+    })
+    .filter((x): x is CategoryProductWithStorefront => x != null);
+}
+
+/**
  * Fetch storefronts for "Featured Vendors This Week" carousel.
  * Rotates weekly: (currentWeek * 3) % totalVendors gives start index; returns 3 consecutive (or count).
  */

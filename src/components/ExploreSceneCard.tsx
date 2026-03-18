@@ -7,19 +7,28 @@ function formatViewCount(count: number): string {
 }
 
 interface ExploreSceneCardProps {
-  scene: ExploreScene;
+  scene: Pick<ExploreScene, 'id' | 'slug' | 'title' | 'hero_image_url'> & Partial<ExploreScene>;
   onSelect: (slug: string) => void;
   /** Total view count for this scene (from explore_scenes.view_count) */
   viewCount?: number;
   /** True when this scene has the highest view count in the list (shows "Trending") */
   isTrending?: boolean;
+  /** TV Wall variant: image + title + "TV Wall" badge only */
+  variant?: 'default' | 'tv-wall';
 }
 
-export default function ExploreSceneCard({ scene, onSelect, viewCount = 0, isTrending = false }: ExploreSceneCardProps) {
+export default function ExploreSceneCard({
+  scene,
+  onSelect,
+  viewCount = 0,
+  isTrending = false,
+  variant = 'default',
+}: ExploreSceneCardProps) {
+  const isTvWall = variant === 'tv-wall';
   const catalogBudget = Number(scene.catalog_budget_ngn) || 0;
   const minimumItemPrice = Number(scene.minimum_item_price_ngn) || 0;
   const catalogProductCount = Number(scene.catalog_product_count) || 0;
-  const showBadgeOrViews = catalogProductCount > 0 || viewCount > 0;
+  const showBadgeOrViews = !isTvWall && (catalogProductCount > 0 || viewCount > 0);
   const viewText = formatViewCount(viewCount);
   const viewLabel = isTrending ? `🔥 Trending: ${viewText}` : viewText;
   const isWallStyling = scene.room_type === 'wall_styling';
@@ -38,18 +47,23 @@ export default function ExploreSceneCard({ scene, onSelect, viewCount = 0, isTre
         />
       </div>
       <div className="p-4">
-        {isWallStyling && (
+        {isTvWall && (
+          <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 text-[11px] font-medium px-2 py-0.5 mb-1">
+            TV Wall
+          </span>
+        )}
+        {!isTvWall && isWallStyling && (
           <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 text-[11px] font-medium px-2 py-0.5 mb-1">
             Wall idea
           </span>
         )}
         <h3 className="text-xl md:text-2xl font-bold text-[#111111] mb-2 line-clamp-2">{scene.title}</h3>
-        {minimumItemPrice > 0 && (
+        {!isTvWall && minimumItemPrice > 0 && (
           <p className="text-base font-semibold text-[#111111] mb-1">
             Items from ₦{minimumItemPrice.toLocaleString('en-NG')}
           </p>
         )}
-        {catalogBudget > 0 && (
+        {!isTvWall && catalogBudget > 0 && (
           <p className="text-sm text-gray-500 mb-2">
             Complete room from ₦{catalogBudget.toLocaleString('en-NG')}
           </p>

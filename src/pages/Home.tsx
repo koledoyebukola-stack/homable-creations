@@ -13,6 +13,19 @@ import {
   type ExploreRoomTypeFilter,
   type ExplorePriceFilter,
 } from '@/lib/explore-filters';
+import { slugify } from '@/lib/slugify';
+
+const TV_WALL_CARDS = [
+  { title: 'Soft Life Minimalist', imageUrl: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Soft%20Life%20Minimalist.png' },
+  { title: 'Midnight Blu Premium', imageUrl: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Midnight%20Blu%20Premium.png' },
+  { title: 'Bookshelf Wall', imageUrl: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Bookshelf%20Wall.png' },
+  { title: 'Full Option', imageUrl: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Full%20Option.png' },
+  { title: 'Oga At The Top', imageUrl: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Oga%20At%20The%20Top.png' },
+  { title: 'Arch Of Grace', imageUrl: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Arch%20Of%20Grace.png' },
+  { title: 'Vibes On Vibes', imageUrl: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Vibes%20on%20Vibes.png' },
+  { title: 'Marble No Be Small', imageUrl: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Marble%20No%20Be%20Small.png' },
+  { title: 'Wood Flute', imageUrl: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Wood%20Flute.png' },
+];
 import { trackNgEvent, NG_EVENTS } from '@/lib/analytics-ng';
 
 // Carousel examples showing inspiration photo → checklist
@@ -133,6 +146,7 @@ export default function Home() {
   const [loadingExplore, setLoadingExplore] = useState(false);
   const [exploreCategoryFilter, setExploreCategoryFilter] = useState<ExploreRoomTypeFilter>('all');
   const [explorePriceFilter, setExplorePriceFilter] = useState<ExplorePriceFilter>('all');
+  const [exploreDisplayCount, setExploreDisplayCount] = useState(6);
   const exploreSectionRef = useRef<HTMLElement | null>(null);
   const browseSectionRef = useRef<HTMLElement | null>(null);
 
@@ -142,6 +156,16 @@ export default function Home() {
   const [browseProductsCategory, setBrowseProductsCategory] = useState<BrowseProductsCategoryValue>('planters');
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [scrollDirection, setScrollDirection] = useState<'down' | 'up'>('down');
+
+  // Restore scroll position when returning from Explore scene
+  useEffect(() => {
+    const saved = sessionStorage.getItem('home_explore_scroll');
+    if (saved !== null) {
+      const y = parseInt(saved, 10);
+      if (!isNaN(y)) window.scrollTo(0, y);
+      sessionStorage.removeItem('home_explore_scroll');
+    }
+  }, []);
 
   useEffect(() => {
     // Nigeria: load NG Explore scenes
@@ -404,7 +428,10 @@ export default function Home() {
                 <button
                   key={value}
                   type="button"
-                  onClick={() => setExploreCategoryFilter(value)}
+                  onClick={() => {
+                    setExploreCategoryFilter(value);
+                    setExploreDisplayCount(6);
+                  }}
                   className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                     exploreCategoryFilter === value
                       ? 'bg-[#111111] text-white'
@@ -421,10 +448,13 @@ export default function Home() {
               <p className="text-xs font-medium text-[#666666] mb-2">Price</p>
               <div className="flex gap-2 overflow-x-auto pb-2 md:overflow-visible md:flex-wrap scroll-pills-hide-scrollbar">
                 {EXPLORE_PRICE_PILLS.map(({ value, label }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setExplorePriceFilter(value)}
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => {
+                    setExplorePriceFilter(value);
+                    setExploreDisplayCount(6);
+                  }}
                     className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                       explorePriceFilter === value
                         ? 'bg-[#111111] text-white'
@@ -454,40 +484,80 @@ export default function Home() {
                       const matchPrice = matchesExplorePriceFilter(catalogBudget, explorePriceFilter);
                       return matchCategory && matchPrice;
                     });
-                  const displayScenes = filtered.slice(0, 10);
+                  const displayScenes = filtered.slice(0, exploreDisplayCount);
+                  const hasMore = exploreDisplayCount < filtered.length;
                   const maxViewCount =
                     displayScenes.length > 0
                       ? Math.max(0, ...displayScenes.map((s) => s.view_count ?? 0))
                       : 0;
                   if (displayScenes.length > 0) {
                     return (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                        {displayScenes.map((scene) => (
-                          <ExploreSceneCard
-                            key={scene.id}
-                            scene={scene}
-                            onSelect={(slug) => navigate(`/explore/${slug}`)}
-                            viewCount={scene.view_count ?? 0}
-                            isTrending={
-                              (scene.view_count ?? 0) === maxViewCount && maxViewCount > 0
-                            }
-                          />
-                        ))}
-                      </div>
+                      <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                          {displayScenes.map((scene) => (
+                            <ExploreSceneCard
+                              key={scene.id}
+                              scene={scene}
+                              onSelect={(slug) => {
+                                sessionStorage.setItem('home_explore_scroll', String(window.scrollY));
+                                navigate(`/explore/${slug}`);
+                              }}
+                              viewCount={scene.view_count ?? 0}
+                              isTrending={
+                                (scene.view_count ?? 0) === maxViewCount && maxViewCount > 0
+                              }
+                            />
+                          ))}
+                        </div>
+                        {hasMore && (
+                          <div className="text-center mt-10">
+                            <Button
+                              onClick={() =>
+                                setExploreDisplayCount((prev) => Math.min(prev + 6, filtered.length))
+                              }
+                              variant="outline"
+                              className="rounded-xl border-[#e0e0e0] hover:border-black"
+                            >
+                              Load more
+                            </Button>
+                          </div>
+                        )}
+                      </>
                     );
                   }
                   return null;
                 })()}
-                <div className="text-center mt-10">
-                  <Button
-                    onClick={() => navigate('/upload?mode=explore')}
-                    className="bg-[#111111] hover:bg-[#333] text-white rounded-xl font-medium px-8"
-                  >
-                    See More Rooms
-                  </Button>
-                </div>
               </>
             )}
+          </div>
+        </section>
+      )}
+
+      {/* TV Console Wall Ideas (Nigeria only) */}
+      {country === 'NG' && (
+        <section className="bg-gradient-to-br from-gray-50 to-stone-50 pt-10 pb-16 md:pt-12 md:pb-12 px-4 md:px-6">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-6 md:mb-8">
+              TV Console Wall Ideas
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+              {TV_WALL_CARDS.map((card) => (
+                <ExploreSceneCard
+                  key={card.title}
+                  scene={{
+                    id: slugify(card.title),
+                    slug: slugify(card.title),
+                    title: card.title,
+                    hero_image_url: card.imageUrl,
+                  }}
+                  onSelect={(slug) => {
+                    sessionStorage.setItem('home_explore_scroll', String(window.scrollY));
+                    navigate(`/explore/${slug}`);
+                  }}
+                  variant="tv-wall"
+                />
+              ))}
+            </div>
           </div>
         </section>
       )}

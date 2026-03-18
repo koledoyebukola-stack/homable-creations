@@ -488,16 +488,6 @@ Deno.serve(async (req: Request) => {
     });
 
     if (!openaiRes.ok) {
-      console.log(
-        '[ai-room-generate] OpenAI response status:',
-        openaiRes.status,
-        openaiRes.statusText,
-      );
-      const rawErrorText = await openaiRes.text();
-      console.log(
-        '[ai-room-generate] OpenAI raw text:',
-        rawErrorText.substring(0, 2000),
-      );
       console.error('[ai-room-generate] OpenAI error:', openaiRes.status);
       return jsonResponse(
         {
@@ -509,20 +499,23 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log(
-      '[ai-room-generate] OpenAI response status:',
-      openaiRes.status,
-      openaiRes.statusText,
-    );
     const rawText = await openaiRes.text();
-    console.log(
-      '[ai-room-generate] OpenAI raw text:',
-      rawText.substring(0, 2000),
-    );
     const openaiJson = JSON.parse(rawText);
-    const imageBase64 = openaiJson?.output
-      ?.filter((o: any) => o.type === 'image')
-      ?.map((o: any) => o.image_base64)[0];
+
+    const imageGenerationCalls = Array.isArray(openaiJson?.output)
+      ? openaiJson.output.filter(
+          (o: any) => o?.type === 'image_generation_call',
+        )
+      : [];
+    const imageBase64 =
+      imageGenerationCalls.length > 0
+        ? imageGenerationCalls[0].result
+        : undefined;
+
+    console.log(
+      '[ai-room-generate] Image found:',
+      imageBase64 ? 'yes' : 'no',
+    );
 
     if (!imageBase64) {
       console.error('[ai-room-generate] No image in OpenAI response');
