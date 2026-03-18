@@ -75,6 +75,18 @@ function getMoreOptionsCategories(roomType: string | null): { title: string; cat
   return MORE_OPTIONS_BY_ROOM_TYPE[key] ?? MORE_OPTIONS_BY_ROOM_TYPE.living_room;
 }
 
+const TV_WALL_SLUGS = new Set([
+  'soft-life-minimalist',
+  'midnight-blu-premium',
+  'bookshelf-wall',
+  'full-option',
+  'oga-at-the-top',
+  'arch-of-grace',
+  'vibes-on-vibes',
+  'marble-no-be-small',
+  'wood-flute',
+]);
+
 const TV_WALL_IMAGE_FILENAMES = [
   'Soft Life Minimalist',
   'Midnight Blu Premium',
@@ -88,6 +100,7 @@ const TV_WALL_IMAGE_FILENAMES = [
 ];
 
 function isTvWallScene(scene: ExploreScene): boolean {
+  if (TV_WALL_SLUGS.has(scene.slug)) return true;
   const url = scene.hero_image_url ?? '';
   return TV_WALL_IMAGE_FILENAMES.some((name) => url.includes(name) || url.includes(encodeURIComponent(name)));
 }
@@ -1187,12 +1200,13 @@ export default function ExploreScenePage() {
         )}
 
         {/* TV Wall only: Verified Carpenters */}
-        {isNigeriaScene && isTvWallScene(scene) && tvWallCarpenters.length > 0 && (
+        {isNigeriaScene && isTvWallScene(scene) && (
           <section className="mb-10">
             <h2 className="text-xl font-semibold text-[#111111] mb-2">Verified Carpenters who can build this</h2>
             <p className="text-sm text-gray-600 mb-4">
               Contact directly for pricing and build time
             </p>
+            {tvWallCarpenters.length > 0 ? (
             <div className="overflow-x-auto pb-1 scroll-pills-hide-scrollbar md:overflow-visible -mx-4 md:mx-0 px-4 md:px-0">
               <div className="flex gap-4 md:grid md:grid-cols-3 min-w-0 md:min-w-full">
                 {tvWallCarpenters.map((vendor) => (
@@ -1249,16 +1263,20 @@ export default function ExploreScenePage() {
                 ))}
               </div>
             </div>
+            ) : (
+              <p className="text-sm text-gray-500">No verified carpenters listed yet. Check back soon.</p>
+            )}
           </section>
         )}
 
         {/* TV Wall only: Complete the look */}
-        {isNigeriaScene && isTvWallScene(scene) && tvWallCompleteTheLook.length > 0 && (
+        {isNigeriaScene && isTvWallScene(scene) && (
           <section className="mb-10">
             <h2 className="text-xl font-semibold text-[#111111] mb-2">Complete the look</h2>
             <p className="text-sm text-gray-600 mb-4">
               Shoppable pieces to style your TV wall
             </p>
+            {tvWallCompleteTheLook.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
               {tvWallCompleteTheLook.map(({ product, storefront }) => (
                 <div
@@ -1328,6 +1346,9 @@ export default function ExploreScenePage() {
                 </div>
               ))}
             </div>
+            ) : (
+              <p className="text-sm text-gray-500">No shoppable pieces in artwork, lighting, mirror, or planters categories yet.</p>
+            )}
           </section>
         )}
 
