@@ -541,22 +541,32 @@ export default function Home() {
               TV Console Wall Ideas
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-              {TV_WALL_CARDS.map((card) => (
-                <ExploreSceneCard
-                  key={card.title}
-                  scene={{
-                    id: slugify(card.title),
-                    slug: slugify(card.title),
-                    title: card.title,
-                    hero_image_url: card.imageUrl,
-                  }}
-                  onSelect={(slug) => {
-                    sessionStorage.setItem('home_explore_scroll', String(window.scrollY));
-                    navigate(`/explore/${slug}`);
-                  }}
-                  variant="tv-wall"
-                />
-              ))}
+              {TV_WALL_CARDS.map((card) => {
+                const matchedScene = exploreScenes.find((s) => {
+                  const titleMatch = s.title?.toLowerCase() === card.title.toLowerCase();
+                  if (titleMatch) return true;
+                  if (!s.hero_image_url) return false;
+                  const url = s.hero_image_url;
+                  return url === card.imageUrl || url.includes(card.title) || url.includes(encodeURIComponent(card.title));
+                });
+                const slug = matchedScene?.slug ?? slugify(card.title);
+                return (
+                  <ExploreSceneCard
+                    key={card.title}
+                    scene={{
+                      id: matchedScene?.id ?? slugify(card.title),
+                      slug,
+                      title: card.title,
+                      hero_image_url: card.imageUrl,
+                    }}
+                    onSelect={(targetSlug) => {
+                      sessionStorage.setItem('home_explore_scroll', String(window.scrollY));
+                      navigate(`/explore/${targetSlug}`);
+                    }}
+                    variant="tv-wall"
+                  />
+                );
+              })}
             </div>
           </div>
         </section>
