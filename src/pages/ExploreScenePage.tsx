@@ -87,23 +87,27 @@ const TV_WALL_SLUGS = new Set([
   'wood-flute',
 ]);
 
-const TV_WALL_IMAGE_FILENAMES = [
-  'Soft Life Minimalist',
-  'Midnight Blu Premium',
-  'Bookshelf Wall',
-  'Full Option',
-  'Oga At The Top',
-  'Arch Of Grace',
-  'Vibes on Vibes',
-  'Marble No Be Small',
-  'Wood Flute',
-];
+const TV_WALL_TITLES = new Set([
+  'soft life minimalist',
+  'midnight blu premium',
+  'bookshelf wall',
+  'full option',
+  'oga at the top',
+  'arch of grace',
+  'vibes on vibes',
+  'marble no be small',
+  'wood flute',
+]);
 
 function isTvWallScene(scene: ExploreScene): boolean {
   const slugLower = (scene.slug ?? '').toLowerCase().trim();
   if (TV_WALL_SLUGS.has(slugLower)) return true;
+  const titleLower = (scene.title ?? '').toLowerCase().trim();
+  if (TV_WALL_TITLES.has(titleLower)) return true;
   const url = scene.hero_image_url ?? '';
-  return TV_WALL_IMAGE_FILENAMES.some((name) => url.includes(name) || url.includes(encodeURIComponent(name)));
+  return ['Soft Life Minimalist', 'Midnight Blu Premium', 'Bookshelf Wall', 'Full Option', 'Oga At The Top', 'Arch Of Grace', 'Vibes on Vibes', 'Marble No Be Small', 'Wood Flute'].some(
+    (name) => url.includes(name) || url.includes(encodeURIComponent(name))
+  );
 }
 
 export default function ExploreScenePage() {
@@ -317,8 +321,8 @@ export default function ExploreScenePage() {
     getFeaturedStorefrontsThisWeek('NG', 3).then(setFeaturedVendors);
 
     if (data && 'scene' in data && isTvWallScene(data.scene)) {
-      getCarpenterStorefronts().then(setTvWallCarpenters);
-      getProductsForTvWallCompleteTheLook().then(setTvWallCompleteTheLook);
+      getCarpenterStorefronts().then(setTvWallCarpenters).catch(() => setTvWallCarpenters([]));
+      getProductsForTvWallCompleteTheLook().then(setTvWallCompleteTheLook).catch(() => setTvWallCompleteTheLook([]));
     } else {
       setTvWallCarpenters([]);
       setTvWallCompleteTheLook([]);
