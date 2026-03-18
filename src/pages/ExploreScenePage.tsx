@@ -473,8 +473,8 @@ export default function ExploreScenePage() {
             <h2 className="text-xl font-semibold text-[#111111] mb-2">Verified Carpenters who can build this</h2>
             <p className="text-sm text-gray-600 mb-4">Contact directly for pricing and build time</p>
             {tvWallCarpenters.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {tvWallCarpenters.map((vendor) => (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+                {[...tvWallCarpenters].sort(() => Math.random() - 0.5).map((vendor) => (
                   <div
                     key={vendor.id}
                     className="bg-white rounded-2xl border border-[#e5e5e5] overflow-hidden shadow-sm hover:shadow-lg transition-shadow flex flex-col cursor-pointer"
