@@ -20,7 +20,7 @@ import { supabase } from '@/lib/supabase';
 import { trackNgEvent, NG_EVENTS } from '@/lib/analytics-ng';
 import type { ExploreScene, ExploreSceneItemWithProduct, VendorProduct, Storefront, Checklist } from '@/lib/types';
 import type { User } from '@supabase/supabase-js';
-import { ExternalLink, ShoppingBag, Wrench, Instagram, ListChecks, Upload, ChevronDown, ChevronUp, Store } from 'lucide-react';
+import { ExternalLink, ShoppingBag, Wrench, Instagram, ListChecks, Upload, ChevronDown, ChevronUp, Store, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 function formatNgn(value: number): string {
@@ -198,6 +198,12 @@ export default function ExploreScenePage() {
         scene_title: s.title,
         scene_slug: s.slug,
       });
+      if (s.room_type === 'tv_wall') {
+        trackNgEvent(NG_EVENTS.TV_WALL_SCENE_VIEWED, {
+          scene_slug: s.slug,
+          scene_title: s.title,
+        });
+      }
     }
   }, [data]);
 
@@ -530,6 +536,26 @@ export default function ExploreScenePage() {
                         <Store className="mr-2 h-4 w-4" />
                         Visit Storefront
                       </Button>
+                      {vendor.whatsapp_number && (
+                        <a
+                          href={`https://wa.me/${vendor.whatsapp_number.replace(/\D/g, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-2 flex items-center justify-center gap-2 w-full rounded-xl bg-[#25D366] hover:bg-[#20BA5A] text-white text-xs font-semibold py-2 px-3 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            trackNgEvent(NG_EVENTS.CARPENTER_WHATSAPP_CLICKED, {
+                              carpenter_slug: vendor.slug,
+                              carpenter_name: vendor.name,
+                              scene_slug: scene.slug,
+                            });
+                          }}
+                        >
+                          <MessageCircle className="h-4 w-4 shrink-0" />
+                          Contact on WhatsApp
+                        </a>
+                      )}
+
                     </div>
                   </div>
                 ))}
