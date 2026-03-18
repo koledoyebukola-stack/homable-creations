@@ -477,13 +477,15 @@ export default function Home() {
               <>
                 {(() => {
                   const filtered =
-                    exploreScenes.filter((s) => {
-                      const matchCategory =
-                        exploreCategoryFilter === 'all' || s.room_type === exploreCategoryFilter;
-                      const catalogBudget = Number(s.catalog_budget_ngn) || 0;
-                      const matchPrice = matchesExplorePriceFilter(catalogBudget, explorePriceFilter);
-                      return matchCategory && matchPrice;
-                    });
+                    exploreScenes
+                      .filter((s) => s.room_type !== 'tv_wall') // TV Wall scenes have their own section below
+                      .filter((s) => {
+                        const matchCategory =
+                          exploreCategoryFilter === 'all' || s.room_type === exploreCategoryFilter;
+                        const catalogBudget = Number(s.catalog_budget_ngn) || 0;
+                        const matchPrice = matchesExplorePriceFilter(catalogBudget, explorePriceFilter);
+                        return matchCategory && matchPrice;
+                      });
                   const displayScenes = filtered.slice(0, exploreDisplayCount);
                   const hasMore = exploreDisplayCount < filtered.length;
                   const maxViewCount =

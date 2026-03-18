@@ -7,7 +7,7 @@ BEGIN;
 UPDATE explore_scenes
 SET
   location = 'NG',
-  room_type = 'wall_styling',
+  room_type = 'tv_wall',
   status = 'published',
   hero_image_url = CASE slug
     WHEN 'soft-life-minimalist' THEN 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Soft%20Life%20Minimalist.png'
