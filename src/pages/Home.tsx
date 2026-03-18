@@ -864,7 +864,7 @@ export default function Home() {
                 </h3>
                 <p className="text-[#555555]">
                   {country === 'NG'
-                    ? 'Browse our curated Nigerian rooms or upload any room photo you love from Pinterest, Instagram, or your own space.'
+                    ? 'Browse our curated Nigerian rooms and find a style you love.'
                     : "Share any inspiration photo you love, whether it's from Pinterest, Instagram, or your own space."}
                 </p>
               </div>
