@@ -100,7 +100,8 @@ const TV_WALL_IMAGE_FILENAMES = [
 ];
 
 function isTvWallScene(scene: ExploreScene): boolean {
-  if (TV_WALL_SLUGS.has(scene.slug)) return true;
+  const slugLower = (scene.slug ?? '').toLowerCase().trim();
+  if (TV_WALL_SLUGS.has(slugLower)) return true;
   const url = scene.hero_image_url ?? '';
   return TV_WALL_IMAGE_FILENAMES.some((name) => url.includes(name) || url.includes(encodeURIComponent(name)));
 }
@@ -1199,8 +1200,8 @@ export default function ExploreScenePage() {
           </section>
         )}
 
-        {/* TV Wall only: Verified Carpenters */}
-        {isNigeriaScene && isTvWallScene(scene) && (
+        {/* TV Wall only: Verified Carpenters — show when slug matches, regardless of scene.location */}
+        {isTvWallScene(scene) && (
           <section className="mb-10">
             <h2 className="text-xl font-semibold text-[#111111] mb-2">Verified Carpenters who can build this</h2>
             <p className="text-sm text-gray-600 mb-4">
@@ -1270,7 +1271,7 @@ export default function ExploreScenePage() {
         )}
 
         {/* TV Wall only: Complete the look */}
-        {isNigeriaScene && isTvWallScene(scene) && (
+        {isTvWallScene(scene) && (
           <section className="mb-10">
             <h2 className="text-xl font-semibold text-[#111111] mb-2">Complete the look</h2>
             <p className="text-sm text-gray-600 mb-4">
