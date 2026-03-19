@@ -56,6 +56,9 @@ export default function Checklists() {
     });
   };
 
+  const myGiftRegistries = checklists.filter((c) => !!c.gifting_enabled);
+  const shoppingListsOnly = checklists.filter((c) => !c.gifting_enabled);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#FAFAFA] flex flex-col">
@@ -162,13 +165,65 @@ export default function Checklists() {
           </div>
         )}
 
+        {/* My Gift Registries Section */}
+        {myGiftRegistries.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Gift className="h-5 w-5 text-[#C89F7A]" />
+              <h2 className="text-2xl font-bold text-[#111111]">My Gift Registries</h2>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {myGiftRegistries.map((checklist) => {
+                const progressPercent = checklist.total_count > 0
+                  ? Math.round((checklist.completed_count / checklist.total_count) * 100)
+                  : 0;
+
+                return (
+                  <Card
+                    key={checklist.id}
+                    className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-[#C89F7A]"
+                    onClick={() => navigate(`/checklists/${checklist.id}`)}
+                  >
+                    <CardHeader>
+                      <CardTitle className="text-lg font-semibold text-[#111111] line-clamp-2">
+                        {checklist.name}
+                      </CardTitle>
+                      <p className="text-sm text-gray-500">
+                        Created {formatDate(checklist.created_at)}
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-gray-700">
+                              {checklist.completed_count} of {checklist.total_count} items
+                            </span>
+                            <span className="text-sm font-bold text-[#2F9E44]">
+                              {progressPercent}%
+                            </span>
+                          </div>
+                          <Progress value={progressPercent} className="h-2 [&>div]:bg-[#2F9E44]" />
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          Read-only view • Click to manage your claims
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* My Shopping Lists Section */}
-        <div className={giftsHelping.length > 0 ? 'mb-8' : ''}>
+        <div className={giftsHelping.length > 0 || myGiftRegistries.length > 0 ? 'mb-8' : ''}>
           <h2 className="text-2xl font-bold text-[#111111] mb-4">My Shopping Lists</h2>
         </div>
 
         {/* Checklists Grid */}
-        {checklists.length === 0 ? (
+        {shoppingListsOnly.length === 0 ? (
           <Card className="border-2 border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-16">
               <div className="relative mb-6">
@@ -194,7 +249,7 @@ export default function Checklists() {
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {checklists.map((checklist) => {
+            {shoppingListsOnly.map((checklist) => {
               const progressPercent = checklist.total_count > 0
                 ? Math.round((checklist.completed_count / checklist.total_count) * 100)
                 : 0;

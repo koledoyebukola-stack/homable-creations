@@ -538,7 +538,7 @@ export default function ExploreScenePage() {
     setSavingChecklist(true);
     try {
       const checklist = await createChecklist(
-        `${scene.title} - Shopping List`,
+        `The ${scene.title} Gift Registry`,
         undefined, // No board_id for explore scenes
         checklistItemInputs,
         { sourceImageUrl: scene.hero_image_url ?? undefined, exploreSceneId: scene.id }
@@ -1042,13 +1042,17 @@ export default function ExploreScenePage() {
                     savingChecklist ||
                     (!(giftRegistryChecklistId && !showGiftingModal) && !hasSavableItems)
                   }
-                  className="bg-[#111111] hover:bg-[#333] text-white rounded-xl font-medium px-5 py-2.5 h-auto text-sm flex items-center gap-2 w-full sm:w-auto"
+                  className={`rounded-xl font-medium px-5 py-2.5 h-auto text-sm flex items-center gap-2 w-full sm:w-auto ${
+                    giftRegistryChecklistId && !showGiftingModal
+                      ? 'bg-[#2F9E44] hover:bg-[#2F9E44]/90 text-white shadow-md'
+                      : 'bg-[#111111] hover:bg-[#333] text-white'
+                  }`}
                 >
                   <ListChecks className="w-4 h-4 shrink-0" />
                   {savingChecklist
                     ? 'Creating...'
                     : giftRegistryChecklistId && !showGiftingModal
-                      ? 'View Gift Registry'
+                      ? 'See gift registry'
                       : getGiftMeText(scene.room_type)}
                 </Button>
 
