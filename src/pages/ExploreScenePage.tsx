@@ -654,7 +654,7 @@ export default function ExploreScenePage() {
       }
 
       const checklist = await createChecklist(
-        `${scene.title} - Shopping List`,
+        `The ${scene.title} Gift Registry`,
         undefined, // No board_id for explore scenes
         checklistItemInputs,
         { sourceImageUrl: scene.hero_image_url ?? undefined, exploreSceneId: scene.id }
