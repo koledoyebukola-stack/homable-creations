@@ -17,6 +17,7 @@ export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showSignUpConfirmation, setShowSignUpConfirmation] = useState(false);
 
   const redirectPath = searchParams.get('redirect') || '/upload';
 
@@ -58,8 +59,9 @@ export default function Auth() {
         if (error) throw error;
 
         trackNgEvent(NG_EVENTS.SIGNUP, { signup_method: 'email' });
-        toast.success('Account created successfully!');
-        navigate(redirectPath);
+        // Replace the form with confirmation messaging.
+        // Do not navigate away / do not auto-sign-in.
+        setShowSignUpConfirmation(true);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -122,86 +124,99 @@ export default function Auth() {
             </p>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleAuth} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-[#111111]">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                required
-                className="h-12"
-              />
+          {/* Form or signup confirmation message */}
+          {showSignUpConfirmation ? (
+            <div className="space-y-3">
+              <h3 className="text-2xl font-bold text-[#111111]">Check your inbox</h3>
+              <p className="text-[#555555]">
+                We&apos;ve sent a confirmation link to your email address. Click it to activate
+                your Homable Creations account.
+              </p>
+              <p className="text-sm text-[#777777]">
+                Didn&apos;t receive it? Check your spam folder or try signing up again.
+              </p>
             </div>
-
-            {!isForgotPassword && (
+          ) : (
+            <form onSubmit={handleAuth} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-[#111111]">Password</Label>
+                <Label htmlFor="email" className="text-[#111111]">Email</Label>
                 <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
                   required
                   className="h-12"
                 />
               </div>
-            )}
 
-            {!isSignUp && !isForgotPassword && (
-              <div className="text-right">
+              {!isForgotPassword && (
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-[#111111]">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    className="h-12"
+                  />
+                </div>
+              )}
+
+              {!isSignUp && !isForgotPassword && (
+                <div className="text-right">
+                  <button
+                    type="button"
+                    onClick={() => setIsForgotPassword(true)}
+                    className="text-sm text-[#555555] hover:text-[#111111] transition-colors"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                size="lg"
+                disabled={loading}
+                className="w-full bg-[#111111] hover:bg-[#333333] text-white text-lg py-6 rounded-full"
+              >
+                {loading 
+                  ? 'Loading...' 
+                  : isForgotPassword 
+                  ? 'Send Reset Link'
+                  : isSignUp 
+                  ? 'Create Free Account' 
+                  : 'Sign In'}
+              </Button>
+
+              {isForgotPassword ? (
                 <button
                   type="button"
-                  onClick={() => setIsForgotPassword(true)}
-                  className="text-sm text-[#555555] hover:text-[#111111] transition-colors"
+                  onClick={() => {
+                    setIsForgotPassword(false);
+                    setEmail('');
+                  }}
+                  className="w-full text-center text-sm text-[#555555] hover:text-[#111111] transition-colors"
                 >
-                  Forgot password?
+                  Back to sign in
                 </button>
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              size="lg"
-              disabled={loading}
-              className="w-full bg-[#111111] hover:bg-[#333333] text-white text-lg py-6 rounded-full"
-            >
-              {loading 
-                ? 'Loading...' 
-                : isForgotPassword 
-                ? 'Send Reset Link'
-                : isSignUp 
-                ? 'Create Free Account' 
-                : 'Sign In'}
-            </Button>
-
-            {isForgotPassword ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsForgotPassword(false);
-                  setEmail('');
-                }}
-                className="w-full text-center text-sm text-[#555555] hover:text-[#111111] transition-colors"
-              >
-                Back to sign in
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setIsSignUp(!isSignUp)}
-                className="w-full text-center text-sm text-[#555555] hover:text-[#111111] transition-colors"
-              >
-                {isSignUp
-                  ? 'Already have an account? Sign in'
-                  : "Don't have an account? Sign up"}
-              </button>
-            )}
-          </form>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsSignUp(!isSignUp)}
+                  className="w-full text-center text-sm text-[#555555] hover:text-[#111111] transition-colors"
+                >
+                  {isSignUp
+                    ? 'Already have an account? Sign in'
+                    : "Don't have an account? Sign up"}
+                </button>
+              )}
+            </form>
+          )}
         </div>
       </div>
     </div>

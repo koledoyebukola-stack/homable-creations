@@ -64,6 +64,15 @@ function getGiftMeText(roomType: string | null | undefined): string {
   return 'Gift me this room';
 }
 
+function getRoomTypeLabel(roomType: string | null | undefined): string {
+  if (roomType === 'living_room') return 'living room';
+  if (roomType === 'bedroom') return 'bedroom';
+  if (roomType === 'dining') return 'dining room';
+  if (roomType === 'office') return 'office';
+  if (roomType === 'wall_styling') return 'wall design';
+  return (roomType ?? '').toString().replace(/_/g, ' ').trim() || 'room';
+}
+
 /** Category sections for "More Options to Love" by room type. Default = living room. */
 const MORE_OPTIONS_BY_ROOM_TYPE: Record<string, { title: string; category: string }[]> = {
   living_room: [
@@ -1073,7 +1082,11 @@ export default function ExploreScenePage() {
                   disabled={savingRoom}
                 >
                   <Bookmark className="w-4 h-4 shrink-0" />
-                  {savingRoom ? 'Saving...' : roomSaved ? 'View Saved Room' : 'Save Room'}
+                  {savingRoom
+                    ? 'Saving...'
+                    : roomSaved
+                      ? `View saved ${getRoomTypeLabel(scene.room_type)}`
+                      : `Save ${getRoomTypeLabel(scene.room_type)}`}
                 </Button>
               </>
             ) : (
