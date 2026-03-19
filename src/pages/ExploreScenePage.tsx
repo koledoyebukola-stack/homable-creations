@@ -824,7 +824,9 @@ export default function ExploreScenePage() {
                       </Button>
                       {vendor.whatsapp_number && (
                         <a
-                          href={`https://wa.me/${vendor.whatsapp_number.replace(/\D/g, '')}`}
+                          href={`https://wa.me/${vendor.whatsapp_number.replace(/\D/g, '')}?text=${encodeURIComponent(
+                            `Hi, I'm interested in building a TV wall similar to this design: ${window.location.href}\n\nCould you help with pricing and timeline?`
+                          )}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="mt-2 flex items-center justify-center gap-2 w-full rounded-xl bg-[#25D366] hover:bg-[#20BA5A] text-white text-xs font-semibold py-2 px-3 transition-colors"
@@ -838,7 +840,7 @@ export default function ExploreScenePage() {
                           }}
                         >
                           <MessageCircle className="h-4 w-4 shrink-0" />
-                          Contact on WhatsApp
+                          Chat on WhatsApp
                         </a>
                       )}
 

@@ -188,13 +188,18 @@ export default function ShopsProductDetail() {
                   <button
                     type="button"
                     onClick={() => setIsImageOpen(true)}
-                    className="w-full h-auto max-h-[420px] flex items-center justify-center cursor-zoom-in"
+                    className="relative w-full h-auto max-h-[420px] flex items-center justify-center cursor-zoom-in"
                   >
                     <img
                       src={product.image_url}
                       alt={product.name}
                       className="w-full h-full max-h-[420px] object-cover object-center rounded-xl shadow-md"
                     />
+                    <div className="absolute bottom-3 inset-x-0 flex justify-center md:hidden">
+                      <div className="px-3 py-1 rounded-full bg-black/60 text-[11px] text-white">
+                        tap to expand
+                      </div>
+                    </div>
                   </button>
                 ) : (
                   <div className="w-full h-64 flex items-center justify-center text-gray-500 text-sm">
