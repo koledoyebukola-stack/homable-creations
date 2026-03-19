@@ -1789,30 +1789,32 @@ export default function ExploreScenePage() {
           onClick={closeHeroModal}
         >
           <div
-            className="relative w-full h-full md:max-w-5xl md:max-h-[90vh] md:flex md:items-center md:justify-center overflow-hidden"
+            className="w-full h-full md:max-w-5xl md:max-h-[90vh] flex items-center justify-center overflow-hidden"
             onClick={(e) => e.stopPropagation()}
             onTouchStart={handleHeroTouchStart}
             onTouchMove={handleHeroTouchMove}
             onTouchEnd={handleHeroTouchEnd}
             style={{ touchAction: 'none' }}
           >
-            <button
-              type="button"
-              onClick={closeHeroModal}
-              className="absolute top-4 right-4 md:top-6 md:right-6 rounded-full bg-black/70 hover:bg-black text-white p-2.5 text-xs md:text-sm z-10 shadow-lg"
-            >
-              ×
-            </button>
-            <img
-              src={scene.hero_image_url}
-              alt={scene.title}
-              draggable={false}
-              className="w-full h-full object-contain object-center select-none pointer-events-none rounded-none md:rounded-xl md:shadow-2xl"
-              style={{
-                transform: `translate3d(${heroOffset.x}px, ${heroOffset.y}px, 0) scale(${heroScale})`,
-                transformOrigin: 'center center',
-              }}
-            />
+            <div className="relative inline-block max-w-full max-h-full">
+              <button
+                type="button"
+                onClick={closeHeroModal}
+                className="absolute top-2 right-2 md:top-3 md:right-3 rounded-full bg-black/70 hover:bg-black text-white p-2.5 text-xs md:text-sm z-10 shadow-lg"
+              >
+                ×
+              </button>
+              <img
+                src={scene.hero_image_url}
+                alt={scene.title}
+                draggable={false}
+                className="w-full h-full object-contain object-center select-none pointer-events-none rounded-none md:rounded-xl md:shadow-2xl"
+                style={{
+                  transform: `translate3d(${heroOffset.x}px, ${heroOffset.y}px, 0) scale(${heroScale})`,
+                  transformOrigin: 'center center',
+                }}
+              />
+            </div>
           </div>
         </div>
       )}
