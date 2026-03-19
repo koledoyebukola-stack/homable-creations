@@ -322,7 +322,7 @@ export default function History() {
               return (
                 <section>
                   <div className="flex items-center gap-3 mb-4">
-                    <h2 className="text-xl font-bold text-[#111111]">Rooms I Viewed</h2>
+                    <h2 className="text-xl font-bold text-[#111111]">Saved Rooms</h2>
                     <Badge variant="secondary" className="rounded-full bg-gray-200 text-gray-700 font-medium">
                       {roomItems.length}
                     </Badge>

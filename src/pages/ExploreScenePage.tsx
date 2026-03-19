@@ -3,9 +3,18 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import AuthModal from '@/components/AuthModal';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import {
   getExploreSceneBySlug,
   createChecklist,
+  enableGifting,
   getChecklistByExploreSceneId,
   getRandomArtworkProducts,
   getCategoryProductsForExplore,
@@ -86,6 +95,11 @@ export default function ExploreScenePage() {
   const lastIncrementedSceneIdRef = useRef<string | null>(null);
   const [savingChecklist, setSavingChecklist] = useState(false);
   const [existingChecklist, setExistingChecklist] = useState<Checklist | null>(null);
+  const [roomSaved, setRoomSaved] = useState(false);
+  const [savingRoom, setSavingRoom] = useState(false);
+  const [showGiftingModal, setShowGiftingModal] = useState(false);
+  const [giftingUrl, setGiftingUrl] = useState<string | null>(null);
+  const [giftingUrlCopied, setGiftingUrlCopied] = useState(false);
   const [randomArtworkProducts, setRandomArtworkProducts] = useState<VendorProduct[]>([]);
   const [moreOptionsSections, setMoreOptionsSections] = useState<Array<{ title: string; category: string; items: CategoryProductWithStorefront[] }>>([]);
   const [featuredVendors, setFeaturedVendors] = useState<StorefrontWithProductCount[]>([]);
@@ -184,9 +198,10 @@ export default function ExploreScenePage() {
 
   // Track explore scene view for signed-in users (History / analytics) — per-user record
   useEffect(() => {
-    if (user && data && 'scene' in data) {
-      trackExploreSceneView(data.scene.id, data.scene.slug, data.scene.title, data.scene.hero_image_url);
-    }
+    if (!user || !data || !('scene' in data)) return;
+    // Remove auto-save to history for NG; it will be driven by explicit actions instead.
+    if (data.scene.location === 'NG') return;
+    trackExploreSceneView(data.scene.id, data.scene.slug, data.scene.title, data.scene.hero_image_url);
   }, [user, data]);
 
   // Nigerian journey: room selection (user clicked a room card and is viewing this room)
@@ -211,6 +226,24 @@ export default function ExploreScenePage() {
   useEffect(() => {
     if (!user || !data || !('scene' in data)) return;
     getChecklistByExploreSceneId(data.scene.id).then(setExistingChecklist);
+  }, [user, data]);
+
+  // NG only: does the current scene already exist in the user's explore_scene_views?
+  useEffect(() => {
+    if (!user || !data || !('scene' in data)) return;
+    const s = data.scene;
+    if (s.location !== 'NG') {
+      setRoomSaved(false);
+      return;
+    }
+    supabase
+      .from('explore_scene_views')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('scene_id', s.id)
+      .maybeSingle()
+      .then(({ data: existing }) => setRoomSaved(!!existing))
+      .catch(() => setRoomSaved(false));
   }, [user, data]);
 
   // When scene has no artwork items, fetch 5 random artwork products for "Complete This Look with Artwork" section
@@ -415,6 +448,125 @@ export default function ExploreScenePage() {
       toast.error(error instanceof Error ? error.message : 'Failed to save shopping list');
     } finally {
       setSavingChecklist(false);
+    }
+  };
+
+  // NG-only: Create a Home Registry (checklist + gifting token) from the explore scene page
+  const handleCreateHomeRegistry = async () => {
+    if (!user) {
+      toast.error('Please sign in to create a Home Registry');
+      setShowAuthGate(true);
+      document.body.style.overflow = 'hidden';
+      return;
+    }
+
+    setSavingChecklist(true);
+    try {
+      // Build item payloads exactly like handleSaveShoppingList()
+      const checklistItemInputs = items
+        .map((item) => {
+          const itemName =
+            item.item_type === 'catalog_product'
+              ? item.vendor_product?.name ?? item.name ?? null
+              : item.name ?? null;
+          if (!itemName) return null;
+
+          // Canadian / external retailer items — save external URL + retailer name so checklist can open retailer directly
+          if (item.external_product_url) {
+            const payload: {
+              item_name: string;
+              vendor_product_slug?: string;
+              instagram_handle?: string;
+            } = {
+              item_name: itemName,
+            };
+            // Reuse vendor_product_slug field to store the external URL (ChecklistDetail detects URLs vs slugs)
+            payload.vendor_product_slug = item.external_product_url;
+            // Reuse instagram_handle field to store retailer display name for button label
+            if (item.external_retailer_name) {
+              payload.instagram_handle = item.external_retailer_name;
+            }
+            return payload;
+          }
+
+          // Nigerian vendor product items — keep existing behavior (link to /shops/products/{slug})
+          if (item.item_type === 'catalog_product' && item.vendor_product?.slug) {
+            return { item_name: itemName, vendor_product_slug: item.vendor_product.slug };
+          }
+
+          // Nigerian Instagram decor items — keep existing behavior (link to instagram.com/{handle})
+          if (item.item_type === 'instagram_link' && item.instagram_handle) {
+            return { item_name: itemName, instagram_handle: item.instagram_handle.replace(/^@/, '') };
+          }
+
+          return { item_name: itemName };
+        })
+        .filter((x): x is NonNullable<typeof x> => !!x);
+
+      if (checklistItemInputs.length === 0) {
+        toast.error('No items available to save');
+        return;
+      }
+
+      const checklist = await createChecklist(
+        `${scene.title} - Shopping List`,
+        undefined, // No board_id for explore scenes
+        checklistItemInputs,
+        { sourceImageUrl: scene.hero_image_url ?? undefined, exploreSceneId: scene.id }
+      );
+
+      // Immediately enable gifting on the newly created checklist
+      const giftingResult = await enableGifting(checklist.id);
+
+      // Generate shareable link: /checklists/gift/{gifting_token}
+      const giftRoute = `/checklists/gift/${giftingResult.gifting_token}`;
+      const fullUrl = `${window.location.origin}${giftRoute}`;
+
+      setGiftingUrl(fullUrl);
+      setGiftingUrlCopied(false);
+      setShowGiftingModal(true);
+
+      // Track registry share event for Nigeria
+      trackNgEvent(NG_EVENTS.HOME_REGISTRY_SHARED, {
+        checklist_id: checklist.id,
+      });
+    } catch (error: unknown) {
+      console.error('Failed to create Home Registry:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create Home Registry');
+    } finally {
+      setSavingChecklist(false);
+    }
+  };
+
+  // NG-only: explicitly save this room to explore_scene_views from the explore scene page
+  const handleSaveRoom = async () => {
+    if (!user) {
+      setShowAuthGate(true);
+      document.body.style.overflow = 'hidden';
+      return;
+    }
+
+    if (roomSaved) return;
+
+    setSavingRoom(true);
+    try {
+      await trackExploreSceneView(scene.id, scene.slug, scene.title, scene.hero_image_url);
+      setRoomSaved(true);
+      toast.success('Room saved');
+    } finally {
+      setSavingRoom(false);
+    }
+  };
+
+  const handleCopyGiftingUrl = async () => {
+    if (!giftingUrl) return;
+    try {
+      await navigator.clipboard.writeText(giftingUrl);
+      setGiftingUrlCopied(true);
+      toast.success('Gifting link copied to clipboard!');
+      setTimeout(() => setGiftingUrlCopied(false), 2000);
+    } catch {
+      toast.error('Failed to copy link');
     }
   };
 
@@ -715,6 +867,19 @@ export default function ExploreScenePage() {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-stone-50">
 
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 md:px-6 py-8 md:py-12">
+        {isNigeriaScene && (
+          <button
+            type="button"
+            onClick={() => {
+              sessionStorage.setItem('home_explore_scroll', String(window.scrollY));
+              navigate('/');
+            }}
+            className="mb-6 text-sm text-[#555555] hover:text-[#111111] hover:underline underline-offset-2"
+          >
+            ← Back to Home
+          </button>
+        )}
+
         {/* Hero: full-bleed on mobile, 16/9 on desktop (click to enlarge) */}
         <section className="mb-10">
           <div
@@ -746,32 +911,58 @@ export default function ExploreScenePage() {
 
           {/* Action buttons: stacked on mobile, side by side on desktop; show green "View Shopping List" when already saved */}
           <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
-            {existingChecklist ? (
-              <Button
-                onClick={() => navigate(`/checklists/${existingChecklist.id}`)}
-                className="bg-[#2F9E44] hover:bg-[#2F9E44]/90 text-white font-medium rounded-xl px-5 py-2.5 h-auto text-sm flex items-center gap-2 w-full sm:w-auto shadow-md"
-              >
-                <ListChecks className="w-4 h-4 shrink-0" />
-                View Shopping List
-              </Button>
+            {isNigeriaScene ? (
+              <>
+                <Button
+                  onClick={handleCreateHomeRegistry}
+                  disabled={savingChecklist || !hasSavableItems}
+                  className="bg-[#111111] hover:bg-[#333] text-white rounded-xl font-medium px-5 py-2.5 h-auto text-sm flex items-center gap-2 w-full sm:w-auto"
+                >
+                  <ListChecks className="w-4 h-4 shrink-0" />
+                  {savingChecklist ? 'Creating...' : 'Create Home Registry'}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="rounded-xl border-[#e0e0e0] hover:border-black flex items-center gap-2 px-5 py-2.5 h-auto text-sm w-full sm:w-auto text-[#111111] bg-white"
+                  onClick={handleSaveRoom}
+                  disabled={savingRoom || roomSaved}
+                >
+                  <ListChecks className="w-4 h-4 shrink-0" />
+                  {savingRoom ? 'Saving...' : roomSaved ? 'Saved' : 'Save Room'}
+                </Button>
+              </>
             ) : (
-              <Button
-                onClick={handleSaveShoppingList}
-                disabled={savingChecklist || !hasSavableItems}
-                className="bg-[#111111] hover:bg-[#333] text-white rounded-xl font-medium px-5 py-2.5 h-auto text-sm flex items-center gap-2 w-full sm:w-auto"
-              >
-                <ListChecks className="w-4 h-4 shrink-0" />
-                {savingChecklist ? 'Saving...' : 'Save as Shopping List'}
-              </Button>
+              <>
+                {existingChecklist ? (
+                  <Button
+                    onClick={() => navigate(`/checklists/${existingChecklist.id}`)}
+                    className="bg-[#2F9E44] hover:bg-[#2F9E44]/90 text-white font-medium rounded-xl px-5 py-2.5 h-auto text-sm flex items-center gap-2 w-full sm:w-auto shadow-md"
+                  >
+                    <ListChecks className="w-4 h-4 shrink-0" />
+                    View Shopping List
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleSaveShoppingList}
+                    disabled={savingChecklist || !hasSavableItems}
+                    className="bg-[#111111] hover:bg-[#333] text-white rounded-xl font-medium px-5 py-2.5 h-auto text-sm flex items-center gap-2 w-full sm:w-auto"
+                  >
+                    <ListChecks className="w-4 h-4 shrink-0" />
+                    {savingChecklist ? 'Saving...' : 'Save as Shopping List'}
+                  </Button>
+                )}
+
+                <Button
+                  variant="outline"
+                  className="rounded-xl border-[#e0e0e0] hover:border-black flex items-center gap-2 px-5 py-2.5 h-auto text-sm w-full sm:w-auto"
+                  onClick={() => navigate('/upload?mode=explore')}
+                >
+                  <Upload className="w-4 h-4 shrink-0" />
+                  Explore Another Room
+                </Button>
+              </>
             )}
-            <Button
-              variant="outline"
-              className="rounded-xl border-[#e0e0e0] hover:border-black flex items-center gap-2 px-5 py-2.5 h-auto text-sm w-full sm:w-auto"
-              onClick={() => navigate('/upload?mode=explore')}
-            >
-              <Upload className="w-4 h-4 shrink-0" />
-              Explore Another Room
-            </Button>
           </div>
         </section>
 
@@ -1510,6 +1701,38 @@ export default function ExploreScenePage() {
             <ChevronUp className="w-5 h-5" />
           )}
         </button>
+      )}
+
+      {/* Home Registry shareable link modal */}
+      {showGiftingModal && giftingUrl && (
+        <Dialog open={showGiftingModal} onOpenChange={setShowGiftingModal}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-[#111111]">
+                Create Home Registry ✨
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="flex gap-2">
+                <Input value={giftingUrl} readOnly className="flex-1 text-xs" />
+                <Button onClick={handleCopyGiftingUrl} variant="outline" className="shrink-0">
+                  {giftingUrlCopied ? 'Copied' : 'Copy'}
+                </Button>
+              </div>
+              <p className="text-sm text-gray-600">Copy and share this link with friends.</p>
+            </div>
+
+            <DialogFooter>
+              <Button
+                onClick={() => setShowGiftingModal(false)}
+                className="w-full bg-[#111111] hover:bg-[#333333] text-white"
+              >
+                Done
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Auth gate: show login when unauthenticated user clicks a product card, "View on [retailer]" (CA), or Instagram link (NG) */}
