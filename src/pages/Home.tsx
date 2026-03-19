@@ -13,19 +13,6 @@ import {
   type ExploreRoomTypeFilter,
   type ExplorePriceFilter,
 } from '@/lib/explore-filters';
-import { slugify } from '@/lib/slugify';
-
-const TV_WALL_CARDS = [
-  { title: 'Soft Life Minimalist', imageUrl: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Soft%20Life%20Minimalist.png' },
-  { title: 'Midnight Blu Premium', imageUrl: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Midnight%20Blu%20Premium.png' },
-  { title: 'Bookshelf Wall', imageUrl: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Bookshelf%20Wall.png' },
-  { title: 'Full Option', imageUrl: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Full%20Option.png' },
-  { title: 'Oga At The Top', imageUrl: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Oga%20At%20The%20Top.png' },
-  { title: 'Arch Of Grace', imageUrl: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Arch%20Of%20Grace.png' },
-  { title: 'Vibes On Vibes', imageUrl: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Vibes%20on%20Vibes.png' },
-  { title: 'Marble No Be Small', imageUrl: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Marble%20No%20Be%20Small.png' },
-  { title: 'Wood Flute', imageUrl: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Wood%20Flute.png' },
-];
 
 const HOME_EXPLORE_CATEGORY_PILLS = [
   ...EXPLORE_CATEGORY_PILLS,
@@ -655,45 +642,6 @@ export default function Home() {
               >
                 Browse All Products
               </Button>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* TV Wall Inspirations (Nigeria only) */}
-      {country === 'NG' && (
-        <section className="bg-gradient-to-br from-gray-50 to-stone-50 pt-10 pb-16 md:pt-12 md:pb-12 px-4 md:px-6">
-          <div className="max-w-6xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-6 md:mb-8">
-              TV Wall Inspirations
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-              {TV_WALL_CARDS.map((card) => {
-                const matchedScene = exploreScenes.find((s) => {
-                  const titleMatch = s.title?.toLowerCase() === card.title.toLowerCase();
-                  if (titleMatch) return true;
-                  if (!s.hero_image_url) return false;
-                  const url = s.hero_image_url;
-                  return url === card.imageUrl || url.includes(card.title) || url.includes(encodeURIComponent(card.title));
-                });
-                const slug = matchedScene?.slug ?? slugify(card.title);
-                return (
-                  <ExploreSceneCard
-                    key={card.title}
-                    scene={{
-                      id: matchedScene?.id ?? slugify(card.title),
-                      slug,
-                      title: card.title,
-                      hero_image_url: card.imageUrl,
-                    }}
-                    onSelect={(targetSlug) => {
-                      sessionStorage.setItem('home_explore_scroll', String(window.scrollY));
-                      navigate(`/explore/${targetSlug}`);
-                    }}
-                    variant="tv-wall"
-                  />
-                );
-              })}
             </div>
           </div>
         </section>
