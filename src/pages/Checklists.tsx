@@ -95,7 +95,7 @@ export default function Checklists() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
             <h1 className="text-3xl font-bold text-[#111111]">My Shopping Lists</h1>
-            {checklists.length > 0 && (
+            {checklists.length > 0 && country !== 'NG' && (
               <Button
                 onClick={() => navigate('/my-boards')}
                 variant="outline"
