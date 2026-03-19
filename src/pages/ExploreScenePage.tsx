@@ -338,6 +338,33 @@ export default function ExploreScenePage() {
     getChecklistByExploreSceneId(data.scene.id).then(setExistingChecklist);
   }, [user, data]);
 
+  // NG only: check if owner already has a gifting-enabled registry for this scene.
+  // If present, lock CTA to "See gift registry" and reuse its checklist id.
+  useEffect(() => {
+    if (!user || !data || !('scene' in data)) return;
+    const s = data.scene;
+    if (s.location !== 'NG') {
+      setGiftRegistryChecklistId(null);
+      return;
+    }
+
+    supabase
+      .from('app_8574c59127_checklists')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('explore_scene_id', s.id)
+      .eq('gifting_enabled', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data: existingRegistry }) => {
+        setGiftRegistryChecklistId(existingRegistry?.id ?? null);
+      })
+      .catch(() => {
+        setGiftRegistryChecklistId(null);
+      });
+  }, [user, data]);
+
   // NG only: does the current scene already exist in the user's explore_scene_views?
   useEffect(() => {
     if (!user || !data || !('scene' in data)) return;
@@ -569,6 +596,12 @@ export default function ExploreScenePage() {
       toast.error('Please sign in to create a Home Registry');
       setShowAuthGate(true);
       document.body.style.overflow = 'hidden';
+      return;
+    }
+
+    // Prevent duplicate registry creation for this scene in current session state.
+    if (giftRegistryChecklistId) {
+      navigate('/checklists');
       return;
     }
 

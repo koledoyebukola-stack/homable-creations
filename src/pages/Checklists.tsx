@@ -5,8 +5,9 @@ import { ChecklistWithItems } from '@/lib/types';
 import { useCountry } from '@/context/CountryContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, ClipboardList, Plus, Gift } from 'lucide-react';
+import { Loader2, ClipboardList, Plus, Gift, Copy, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 export default function Checklists() {
@@ -14,6 +15,7 @@ export default function Checklists() {
   const { country } = useCountry();
   const [checklists, setChecklists] = useState<ChecklistWithItems[]>([]);
   const [giftsHelping, setGiftsHelping] = useState<ChecklistWithItems[]>([]);
+  const [copiedRegistryId, setCopiedRegistryId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -156,9 +158,41 @@ export default function Checklists() {
                           </div>
                           <Progress value={progressPercent} className="h-2 [&>div]:bg-[#2F9E44]" />
                         </div>
-                        <p className="text-xs text-gray-500">
-                          Read-only view • Click to manage your claims
-                        </p>
+                        {checklist.gifting_token && (
+                          <div className="mt-1 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Gift className="h-4 w-4 text-[#C89F7A]" />
+                              <span className="text-sm font-medium text-gray-700">Gifting enabled</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <Input
+                                value={`${window.location.origin}/checklists/gift/${checklist.gifting_token}`}
+                                readOnly
+                                className="flex-1 text-xs"
+                                onClick={(e) => e.currentTarget.select()}
+                              />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigator.clipboard
+                                    .writeText(`${window.location.origin}/checklists/gift/${checklist.gifting_token}`)
+                                    .then(() => {
+                                      setCopiedRegistryId(checklist.id);
+                                      setTimeout(() => setCopiedRegistryId(null), 2000);
+                                    });
+                                }}
+                              >
+                                {copiedRegistryId === checklist.id ? (
+                                  <Check className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <Copy className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
