@@ -1799,7 +1799,7 @@ export default function ExploreScenePage() {
             <button
               type="button"
               onClick={closeHeroModal}
-              className="absolute top-3 right-3 rounded-full bg-black/60 hover:bg-black text-white p-2 text-xs md:text-sm z-10"
+              className="absolute top-4 right-4 md:top-6 md:right-6 rounded-full bg-black/70 hover:bg-black text-white p-2.5 text-xs md:text-sm z-10 shadow-lg"
             >
               ×
             </button>
