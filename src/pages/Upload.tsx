@@ -778,6 +778,7 @@ export default function Upload() {
                                 isTrending={
                                   (scene.view_count ?? 0) === maxViewCount && maxViewCount > 0
                                 }
+                                variant={scene.room_type === 'tv_wall' ? 'tv-wall' : 'default'}
                               />
                             );
                           })}

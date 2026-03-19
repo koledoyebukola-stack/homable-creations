@@ -24,7 +24,7 @@ export default function ExploreSceneCard({
   isTrending = false,
   variant = 'default',
 }: ExploreSceneCardProps) {
-  const isTvWall = variant === 'tv-wall';
+  const isTvWall = variant === 'tv-wall' || scene.room_type === 'tv_wall';
   const catalogBudget = Number(scene.catalog_budget_ngn) || 0;
   const minimumItemPrice = Number(scene.minimum_item_price_ngn) || 0;
   const catalogProductCount = Number(scene.catalog_product_count) || 0;
@@ -58,15 +58,28 @@ export default function ExploreSceneCard({
           </span>
         )}
         <h3 className="text-xl md:text-2xl font-bold text-[#111111] mb-2 line-clamp-2">{scene.title}</h3>
-        {!isTvWall && minimumItemPrice > 0 && (
-          <p className="text-base font-semibold text-[#111111] mb-1">
-            Items from ₦{minimumItemPrice.toLocaleString('en-NG')}
-          </p>
-        )}
-        {!isTvWall && catalogBudget > 0 && (
-          <p className="text-sm text-gray-500 mb-2">
-            Complete room from ₦{catalogBudget.toLocaleString('en-NG')}
-          </p>
+        {isTvWall ? (
+          <>
+            <p className="text-base font-semibold text-[#111111] mb-1">
+              Custom build
+            </p>
+            <p className="text-sm text-gray-500 mb-2">
+              Contact a carpenter for pricing
+            </p>
+          </>
+        ) : (
+          <>
+            {minimumItemPrice > 0 && (
+              <p className="text-base font-semibold text-[#111111] mb-1">
+                Items from ₦{minimumItemPrice.toLocaleString('en-NG')}
+              </p>
+            )}
+            {catalogBudget > 0 && (
+              <p className="text-sm text-gray-500 mb-2">
+                Complete room from ₦{catalogBudget.toLocaleString('en-NG')}
+              </p>
+            )}
+          </>
         )}
         {showBadgeOrViews && (
           <div className="flex items-center justify-between mt-3">
