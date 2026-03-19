@@ -158,41 +158,9 @@ export default function Checklists() {
                           </div>
                           <Progress value={progressPercent} className="h-2 [&>div]:bg-[#2F9E44]" />
                         </div>
-                        {checklist.gifting_token && (
-                          <div className="mt-1 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Gift className="h-4 w-4 text-[#C89F7A]" />
-                              <span className="text-sm font-medium text-gray-700">Gifting enabled</span>
-                            </div>
-                            <div className="flex gap-2">
-                              <Input
-                                value={`${window.location.origin}/checklists/gift/${checklist.gifting_token}`}
-                                readOnly
-                                className="flex-1 text-xs"
-                                onClick={(e) => e.currentTarget.select()}
-                              />
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigator.clipboard
-                                    .writeText(`${window.location.origin}/checklists/gift/${checklist.gifting_token}`)
-                                    .then(() => {
-                                      setCopiedRegistryId(checklist.id);
-                                      setTimeout(() => setCopiedRegistryId(null), 2000);
-                                    });
-                                }}
-                              >
-                                {copiedRegistryId === checklist.id ? (
-                                  <Check className="h-4 w-4 text-green-600" />
-                                ) : (
-                                  <Copy className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                        )}
+                        <p className="text-xs text-gray-500">
+                          Read-only view • Click to manage your claims
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
@@ -242,9 +210,41 @@ export default function Checklists() {
                           </div>
                           <Progress value={progressPercent} className="h-2 [&>div]:bg-[#2F9E44]" />
                         </div>
-                        <p className="text-xs text-gray-500">
-                          Read-only view • Click to manage your claims
-                        </p>
+                        {checklist.gifting_token && (
+                          <div className="mt-1 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Gift className="h-4 w-4 text-[#C89F7A]" />
+                              <span className="text-sm font-medium text-gray-700">Gifting enabled</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <Input
+                                value={`${window.location.origin}/checklists/gift/${checklist.gifting_token}`}
+                                readOnly
+                                className="flex-1 text-xs"
+                                onClick={(e) => e.currentTarget.select()}
+                              />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigator.clipboard
+                                    .writeText(`${window.location.origin}/checklists/gift/${checklist.gifting_token}`)
+                                    .then(() => {
+                                      setCopiedRegistryId(checklist.id);
+                                      setTimeout(() => setCopiedRegistryId(null), 2000);
+                                    });
+                                }}
+                              >
+                                {copiedRegistryId === checklist.id ? (
+                                  <Check className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <Copy className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
