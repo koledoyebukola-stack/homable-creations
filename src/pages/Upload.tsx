@@ -22,6 +22,11 @@ import { trackNgEvent, NG_EVENTS } from '@/lib/analytics-ng';
 import { getSelectedCountry, useCountry } from '@/context/CountryContext';
 import DesignServiceForm from '@/pages/DesignServiceForm';
 
+const UPLOAD_EXPLORE_CATEGORY_PILLS = [
+  ...EXPLORE_CATEGORY_PILLS,
+  { value: 'tv_wall' as ExploreRoomTypeFilter, label: 'TV Wall Styling' },
+];
+
 // Sample images organized by category - REMOVED HOLIDAY LOOKS
 const SAMPLE_CATEGORIES = [
   {
@@ -614,8 +619,8 @@ export default function Upload() {
                         : 'Curated Canadian rooms matched to real products from trusted retailers'}
                     </p>
                   </div>
-                  <div className="flex gap-2 overflow-x-auto pb-2 md:overflow-visible md:flex-wrap md:justify-center scroll-pills-hide-scrollbar">
-                    {EXPLORE_CATEGORY_PILLS.map(({ value, label }) => (
+                  <div className="flex flex-wrap gap-2 pb-2 md:justify-center">
+                    {UPLOAD_EXPLORE_CATEGORY_PILLS.map(({ value, label }) => (
                       <button
                         key={value}
                         onClick={() => setExploreRoomTypeFilter(value)}
@@ -706,7 +711,7 @@ export default function Upload() {
                         const categoryLabel =
                           exploreRoomTypeFilter === 'all'
                             ? ''
-                            : EXPLORE_CATEGORY_PILLS.find((p) => p.value === exploreRoomTypeFilter)?.label ?? '';
+                            : UPLOAD_EXPLORE_CATEGORY_PILLS.find((p) => p.value === exploreRoomTypeFilter)?.label ?? '';
                         return (
                           <div className="text-center py-16 px-4 bg-white rounded-2xl border border-[#e5e5e5]">
                             <p className="text-[#555555] text-lg">

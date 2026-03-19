@@ -26,6 +26,11 @@ const TV_WALL_CARDS = [
   { title: 'Marble No Be Small', imageUrl: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Marble%20No%20Be%20Small.png' },
   { title: 'Wood Flute', imageUrl: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Wood%20Flute.png' },
 ];
+
+const HOME_EXPLORE_CATEGORY_PILLS = [
+  ...EXPLORE_CATEGORY_PILLS,
+  { value: 'tv_wall' as ExploreRoomTypeFilter, label: 'TV Wall Styling' },
+];
 import { trackNgEvent, NG_EVENTS } from '@/lib/analytics-ng';
 
 // Carousel examples showing inspiration photo → checklist
@@ -423,8 +428,8 @@ export default function Home() {
             </p>
 
             {/* Category filters */}
-            <div className="flex gap-2 overflow-x-auto pb-2 md:overflow-visible md:flex-wrap md:justify-center scroll-pills-hide-scrollbar mb-4">
-              {EXPLORE_CATEGORY_PILLS.map(({ value, label }) => (
+            <div className="flex flex-wrap gap-2 pb-2 md:justify-center mb-4">
+              {HOME_EXPLORE_CATEGORY_PILLS.map(({ value, label }) => (
                 <button
                   key={value}
                   type="button"
@@ -478,7 +483,11 @@ export default function Home() {
                 {(() => {
                   const filtered =
                     exploreScenes
-                      .filter((s) => s.room_type !== 'tv_wall') // TV Wall scenes have their own section below
+                      .filter((s) =>
+                        exploreCategoryFilter === 'tv_wall'
+                          ? s.room_type === 'tv_wall'
+                          : s.room_type !== 'tv_wall'
+                      ) // Keep default list non-TV-wall; allow TV-wall when filter selected
                       .filter((s) => {
                         const matchCategory =
                           exploreCategoryFilter === 'all' || s.room_type === exploreCategoryFilter;
@@ -704,8 +713,8 @@ export default function Home() {
             </p>
 
             {/* Category filters (reuse Explore filters; same values, CAD context) */}
-            <div className="flex gap-2 overflow-x-auto pb-2 md:overflow-visible md:flex-wrap md:justify-center scroll-pills-hide-scrollbar mb-4">
-              {EXPLORE_CATEGORY_PILLS.map(({ value, label }) => (
+            <div className="flex flex-wrap gap-2 pb-2 md:justify-center mb-4">
+              {HOME_EXPLORE_CATEGORY_PILLS.map(({ value, label }) => (
                 <button
                   key={value}
                   type="button"
