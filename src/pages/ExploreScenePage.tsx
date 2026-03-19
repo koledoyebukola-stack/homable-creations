@@ -29,7 +29,7 @@ import { supabase } from '@/lib/supabase';
 import { trackNgEvent, NG_EVENTS } from '@/lib/analytics-ng';
 import type { ExploreScene, ExploreSceneItemWithProduct, VendorProduct, Storefront, Checklist } from '@/lib/types';
 import type { User } from '@supabase/supabase-js';
-import { ExternalLink, ShoppingBag, Wrench, Instagram, ListChecks, Upload, ChevronDown, ChevronUp, Store, MessageCircle } from 'lucide-react';
+import { ExternalLink, ShoppingBag, Wrench, Instagram, ListChecks, Upload, ChevronDown, ChevronUp, Store, MessageCircle, Gift, Bookmark } from 'lucide-react';
 import { toast } from 'sonner';
 
 function formatNgn(value: number): string {
@@ -786,11 +786,6 @@ export default function ExploreScenePage() {
                     key={vendor.id}
                     className="bg-white rounded-2xl border border-[#e5e5e5] overflow-hidden shadow-sm hover:shadow-lg transition-shadow flex flex-col cursor-pointer"
                     onClick={() => {
-                      if (!user) {
-                        setShowAuthGate(true);
-                        document.body.style.overflow = 'hidden';
-                        return;
-                      }
                       navigate(`/stores/${vendor.slug}`);
                     }}
                     role="button"
@@ -798,11 +793,6 @@ export default function ExploreScenePage() {
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        if (!user) {
-                          setShowAuthGate(true);
-                          document.body.style.overflow = 'hidden';
-                          return;
-                        }
                         navigate(`/stores/${vendor.slug}`);
                       }
                     }}
@@ -826,11 +816,6 @@ export default function ExploreScenePage() {
                         className="mt-3 rounded-xl border-[#e0e0e0] hover:border-black w-full"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (!user) {
-                            setShowAuthGate(true);
-                            document.body.style.overflow = 'hidden';
-                            return;
-                          }
                           navigate(`/stores/${vendor.slug}`);
                         }}
                       >
@@ -886,11 +871,6 @@ export default function ExploreScenePage() {
                             role="button"
                             tabIndex={0}
                             onClick={() => {
-                              if (!user) {
-                                setShowAuthGate(true);
-                                document.body.style.overflow = 'hidden';
-                                return;
-                              }
                               trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
                                 product_id: product.id,
                                 product_name: product.name,
@@ -901,11 +881,6 @@ export default function ExploreScenePage() {
                             onKeyDown={(e) => {
                               if (e.key === 'Enter' || e.key === ' ') {
                                 e.preventDefault();
-                                if (!user) {
-                                  setShowAuthGate(true);
-                                  document.body.style.overflow = 'hidden';
-                                  return;
-                                }
                                 trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
                                   product_id: product.id,
                                   product_name: product.name,
@@ -1081,7 +1056,7 @@ export default function ExploreScenePage() {
                       : 'bg-[#111111] hover:bg-[#333] text-white'
                   }`}
                 >
-                  <ListChecks className="w-4 h-4 shrink-0" />
+                  <Gift className="w-4 h-4 shrink-0" />
                   {savingChecklist
                     ? 'Creating...'
                     : giftRegistryChecklistId && !showGiftingModal
@@ -1095,7 +1070,7 @@ export default function ExploreScenePage() {
                   onClick={handleSaveRoom}
                   disabled={savingRoom}
                 >
-                  <ListChecks className="w-4 h-4 shrink-0" />
+                  <Bookmark className="w-4 h-4 shrink-0" />
                   {savingRoom ? 'Saving...' : roomSaved ? 'View Saved Room' : 'Save Room'}
                 </Button>
               </>
@@ -1247,11 +1222,6 @@ export default function ExploreScenePage() {
                         role="button"
                         tabIndex={0}
                         onClick={() => {
-                          if (!user) {
-                            setShowAuthGate(true);
-                            document.body.style.overflow = 'hidden';
-                            return;
-                          }
                           trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
                             product_id: product.id,
                             product_name: product.name,
@@ -1265,11 +1235,6 @@ export default function ExploreScenePage() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            if (!user) {
-                              setShowAuthGate(true);
-                              document.body.style.overflow = 'hidden';
-                              return;
-                            }
                             trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
                               product_id: product.id,
                               product_name: product.name,
@@ -1334,11 +1299,6 @@ export default function ExploreScenePage() {
                         role="button"
                         tabIndex={0}
                         onClick={() => {
-                          if (!user) {
-                            setShowAuthGate(true);
-                            document.body.style.overflow = 'hidden';
-                            return;
-                          }
                           trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
                             product_id: product.id,
                             product_name: product.name,
@@ -1352,11 +1312,6 @@ export default function ExploreScenePage() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            if (!user) {
-                              setShowAuthGate(true);
-                              document.body.style.overflow = 'hidden';
-                              return;
-                            }
                             trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
                               product_id: product.id,
                               product_name: product.name,
@@ -1649,12 +1604,6 @@ export default function ExploreScenePage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => {
-                        if (!user) {
-                          e.preventDefault();
-                          setShowAuthGate(true);
-                          document.body.style.overflow = 'hidden';
-                          return;
-                        }
                         trackNgEvent(NG_EVENTS.VIEW_ON_INSTAGRAM_CLICKED, {
                           instagram_handle: item.instagram_handle ?? undefined,
                           item_name: item.name ?? undefined,
@@ -1694,11 +1643,6 @@ export default function ExploreScenePage() {
                             role="button"
                             tabIndex={0}
                             onClick={() => {
-                              if (!user) {
-                                setShowAuthGate(true);
-                                document.body.style.overflow = 'hidden';
-                                return;
-                              }
                               trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
                                 product_id: product.id,
                                 product_name: product.name,
@@ -1712,11 +1656,6 @@ export default function ExploreScenePage() {
                             onKeyDown={(e) => {
                               if (e.key === 'Enter' || e.key === ' ') {
                                 e.preventDefault();
-                                if (!user) {
-                                  setShowAuthGate(true);
-                                  document.body.style.overflow = 'hidden';
-                                  return;
-                                }
                                 navigate(
                                   `/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
                                 );
