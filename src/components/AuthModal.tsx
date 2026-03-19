@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,6 +24,19 @@ export default function AuthModal({ onSuccess, title, subtitle, onClose }: AuthM
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showSignUpConfirmation, setShowSignUpConfirmation] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendInlineMessage, setResendInlineMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!showSignUpConfirmation) return;
+    if (resendCooldown <= 0) return;
+
+    const intervalId = window.setInterval(() => {
+      setResendCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [resendCooldown, showSignUpConfirmation]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,6 +136,39 @@ export default function AuthModal({ onSuccess, title, subtitle, onClose }: AuthM
               <p className="text-sm text-[#777777]">
                 Didn&apos;t receive it? Check your spam folder or try signing up again.
               </p>
+
+              <button
+                type="button"
+                disabled={resendCooldown > 0}
+                onClick={async () => {
+                  if (!email) {
+                    setResendInlineMessage('Could not resend. Please try again.');
+                    return;
+                  }
+
+                  setResendInlineMessage(null);
+                  setResendCooldown(60);
+
+                  try {
+                    const { error } = await supabase.auth.resend({
+                      type: 'signup',
+                      email,
+                    });
+
+                    if (error) throw error;
+                    setResendInlineMessage('Confirmation email resent. Check your inbox.');
+                  } catch {
+                    setResendInlineMessage('Could not resend. Please try again.');
+                  }
+                }}
+                className="w-full text-center text-sm font-medium text-[#111111] disabled:opacity-60 disabled:cursor-not-allowed hover:underline transition-colors"
+              >
+                {resendCooldown > 0 ? `Resend again in ${resendCooldown}s` : 'Resend confirmation email'}
+              </button>
+
+              {resendInlineMessage && (
+                <p className="text-sm text-[#555555]">{resendInlineMessage}</p>
+              )}
             </div>
           ) : (
             <form onSubmit={handleAuth} className="space-y-4">
