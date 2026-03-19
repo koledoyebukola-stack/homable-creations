@@ -23,7 +23,6 @@ import {
 } from '@/components/ui/dialog';
 import { 
   Loader2, 
-  ArrowLeft, 
   Pencil, 
   Check, 
   X, 
@@ -499,10 +498,9 @@ export default function ChecklistDetail() {
         <Button
           variant="ghost"
           onClick={() => navigate('/checklists')}
-          className="mb-6 -ml-2"
+          className="mb-6 -ml-2 text-xs text-[#888888] hover:text-[#666666] font-normal h-auto p-0"
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Shopping Lists
+          See all gift registries
         </Button>
 
         {/* Inspiration Image (if available) — from checklist.board_image_url or board; click to view full size */}

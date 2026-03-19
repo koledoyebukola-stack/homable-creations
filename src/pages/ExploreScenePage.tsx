@@ -543,6 +543,8 @@ export default function ExploreScenePage() {
         checklistItemInputs,
         { sourceImageUrl: scene.hero_image_url ?? undefined, exploreSceneId: scene.id }
       );
+      // Keep local state aligned with the created checklist immediately.
+      setExistingChecklist(checklist);
 
       setExistingChecklist(checklist);
       toast.success('Shopping list saved!');
@@ -1031,7 +1033,7 @@ export default function ExploreScenePage() {
                   onClick={() => {
                     const isReady = !!giftRegistryChecklistId && !showGiftingModal;
                     if (isReady && giftRegistryChecklistId) {
-                      navigate(`/checklists/${giftRegistryChecklistId}`);
+                      navigate('/checklists');
                       return;
                     }
                     handleCreateHomeRegistry();
