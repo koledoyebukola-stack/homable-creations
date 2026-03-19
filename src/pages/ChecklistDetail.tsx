@@ -483,25 +483,27 @@ export default function ChecklistDetail() {
     <div className="min-h-screen bg-[#FAFAFA] flex flex-col">
       
       <main className="flex-1 container mx-auto px-4 py-8 max-w-3xl">
-        {/* Back to originating explore scene (only for Explore-created checklists) */}
-        {!!checklist?.explore_scene_id && (checklist as any)?.explore_scenes?.slug && (
+        <div className="mb-6 space-y-2">
+          {/* Back to originating explore scene (only for Explore-created checklists) */}
+          {!!checklist?.explore_scene_id && (checklist as any)?.explore_scenes?.slug && (
+            <button
+              type="button"
+              onClick={() => navigate(`/explore/${(checklist as any).explore_scenes.slug}`)}
+              className="block text-sm text-[#555555] hover:text-[#111111] hover:underline underline-offset-2 cursor-pointer"
+            >
+              ← Back to room
+            </button>
+          )}
+
+          {/* Secondary link */}
           <button
             type="button"
-            onClick={() => navigate(`/explore/${(checklist as any).explore_scenes.slug}`)}
-            className="mb-4 text-sm text-[#555555] hover:text-[#111111] hover:underline underline-offset-2 cursor-pointer"
+            onClick={() => navigate('/checklists')}
+            className="block text-xs text-[#888888] hover:text-[#666666] font-normal cursor-pointer"
           >
-            ← Back to room
+            See all gift registries
           </button>
-        )}
-
-        {/* Back Button */}
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/checklists')}
-          className="mb-6 -ml-2 text-xs text-[#888888] hover:text-[#666666] font-normal h-auto p-0"
-        >
-          See all gift registries
-        </Button>
+        </div>
 
         {/* Inspiration Image (if available) — from checklist.board_image_url or board; click to view full size */}
         {(checklist?.board_image_url ?? board?.source_image_url) && (
