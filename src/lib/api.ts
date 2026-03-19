@@ -732,7 +732,7 @@ export async function getChecklistById(checklistId: string): Promise<(ChecklistW
 
   const { data: checklist, error: checklistError } = await supabase
     .from('app_8574c59127_checklists')
-    .select('*')
+    .select('*, explore_scenes(slug)')
     .eq('id', checklistId)
     .eq('user_id', user.id)
     .single();

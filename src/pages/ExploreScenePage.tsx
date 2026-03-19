@@ -55,6 +55,15 @@ function formatVendorDimensions(p: VendorProduct): string | null {
   return `${dimension_width} × ${dimension_height} ${dimension_unit}`;
 }
 
+function getGiftMeText(roomType: string | null | undefined): string {
+  if (roomType === 'living_room') return 'Gift me this living room';
+  if (roomType === 'bedroom') return 'Gift me this bedroom';
+  if (roomType === 'dining') return 'Gift me this dining room';
+  if (roomType === 'office') return 'Gift me this home office';
+  if (roomType === 'wall_styling') return 'Gift me this wall design';
+  return 'Gift me this room';
+}
+
 /** Category sections for "More Options to Love" by room type. Default = living room. */
 const MORE_OPTIONS_BY_ROOM_TYPE: Record<string, { title: string; category: string }[]> = {
   living_room: [
@@ -97,9 +106,13 @@ export default function ExploreScenePage() {
   const [existingChecklist, setExistingChecklist] = useState<Checklist | null>(null);
   const [roomSaved, setRoomSaved] = useState(false);
   const [savingRoom, setSavingRoom] = useState(false);
+  const [giftRegistryChecklistId, setGiftRegistryChecklistId] = useState<string | null>(null);
   const [showGiftingModal, setShowGiftingModal] = useState(false);
   const [giftingUrl, setGiftingUrl] = useState<string | null>(null);
   const [giftingUrlCopied, setGiftingUrlCopied] = useState(false);
+  const [heroModalClosing, setHeroModalClosing] = useState(false);
+  const [heroScale, setHeroScale] = useState(1);
+  const [heroOffset, setHeroOffset] = useState({ x: 0, y: 0 });
   const [randomArtworkProducts, setRandomArtworkProducts] = useState<VendorProduct[]>([]);
   const [moreOptionsSections, setMoreOptionsSections] = useState<Array<{ title: string; category: string; items: CategoryProductWithStorefront[] }>>([]);
   const [featuredVendors, setFeaturedVendors] = useState<StorefrontWithProductCount[]>([]);
@@ -109,6 +122,25 @@ export default function ExploreScenePage() {
   const [showHeroTapHint, setShowHeroTapHint] = useState(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [scrollDirection, setScrollDirection] = useState<'down' | 'up'>('down');
+
+  const heroCloseTimeoutRef = useRef<number | null>(null);
+  const heroPanStartRef = useRef<{ x: number; y: number } | null>(null);
+  const heroPinchStartRef = useRef<{
+    initialDistance: number;
+    initialScale: number;
+    lastMidX: number;
+    lastMidY: number;
+  } | null>(null);
+
+  const closeHeroModal = () => {
+    if (heroCloseTimeoutRef.current) window.clearTimeout(heroCloseTimeoutRef.current);
+    setHeroModalClosing(true);
+    heroCloseTimeoutRef.current = window.setTimeout(() => {
+      setIsHeroImageOpen(false);
+      setHeroScale(1);
+      setHeroOffset({ x: 0, y: 0 });
+    }, 180);
+  };
 
   // Always start at top when navigating to a new explore scene
   useEffect(() => {
@@ -139,12 +171,90 @@ export default function ExploreScenePage() {
     if (!isHeroImageOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setIsHeroImageOpen(false);
+        closeHeroModal();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isHeroImageOpen]);
+
+  // Reset zoom/pan when opening the modal
+  useEffect(() => {
+    if (!isHeroImageOpen) return;
+    setHeroModalClosing(false);
+    setHeroScale(1);
+    setHeroOffset({ x: 0, y: 0 });
+    heroPanStartRef.current = null;
+    heroPinchStartRef.current = null;
+  }, [isHeroImageOpen]);
+
+  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+
+  const handleHeroTouchStart = (e: any) => {
+    if (!e?.touches) return;
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      heroPanStartRef.current = { x: t.clientX, y: t.clientY };
+      heroPinchStartRef.current = null;
+    } else if (e.touches.length === 2) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dx = t1.clientX - t2.clientX;
+      const dy = t1.clientY - t2.clientY;
+      const dist = Math.hypot(dx, dy);
+      const midX = (t1.clientX + t2.clientX) / 2;
+      const midY = (t1.clientY + t2.clientY) / 2;
+      heroPinchStartRef.current = {
+        initialDistance: dist || 1,
+        initialScale: heroScale,
+        lastMidX: midX,
+        lastMidY: midY,
+      };
+      heroPanStartRef.current = null;
+    }
+  };
+
+  const handleHeroTouchMove = (e: any) => {
+    if (!e?.touches) return;
+    // Prevent the browser from scrolling while manipulating the image.
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+
+    if (e.touches.length === 1 && heroPanStartRef.current) {
+      const t = e.touches[0];
+      const dx = t.clientX - heroPanStartRef.current.x;
+      const dy = t.clientY - heroPanStartRef.current.y;
+      heroPanStartRef.current = { x: t.clientX, y: t.clientY };
+      setHeroOffset((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
+    } else if (e.touches.length === 2 && heroPinchStartRef.current) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dx = t1.clientX - t2.clientX;
+      const dy = t1.clientY - t2.clientY;
+      const dist = Math.hypot(dx, dy);
+      const midX = (t1.clientX + t2.clientX) / 2;
+      const midY = (t1.clientY + t2.clientY) / 2;
+
+      const nextScale = clamp(
+        heroPinchStartRef.current.initialScale * (dist / heroPinchStartRef.current.initialDistance),
+        1,
+        4
+      );
+
+      const midDx = midX - heroPinchStartRef.current.lastMidX;
+      const midDy = midY - heroPinchStartRef.current.lastMidY;
+
+      heroPinchStartRef.current.lastMidX = midX;
+      heroPinchStartRef.current.lastMidY = midY;
+
+      setHeroScale(nextScale);
+      setHeroOffset((prev) => ({ x: prev.x + midDx, y: prev.y + midDy }));
+    }
+  };
+
+  const handleHeroTouchEnd = () => {
+    heroPanStartRef.current = null;
+    heroPinchStartRef.current = null;
+  };
 
   // Floating scroll navigation button on mobile (up/down based on scroll position)
   useEffect(() => {
@@ -525,6 +635,7 @@ export default function ExploreScenePage() {
       setGiftingUrl(fullUrl);
       setGiftingUrlCopied(false);
       setShowGiftingModal(true);
+      setGiftRegistryChecklistId(checklist.id);
 
       // Track registry share event for Nigeria
       trackNgEvent(NG_EVENTS.HOME_REGISTRY_SHARED, {
@@ -546,7 +657,10 @@ export default function ExploreScenePage() {
       return;
     }
 
-    if (roomSaved) return;
+    if (roomSaved) {
+      navigate('/history');
+      return;
+    }
 
     setSavingRoom(true);
     try {
@@ -914,22 +1028,36 @@ export default function ExploreScenePage() {
             {isNigeriaScene ? (
               <>
                 <Button
-                  onClick={handleCreateHomeRegistry}
-                  disabled={savingChecklist || !hasSavableItems}
+                  onClick={() => {
+                    const isReady = !!giftRegistryChecklistId && !showGiftingModal;
+                    if (isReady && giftRegistryChecklistId) {
+                      navigate(`/checklists/${giftRegistryChecklistId}`);
+                      return;
+                    }
+                    handleCreateHomeRegistry();
+                  }}
+                  disabled={
+                    savingChecklist ||
+                    (!(giftRegistryChecklistId && !showGiftingModal) && !hasSavableItems)
+                  }
                   className="bg-[#111111] hover:bg-[#333] text-white rounded-xl font-medium px-5 py-2.5 h-auto text-sm flex items-center gap-2 w-full sm:w-auto"
                 >
                   <ListChecks className="w-4 h-4 shrink-0" />
-                  {savingChecklist ? 'Creating...' : 'Create Home Registry'}
+                  {savingChecklist
+                    ? 'Creating...'
+                    : giftRegistryChecklistId && !showGiftingModal
+                      ? 'View Gift Registry'
+                      : getGiftMeText(scene.room_type)}
                 </Button>
 
                 <Button
                   variant="outline"
                   className="rounded-xl border-[#e0e0e0] hover:border-black flex items-center gap-2 px-5 py-2.5 h-auto text-sm w-full sm:w-auto text-[#111111] bg-white"
                   onClick={handleSaveRoom}
-                  disabled={savingRoom || roomSaved}
+                  disabled={savingRoom}
                 >
                   <ListChecks className="w-4 h-4 shrink-0" />
-                  {savingRoom ? 'Saving...' : roomSaved ? 'Saved' : 'Save Room'}
+                  {savingRoom ? 'Saving...' : roomSaved ? 'View Saved Room' : 'Save Room'}
                 </Button>
               </>
             ) : (
@@ -1655,16 +1783,22 @@ export default function ExploreScenePage() {
       {/* Full-screen hero image overlay */}
       {isHeroImageOpen && scene.hero_image_url && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-0 md:p-8 transition-opacity"
-          onClick={() => setIsHeroImageOpen(false)}
+          className={`fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-0 md:p-8 transition-all duration-200 ${
+            heroModalClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+          }`}
+          onClick={closeHeroModal}
         >
           <div
-            className="relative w-full h-full md:max-w-5xl md:max-h-[90vh] md:flex md:items-center md:justify-center"
-            onClick={e => e.stopPropagation()}
+            className="relative w-full h-full md:max-w-5xl md:max-h-[90vh] md:flex md:items-center md:justify-center overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+            onTouchStart={handleHeroTouchStart}
+            onTouchMove={handleHeroTouchMove}
+            onTouchEnd={handleHeroTouchEnd}
+            style={{ touchAction: 'none' }}
           >
             <button
               type="button"
-              onClick={() => setIsHeroImageOpen(false)}
+              onClick={closeHeroModal}
               className="absolute top-3 right-3 rounded-full bg-black/60 hover:bg-black text-white p-2 text-xs md:text-sm z-10"
             >
               ×
@@ -1672,7 +1806,12 @@ export default function ExploreScenePage() {
             <img
               src={scene.hero_image_url}
               alt={scene.title}
-              className="w-full h-auto max-h-full object-contain object-center rounded-none md:rounded-xl md:shadow-2xl"
+              draggable={false}
+              className="w-full h-full object-contain object-center select-none pointer-events-none rounded-none md:rounded-xl md:shadow-2xl"
+              style={{
+                transform: `translate3d(${heroOffset.x}px, ${heroOffset.y}px, 0) scale(${heroScale})`,
+                transformOrigin: 'center center',
+              }}
             />
           </div>
         </div>
@@ -1709,7 +1848,7 @@ export default function ExploreScenePage() {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold text-[#111111]">
-                Create Home Registry ✨
+                Your gift registry is ready ✨
               </DialogTitle>
             </DialogHeader>
 
