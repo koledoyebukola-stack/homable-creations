@@ -214,6 +214,19 @@ export interface VendorProduct {
   updated_at: string;
 }
 
+/** One row from `vendor_product_attributes` (structured keys in JSONB for inspiration ↔ product matching). */
+export interface VendorProductAttributesRow {
+  vendor_product_id: string;
+  attributes: import('./vendor-product-attributes').VendorProductAttributesDocument;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Catalog product with optional 1:1 attribute row when queries join `vendor_product_attributes`. */
+export interface VendorProductWithAttributes extends VendorProduct {
+  vendor_product_attributes?: VendorProductAttributesRow | null;
+}
+
 // Explore: curated room inspirations (Nigeria)
 export interface ExploreScene {
   id: string;

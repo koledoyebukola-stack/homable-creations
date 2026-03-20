@@ -1,5 +1,6 @@
 import { supabase, SUPABASE_ANON_KEY, SUPABASE_URL } from './supabase';
-import type { Board, DetectedItem, Product, Checklist, ChecklistItem, ChecklistWithItems, HistoryItem, SpecsHistory, CarpenterSpec, Storefront, VendorProduct, ExploreScene, ExploreSceneItem, ExploreSceneItemWithProduct } from './types';
+import type { Board, DetectedItem, Product, Checklist, ChecklistItem, ChecklistWithItems, HistoryItem, SpecsHistory, CarpenterSpec, Storefront, VendorProduct, VendorProductWithAttributes, ExploreScene, ExploreSceneItem, ExploreSceneItemWithProduct } from './types';
+import type { VendorProductAttributesDocument } from './vendor-product-attributes';
 
 interface RoomMaterials {
   walls?: string;
@@ -2259,6 +2260,75 @@ export async function getProductsByIds(productIds: string[]): Promise<Array<{ st
     if (sf) productMap.set(p.id, { storefront: sf, product: p });
   });
   return productIds.map((id) => productMap.get(id) ?? null);
+}
+
+function pruneUndefinedDeep(value: unknown): unknown {
+  if (value === undefined) return undefined;
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) {
+    const arr = value.map((v) => pruneUndefinedDeep(v)).filter((v) => v !== undefined);
+    return arr;
+  }
+  const obj = value as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v === undefined) continue;
+    const next = pruneUndefinedDeep(v);
+    if (next !== undefined) out[k] = next;
+  }
+  return out;
+}
+
+/** Single row shape returned by match_vendor_products_by_attributes RPC. */
+type MatchVendorProductsByAttributesRpcRow = VendorProduct & {
+  attributes: VendorProductAttributesDocument;
+  attributes_created_at: string;
+  attributes_updated_at: string;
+};
+
+/**
+ * Find vendor products whose structured attributes contain the given criteria (JSONB @> semantics).
+ * Only products with a row in vendor_product_attributes are considered. Empty criteria returns [] locally
+ * without calling the RPC; the database also returns no rows for {} or null criteria.
+ */
+export async function getProductsByAttributes(
+  attributes: Partial<VendorProductAttributesDocument>,
+  options?: { limit?: number; offset?: number }
+): Promise<VendorProductWithAttributes[]> {
+  const pruned = pruneUndefinedDeep(attributes as Record<string, unknown>) as Record<string, unknown>;
+  if (Object.keys(pruned).length === 0) {
+    return [];
+  }
+
+  const { data, error } = await supabase.rpc('match_vendor_products_by_attributes', {
+    criteria: pruned,
+    p_limit: options?.limit ?? 50,
+    p_offset: options?.offset ?? 0,
+  });
+
+  if (error) {
+    console.error('getProductsByAttributes RPC failed:', error);
+    return [];
+  }
+
+  const rows = (data || []) as MatchVendorProductsByAttributesRpcRow[];
+  return rows.map((row) => {
+    const {
+      attributes: attrDoc,
+      attributes_created_at,
+      attributes_updated_at,
+      ...productFields
+    } = row;
+    return {
+      ...(productFields as VendorProduct),
+      vendor_product_attributes: {
+        vendor_product_id: row.id,
+        attributes: attrDoc,
+        created_at: attributes_created_at,
+        updated_at: attributes_updated_at,
+      },
+    };
+  });
 }
 
 /** WhatsApp redirect event row from analytics (metadata has product_id, vendor_id, from_scene_slug). */
