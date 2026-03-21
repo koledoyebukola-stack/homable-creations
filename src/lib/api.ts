@@ -2442,27 +2442,45 @@ function computeCatalogBudgetFromItems(
   }, 0);
 }
 
+/** Featured rows first; among featured by display_order; among non-featured by view_count → display_order → created_at. */
+function sortExploreScenesFeaturedFirst<T extends ExploreScene>(list: T[]): T[] {
+  return [...list].sort((a, b) => {
+    const fa = a.is_featured ? 1 : 0;
+    const fb = b.is_featured ? 1 : 0;
+    if (fa !== fb) return fb - fa;
+
+    if (fa === 1) {
+      const da = a.display_order ?? Number.POSITIVE_INFINITY;
+      const db = b.display_order ?? Number.POSITIVE_INFINITY;
+      if (da !== db) return da - db;
+    } else {
+      const va = a.view_count ?? 0;
+      const vb = b.view_count ?? 0;
+      if (va !== vb) return vb - va;
+      const da = a.display_order ?? Number.POSITIVE_INFINITY;
+      const db = b.display_order ?? Number.POSITIVE_INFINITY;
+      if (da !== db) return da - db;
+    }
+    const ta = new Date(a.created_at || 0).getTime();
+    const tb = new Date(b.created_at || 0).getTime();
+    return tb - ta;
+  });
+}
+
 /**
  * Fetch published explore scenes for a location.
- * Ordered by display_order ASC (nulls last), then created_at DESC for items without display_order.
+ * Featured scenes sort first; featured order uses display_order; non-featured use view_count, display_order, created_at.
  * catalog_budget_ngn is computed from related vendor_products (not the stored column).
  */
 export async function getExploreScenes(
   location: string,
   limit?: number
 ): Promise<ExploreScene[]> {
-  let query = supabase
+  const query = supabase
     .from('explore_scenes')
     .select('*')
     .eq('status', 'published')
-    .eq('location', location)
-    .order('view_count', { ascending: false, nullsFirst: false })
-    .order('display_order', { ascending: true, nullsFirst: false })
-    .order('created_at', { ascending: false });
-
-  if (limit != null) {
-    query = query.limit(limit);
-  }
+    .eq('location', location);
 
   const { data: scenes, error } = await query;
 
@@ -2471,7 +2489,10 @@ export async function getExploreScenes(
     return [];
   }
 
-  const sceneList = (scenes || []) as ExploreScene[];
+  let sceneList = sortExploreScenesFeaturedFirst((scenes || []) as ExploreScene[]);
+  if (limit != null) {
+    sceneList = sceneList.slice(0, limit);
+  }
   if (sceneList.length === 0) return sceneList;
 
   const sceneIds = sceneList.map((s) => s.id);

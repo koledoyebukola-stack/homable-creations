@@ -489,10 +489,15 @@ export default function Home() {
                       ? Math.max(0, ...displayScenes.map((s) => s.view_count ?? 0))
                       : 0;
                   if (displayScenes.length > 0) {
+                    let featuredTopPickCount = 0;
                     return (
                       <>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                          {displayScenes.map((scene) => (
+                          {displayScenes.map((scene) => {
+                            const showTopPick =
+                              scene.is_featured === true && featuredTopPickCount < 3;
+                            if (showTopPick) featuredTopPickCount += 1;
+                            return (
                             <ExploreSceneCard
                               key={scene.id}
                               scene={scene}
@@ -505,8 +510,10 @@ export default function Home() {
                                 (scene.view_count ?? 0) === maxViewCount && maxViewCount > 0
                               }
                               variant={scene.room_type === 'tv_wall' ? 'tv-wall' : 'default'}
+                              showTopPick={showTopPick}
                             />
-                          ))}
+                            );
+                          })}
                         </div>
                         {hasMore && (
                           <div className="text-center mt-10">

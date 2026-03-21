@@ -41,6 +41,8 @@ interface ExploreSceneCardProps {
   isTrending?: boolean;
   /** TV Wall variant: image + title + "TV Wall" badge only */
   variant?: 'default' | 'tv-wall';
+  /** NG: first 3 featured in list — Top Pick pill on image, view count hidden */
+  showTopPick?: boolean;
 }
 
 export default function ExploreSceneCard({
@@ -49,12 +51,14 @@ export default function ExploreSceneCard({
   viewCount = 0,
   isTrending = false,
   variant = 'default',
+  showTopPick = false,
 }: ExploreSceneCardProps) {
   const isTvWall = variant === 'tv-wall' || scene.room_type === 'tv_wall';
   const catalogBudget = Number(scene.catalog_budget_ngn) || 0;
   const minimumItemPrice = Number(scene.minimum_item_price_ngn) || 0;
   const catalogProductCount = Number(scene.catalog_product_count) || 0;
-  const showBadgeOrViews = !isTvWall && (catalogProductCount > 0 || viewCount > 0);
+  const showBadgeOrViews =
+    !isTvWall && (catalogProductCount > 0 || (!showTopPick && viewCount > 0));
   const viewText = formatViewCount(viewCount);
   const viewLabel = isTrending ? `🔥 Trending: ${viewText}` : viewText;
   const isNigeriaScene = scene.location === 'NG';
@@ -67,7 +71,15 @@ export default function ExploreSceneCard({
       onClick={() => onSelect(scene.slug)}
       className="text-left rounded-xl overflow-hidden bg-white border border-[#e5e5e5] hover:border-[#ccc] hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#111] focus:ring-offset-2 w-full"
     >
-      <div className="aspect-[4/3] overflow-hidden">
+      <div className="relative aspect-[4/3] overflow-hidden">
+        {showTopPick && (
+          <span
+            className="absolute left-[10px] top-[10px] z-10 rounded-full bg-black px-[10px] py-1 text-[11px] leading-none text-white"
+            aria-label="Top Pick"
+          >
+            ⭐ Top Pick
+          </span>
+        )}
         <img
           src={scene.hero_image_url || 'https://placehold.co/600x450/f5f5f5/999?text=Room'}
           alt={scene.title}
@@ -113,7 +125,7 @@ export default function ExploreSceneCard({
             ) : (
               <span />
             )}
-            {viewCount > 0 && (
+            {!showTopPick && viewCount > 0 && (
               <span className="text-xs text-gray-500 font-medium">
                 {viewLabel}
               </span>
