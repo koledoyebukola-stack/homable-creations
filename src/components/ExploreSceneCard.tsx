@@ -1,5 +1,31 @@
 import type { ExploreScene } from '@/lib/types';
 
+/** Human-readable room_type badge for NG explore cards (matches filter pill wording where applicable). */
+function getNgRoomTypeBadgeLabel(
+  roomType: string | null | undefined,
+  isTvWall: boolean,
+): string | null {
+  if (isTvWall || roomType === 'tv_wall') return 'TV Wall';
+  switch (roomType) {
+    case 'wall_styling':
+      return 'Wall idea';
+    case 'living_room':
+      return 'Living Room';
+    case 'bedroom':
+      return 'Bedroom';
+    case 'dining':
+      return 'Dining';
+    case 'office':
+      return 'Home Office';
+    default:
+      if (!roomType) return null;
+      return roomType
+        .split('_')
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ');
+  }
+}
+
 function formatViewCount(count: number): string {
   if (count < 1000) return count === 1 ? '1 view' : `${count} views`;
   if (count < 10000) return `${(count / 1000).toFixed(1)}k views`;
@@ -31,7 +57,9 @@ export default function ExploreSceneCard({
   const showBadgeOrViews = !isTvWall && (catalogProductCount > 0 || viewCount > 0);
   const viewText = formatViewCount(viewCount);
   const viewLabel = isTrending ? `🔥 Trending: ${viewText}` : viewText;
-  const isWallStyling = scene.room_type === 'wall_styling';
+  const isNigeriaScene = scene.location === 'NG';
+  const roomTypeBadgeLabel =
+    isNigeriaScene ? getNgRoomTypeBadgeLabel(scene.room_type, isTvWall) : null;
 
   return (
     <button
@@ -47,14 +75,9 @@ export default function ExploreSceneCard({
         />
       </div>
       <div className="p-4">
-        {isTvWall && (
+        {roomTypeBadgeLabel && (
           <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 text-[11px] font-medium px-2 py-0.5 mb-1">
-            TV Wall
-          </span>
-        )}
-        {!isTvWall && isWallStyling && (
-          <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 text-[11px] font-medium px-2 py-0.5 mb-1">
-            Wall idea
+            {roomTypeBadgeLabel}
           </span>
         )}
         <h3 className="text-xl md:text-2xl font-bold text-[#111111] mb-2 line-clamp-2">{scene.title}</h3>
