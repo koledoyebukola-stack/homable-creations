@@ -225,6 +225,8 @@ export interface VendorProductAttributesRow {
 /** Catalog product with optional 1:1 attribute row when queries join `vendor_product_attributes`. */
 export interface VendorProductWithAttributes extends VendorProduct {
   vendor_product_attributes?: VendorProductAttributesRow | null;
+  /** Set by `find_similar_vendor_products` / `getSimilarProducts` for ordering or display. */
+  match_score?: number;
 }
 
 // Explore: curated room inspirations (Nigeria)

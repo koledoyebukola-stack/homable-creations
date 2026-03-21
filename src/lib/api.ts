@@ -2331,6 +2331,57 @@ export async function getProductsByAttributes(
   });
 }
 
+/** Row from find_similar_vendor_products RPC (extends match_vendor_products_by_attributes + match_score). */
+type FindSimilarVendorProductsRpcRow = MatchVendorProductsByAttributesRpcRow & {
+  match_score: number;
+};
+
+/**
+ * Find vendor products similar to `productId` using that product's attributes (relaxed fallback in RPC).
+ * Only considers products with attribute rows and active storefronts. Returns [] if no source attributes or on error.
+ */
+export async function getSimilarProducts(
+  productId: string,
+  options?: { limit?: number; offset?: number }
+): Promise<VendorProductWithAttributes[]> {
+  const id = productId.trim();
+  if (!id) {
+    return [];
+  }
+
+  const { data, error } = await supabase.rpc('find_similar_vendor_products', {
+    p_product_id: id,
+    p_limit: options?.limit ?? 6,
+    p_offset: options?.offset ?? 0,
+  });
+
+  if (error) {
+    console.error('getSimilarProducts RPC failed:', error);
+    return [];
+  }
+
+  const rows = (data || []) as FindSimilarVendorProductsRpcRow[];
+  return rows.map((row) => {
+    const {
+      attributes: attrDoc,
+      attributes_created_at,
+      attributes_updated_at,
+      match_score: score,
+      ...productFields
+    } = row;
+    return {
+      ...(productFields as VendorProduct),
+      match_score: score,
+      vendor_product_attributes: {
+        vendor_product_id: row.id,
+        attributes: attrDoc,
+        created_at: attributes_created_at,
+        updated_at: attributes_updated_at,
+      },
+    };
+  });
+}
+
 /** WhatsApp redirect event row from analytics (metadata has product_id, vendor_id, from_scene_slug). */
 export interface WhatsAppRedirectProductEvent {
   id: string;
