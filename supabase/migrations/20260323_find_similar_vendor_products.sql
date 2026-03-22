@@ -46,6 +46,9 @@ DECLARE
   c5 jsonb;
   lim int;
   off int;
+  chosen jsonb;
+  fallback jsonb;
+  cnt bigint;
 BEGIN
   SELECT vpa.attributes INTO src
   FROM public.vendor_product_attributes vpa
@@ -97,240 +100,130 @@ BEGIN
     c5 := '{}'::jsonb;
   END IF;
 
-  -- Tier 1: all available among the five keys
-  IF EXISTS (
-    SELECT 1
+  chosen := NULL;
+  fallback := NULL;
+
+  -- Walk strict → loose: pick first tier with >= 3 matches; else keep updating fallback to loosest tier with any match.
+  SELECT COUNT(*) INTO cnt
+  FROM public.vendor_products vp
+  INNER JOIN public.vendor_product_attributes vpa ON vpa.vendor_product_id = vp.id
+  INNER JOIN public.storefronts sf ON sf.id = vp.storefront_id AND sf.status = 'active'
+  WHERE vp.id <> p_product_id
+    AND vpa.attributes @> c1;
+  IF cnt >= 3 THEN
+    chosen := c1;
+  ELSIF cnt > 0 THEN
+    fallback := c1;
+  END IF;
+
+  IF chosen IS NULL AND c2 IS DISTINCT FROM c1 AND c2 <> '{}'::jsonb THEN
+    SELECT COUNT(*) INTO cnt
     FROM public.vendor_products vp
     INNER JOIN public.vendor_product_attributes vpa ON vpa.vendor_product_id = vp.id
     INNER JOIN public.storefronts sf ON sf.id = vp.storefront_id AND sf.status = 'active'
     WHERE vp.id <> p_product_id
-      AND vpa.attributes @> c1
-  ) THEN
-    RETURN QUERY
-    SELECT
-      vp.id,
-      vp.storefront_id,
-      vp.slug,
-      vp.name,
-      vp.category,
-      vp.room,
-      vp.material,
-      vp.dimension_width,
-      vp.dimension_height,
-      vp.dimension_unit,
-      vp.price_min,
-      vp.price_max,
-      vp.currency,
-      vp.image_url,
-      vp.image_urls,
-      vp.sort_order,
-      vp.created_at,
-      vp.updated_at,
-      vpa.attributes,
-      vpa.created_at,
-      vpa.updated_at,
-      (SELECT count(*)::int FROM jsonb_object_keys(c1)) AS match_score
+      AND vpa.attributes @> c2;
+    IF cnt >= 3 THEN
+      chosen := c2;
+    ELSIF cnt > 0 THEN
+      fallback := c2;
+    END IF;
+  END IF;
+
+  IF chosen IS NULL AND c3 IS DISTINCT FROM c2 AND c3 <> '{}'::jsonb THEN
+    SELECT COUNT(*) INTO cnt
     FROM public.vendor_products vp
     INNER JOIN public.vendor_product_attributes vpa ON vpa.vendor_product_id = vp.id
     INNER JOIN public.storefronts sf ON sf.id = vp.storefront_id AND sf.status = 'active'
     WHERE vp.id <> p_product_id
-      AND vpa.attributes @> c1
-    ORDER BY (SELECT count(*)::int FROM jsonb_object_keys(c1)) DESC, vp.price_min ASC NULLS LAST
-    LIMIT lim OFFSET off;
-    RETURN;
-  END IF;
-
-  -- Tier 2: drop style
-  IF c2 IS DISTINCT FROM c1 AND c2 <> '{}'::jsonb THEN
-    IF EXISTS (
-      SELECT 1
-      FROM public.vendor_products vp
-      INNER JOIN public.vendor_product_attributes vpa ON vpa.vendor_product_id = vp.id
-      INNER JOIN public.storefronts sf ON sf.id = vp.storefront_id AND sf.status = 'active'
-      WHERE vp.id <> p_product_id
-        AND vpa.attributes @> c2
-    ) THEN
-      RETURN QUERY
-      SELECT
-        vp.id,
-        vp.storefront_id,
-        vp.slug,
-        vp.name,
-        vp.category,
-        vp.room,
-        vp.material,
-        vp.dimension_width,
-        vp.dimension_height,
-        vp.dimension_unit,
-        vp.price_min,
-        vp.price_max,
-        vp.currency,
-        vp.image_url,
-        vp.image_urls,
-        vp.sort_order,
-        vp.created_at,
-        vp.updated_at,
-        vpa.attributes,
-        vpa.created_at,
-        vpa.updated_at,
-        (SELECT count(*)::int FROM jsonb_object_keys(c2)) AS match_score
-      FROM public.vendor_products vp
-      INNER JOIN public.vendor_product_attributes vpa ON vpa.vendor_product_id = vp.id
-      INNER JOIN public.storefronts sf ON sf.id = vp.storefront_id AND sf.status = 'active'
-      WHERE vp.id <> p_product_id
-        AND vpa.attributes @> c2
-      ORDER BY (SELECT count(*)::int FROM jsonb_object_keys(c2)) DESC, vp.price_min ASC NULLS LAST
-      LIMIT lim OFFSET off;
-      RETURN;
+      AND vpa.attributes @> c3;
+    IF cnt >= 3 THEN
+      chosen := c3;
+    ELSIF cnt > 0 THEN
+      fallback := c3;
     END IF;
   END IF;
 
-  -- Tier 3: drop seating_material
-  IF c3 IS DISTINCT FROM c2 AND c3 <> '{}'::jsonb THEN
-    IF EXISTS (
-      SELECT 1
-      FROM public.vendor_products vp
-      INNER JOIN public.vendor_product_attributes vpa ON vpa.vendor_product_id = vp.id
-      INNER JOIN public.storefronts sf ON sf.id = vp.storefront_id AND sf.status = 'active'
-      WHERE vp.id <> p_product_id
-        AND vpa.attributes @> c3
-    ) THEN
-      RETURN QUERY
-      SELECT
-        vp.id,
-        vp.storefront_id,
-        vp.slug,
-        vp.name,
-        vp.category,
-        vp.room,
-        vp.material,
-        vp.dimension_width,
-        vp.dimension_height,
-        vp.dimension_unit,
-        vp.price_min,
-        vp.price_max,
-        vp.currency,
-        vp.image_url,
-        vp.image_urls,
-        vp.sort_order,
-        vp.created_at,
-        vp.updated_at,
-        vpa.attributes,
-        vpa.created_at,
-        vpa.updated_at,
-        (SELECT count(*)::int FROM jsonb_object_keys(c3)) AS match_score
-      FROM public.vendor_products vp
-      INNER JOIN public.vendor_product_attributes vpa ON vpa.vendor_product_id = vp.id
-      INNER JOIN public.storefronts sf ON sf.id = vp.storefront_id AND sf.status = 'active'
-      WHERE vp.id <> p_product_id
-        AND vpa.attributes @> c3
-      ORDER BY (SELECT count(*)::int FROM jsonb_object_keys(c3)) DESC, vp.price_min ASC NULLS LAST
-      LIMIT lim OFFSET off;
-      RETURN;
+  IF chosen IS NULL AND c4 <> '{}'::jsonb AND c4 IS DISTINCT FROM c3 THEN
+    SELECT COUNT(*) INTO cnt
+    FROM public.vendor_products vp
+    INNER JOIN public.vendor_product_attributes vpa ON vpa.vendor_product_id = vp.id
+    INNER JOIN public.storefronts sf ON sf.id = vp.storefront_id AND sf.status = 'active'
+    WHERE vp.id <> p_product_id
+      AND vpa.attributes @> c4;
+    IF cnt >= 3 THEN
+      chosen := c4;
+    ELSIF cnt > 0 THEN
+      fallback := c4;
     END IF;
   END IF;
 
-  -- Tier 4: seating_type + color_family only
-  IF c4 <> '{}'::jsonb AND c4 IS DISTINCT FROM c3 THEN
-    IF EXISTS (
-      SELECT 1
-      FROM public.vendor_products vp
-      INNER JOIN public.vendor_product_attributes vpa ON vpa.vendor_product_id = vp.id
-      INNER JOIN public.storefronts sf ON sf.id = vp.storefront_id AND sf.status = 'active'
-      WHERE vp.id <> p_product_id
-        AND vpa.attributes @> c4
-    ) THEN
-      RETURN QUERY
-      SELECT
-        vp.id,
-        vp.storefront_id,
-        vp.slug,
-        vp.name,
-        vp.category,
-        vp.room,
-        vp.material,
-        vp.dimension_width,
-        vp.dimension_height,
-        vp.dimension_unit,
-        vp.price_min,
-        vp.price_max,
-        vp.currency,
-        vp.image_url,
-        vp.image_urls,
-        vp.sort_order,
-        vp.created_at,
-        vp.updated_at,
-        vpa.attributes,
-        vpa.created_at,
-        vpa.updated_at,
-        (SELECT count(*)::int FROM jsonb_object_keys(c4)) AS match_score
-      FROM public.vendor_products vp
-      INNER JOIN public.vendor_product_attributes vpa ON vpa.vendor_product_id = vp.id
-      INNER JOIN public.storefronts sf ON sf.id = vp.storefront_id AND sf.status = 'active'
-      WHERE vp.id <> p_product_id
-        AND vpa.attributes @> c4
-      ORDER BY (SELECT count(*)::int FROM jsonb_object_keys(c4)) DESC, vp.price_min ASC NULLS LAST
-      LIMIT lim OFFSET off;
-      RETURN;
-    END IF;
-  END IF;
-
-  -- Tier 5: seating_type only (skip if same criteria as an earlier tier)
-  IF c5 <> '{}'::jsonb
+  IF chosen IS NULL
+     AND c5 <> '{}'::jsonb
      AND c5 IS DISTINCT FROM c4
      AND c5 IS DISTINCT FROM c3
      AND c5 IS DISTINCT FROM c2
      AND c5 IS DISTINCT FROM c1
   THEN
-    IF EXISTS (
-      SELECT 1
-      FROM public.vendor_products vp
-      INNER JOIN public.vendor_product_attributes vpa ON vpa.vendor_product_id = vp.id
-      INNER JOIN public.storefronts sf ON sf.id = vp.storefront_id AND sf.status = 'active'
-      WHERE vp.id <> p_product_id
-        AND vpa.attributes @> c5
-    ) THEN
-      RETURN QUERY
-      SELECT
-        vp.id,
-        vp.storefront_id,
-        vp.slug,
-        vp.name,
-        vp.category,
-        vp.room,
-        vp.material,
-        vp.dimension_width,
-        vp.dimension_height,
-        vp.dimension_unit,
-        vp.price_min,
-        vp.price_max,
-        vp.currency,
-        vp.image_url,
-        vp.image_urls,
-        vp.sort_order,
-        vp.created_at,
-        vp.updated_at,
-        vpa.attributes,
-        vpa.created_at,
-        vpa.updated_at,
-        (SELECT count(*)::int FROM jsonb_object_keys(c5)) AS match_score
-      FROM public.vendor_products vp
-      INNER JOIN public.vendor_product_attributes vpa ON vpa.vendor_product_id = vp.id
-      INNER JOIN public.storefronts sf ON sf.id = vp.storefront_id AND sf.status = 'active'
-      WHERE vp.id <> p_product_id
-        AND vpa.attributes @> c5
-      ORDER BY (SELECT count(*)::int FROM jsonb_object_keys(c5)) DESC, vp.price_min ASC NULLS LAST
-      LIMIT lim OFFSET off;
-      RETURN;
+    SELECT COUNT(*) INTO cnt
+    FROM public.vendor_products vp
+    INNER JOIN public.vendor_product_attributes vpa ON vpa.vendor_product_id = vp.id
+    INNER JOIN public.storefronts sf ON sf.id = vp.storefront_id AND sf.status = 'active'
+    WHERE vp.id <> p_product_id
+      AND vpa.attributes @> c5;
+    IF cnt >= 3 THEN
+      chosen := c5;
+    ELSIF cnt > 0 THEN
+      fallback := c5;
     END IF;
   END IF;
+
+  IF chosen IS NULL THEN
+    chosen := fallback;
+  END IF;
+
+  IF chosen IS NULL OR chosen = '{}'::jsonb THEN
+    RETURN;
+  END IF;
+
+  RETURN QUERY
+  SELECT
+    vp.id,
+    vp.storefront_id,
+    vp.slug,
+    vp.name,
+    vp.category,
+    vp.room,
+    vp.material,
+    vp.dimension_width,
+    vp.dimension_height,
+    vp.dimension_unit,
+    vp.price_min,
+    vp.price_max,
+    vp.currency,
+    vp.image_url,
+    vp.image_urls,
+    vp.sort_order,
+    vp.created_at,
+    vp.updated_at,
+    vpa.attributes,
+    vpa.created_at,
+    vpa.updated_at,
+    (SELECT count(*)::int FROM jsonb_object_keys(chosen)) AS match_score
+  FROM public.vendor_products vp
+  INNER JOIN public.vendor_product_attributes vpa ON vpa.vendor_product_id = vp.id
+  INNER JOIN public.storefronts sf ON sf.id = vp.storefront_id AND sf.status = 'active'
+  WHERE vp.id <> p_product_id
+    AND vpa.attributes @> chosen
+  ORDER BY (SELECT count(*)::int FROM jsonb_object_keys(chosen)) DESC, vp.price_min ASC NULLS LAST
+  LIMIT lim OFFSET off;
 
   RETURN;
 END;
 $$;
 
 COMMENT ON FUNCTION public.find_similar_vendor_products(uuid, integer, integer) IS
-  'Similar products by relaxed JSONB containment on attributes; match_score = key count in winning criteria; active storefronts only.';
+  'Similar products by JSONB containment; relaxes tiers until >=3 matches (count before LIMIT), else uses loosest tier with any match; match_score = key count in chosen criteria; active storefronts only.';
 
 GRANT EXECUTE ON FUNCTION public.find_similar_vendor_products(uuid, integer, integer)
   TO anon, authenticated;
