@@ -82,7 +82,7 @@ const HERO_CAROUSEL_IMAGES = [
 ];
 
 const HERO_DESCRIPTION_NG =
-  "See exactly what your space will cost, find verified vendors, and get everything in one place — no back and forth, no guesswork.";
+  "See exactly what your space will cost, find verified vendors, and get everything in one place. No back and forth. No guesswork.";
 const HERO_DESCRIPTION_CA =
   "Explore our curated room inspirations or upload any room photo and we'll identify every piece in it. Each item is matched to real products from trusted Canadian retailers so you see exactly what the room costs and can shop it all in one place.";
 const HERO_DESCRIPTION_DEFAULT =
