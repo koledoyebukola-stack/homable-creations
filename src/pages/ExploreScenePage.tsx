@@ -1316,25 +1316,25 @@ export default function ExploreScenePage() {
                     if (!product) return null;
                     const dimensions = formatVendorDimensions(product);
                     const isSeating = product.category === 'seating';
-                    const similarSlot = seatingSimilarByItemId[item.id];
-                    const showSimilarSkeleton =
-                      isSeating &&
-                      !!item.vendor_product_id &&
-                      isNigeriaScene &&
-                      similarSlot?.status === 'loading';
-                    const showSimilarCarousel =
-                      isSeating &&
-                      !!item.vendor_product_id &&
-                      isNigeriaScene &&
-                      similarSlot?.status === 'ready' &&
-                      similarSlot.rows.length > 0;
-
                     return (
-                      <div key={item.id} className="contents">
-                        <div
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => {
+                      <div
+                        key={item.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
+                          trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
+                            product_id: product.id,
+                            product_name: product.name,
+                            vendor_id: item.storefront?.id ?? undefined,
+                            explore_scene_id: scene.id,
+                          });
+                          navigate(
+                            `/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
+                          );
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
                             trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
                               product_id: product.id,
                               product_name: product.name,
@@ -1344,181 +1344,48 @@ export default function ExploreScenePage() {
                             navigate(
                               `/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
                             );
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
-                                product_id: product.id,
-                                product_name: product.name,
-                                vendor_id: item.storefront?.id ?? undefined,
-                                explore_scene_id: scene.id,
-                              });
-                              navigate(
-                                `/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
-                              );
-                            }
-                          }}
-                          className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer border border-[#e5e5e5] flex flex-col"
-                        >
-                          <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
-                            {product.image_url ? (
-                              <img
-                                src={product.image_url}
-                                alt={product.name}
-                                className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-[#999] text-sm">No image</div>
-                            )}
-                            <div className="absolute top-2 left-2 z-[1]">
-                              <Badge className="bg-gray-900 text-white text-[10px] font-medium border-0 shadow-sm px-2 py-1 rounded-full">
-                                Sold by {item.storefront?.name ? item.storefront.name.split(' ').slice(0, 2).join(' ') : 'vendor'}
-                              </Badge>
+                          }
+                        }}
+                        className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer border border-[#e5e5e5] flex flex-col"
+                      >
+                        <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
+                          {product.image_url ? (
+                            <img
+                              src={product.image_url}
+                              alt={product.name}
+                              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[#999] text-sm">No image</div>
+                          )}
+                          <div className="absolute top-2 left-2">
+                            <Badge className="bg-gray-900 text-white text-[10px] font-medium border-0 shadow-sm px-2 py-1 rounded-full">
+                              Sold by {item.storefront?.name ? item.storefront.name.split(' ').slice(0, 2).join(' ') : 'vendor'}
+                            </Badge>
+                          </div>
+                          {isSeating && (
+                            <div
+                              className="absolute bottom-0 left-0 right-0 z-[1] h-8 flex items-center justify-center text-white text-[13px] font-medium"
+                              style={{ backgroundColor: '#C8860A' }}
+                            >
+                              ✦ Editor&apos;s Pick
                             </div>
-                            {isSeating && (
-                              <div
-                                className="absolute bottom-0 left-0 right-0 z-[1] h-8 flex items-center justify-center text-white text-[13px] font-medium"
-                                style={{ backgroundColor: '#C8860A' }}
-                              >
-                                ✦ Editor&apos;s Pick
-                              </div>
-                            )}
-                          </div>
-                          <div className="px-2.5 pt-2.5 pb-3 md:px-3 md:pt-3">
-                            <h3 className="text-[13px] md:text-sm font-semibold text-gray-900 leading-snug">
-                              {product.name}
-                            </h3>
-                            <p className="text-xs text-gray-600 mt-1">
-                              {formatVendorPrice(product)}
-                            </p>
-                            {dimensions && (
-                              <p className="text-[11px] text-gray-500 mt-0.5">
-                                {dimensions}
-                              </p>
-                            )}
-                            <p className="text-sm text-gray-500 mt-1.5">Tap to view details →</p>
-                          </div>
+                          )}
                         </div>
-
-                        {showSimilarSkeleton && (
-                          <div className="col-span-2 md:col-span-3 mt-2 mb-2">
-                            <div className="flex items-center justify-between mb-2 px-0.5">
-                              <span
-                                className="text-[13px]"
-                                style={{ color: 'hsl(var(--color-text-secondary))' }}
-                              >
-                                Similar options
-                              </span>
-                              <button
-                                type="button"
-                                className="text-[13px] font-medium border-0 bg-transparent p-0 cursor-pointer hover:underline"
-                                style={{ color: 'hsl(var(--color-text-secondary))' }}
-                                onClick={() => navigate('/shops')}
-                              >
-                                See all →
-                              </button>
-                            </div>
-                            <div className="flex gap-3 overflow-x-auto scroll-pills-hide-scrollbar pb-1 -mx-4 px-4 md:mx-0 md:px-0">
-                              {[0, 1, 2].map((sk) => (
-                                <Skeleton
-                                  key={sk}
-                                  className="w-[150px] flex-shrink-0 aspect-[3/4] rounded-2xl"
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {showSimilarCarousel && similarSlot.status === 'ready' && (
-                          <div className="col-span-2 md:col-span-3 mt-2 mb-2">
-                            <div className="flex items-center justify-between mb-2 px-0.5">
-                              <span
-                                className="text-[13px]"
-                                style={{ color: 'hsl(var(--color-text-secondary))' }}
-                              >
-                                Similar options
-                              </span>
-                              <button
-                                type="button"
-                                className="text-[13px] font-medium border-0 bg-transparent p-0 cursor-pointer hover:underline"
-                                style={{ color: 'hsl(var(--color-text-secondary))' }}
-                                onClick={() => navigate('/shops')}
-                              >
-                                See all →
-                              </button>
-                            </div>
-                            <div className="flex gap-3 overflow-x-auto scroll-pills-hide-scrollbar pb-1 -mx-4 px-4 md:mx-0 md:px-0">
-                              {similarSlot.rows.map(({ product: sp, storefront: sf }) => {
-                                const miniDim = formatVendorDimensions(sp);
-                                return (
-                                  <div
-                                    key={sp.id}
-                                    role="button"
-                                    tabIndex={0}
-                                    onClick={() => {
-                                      trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
-                                        product_id: sp.id,
-                                        product_name: sp.name,
-                                        vendor_id: sf?.id,
-                                        explore_scene_id: scene.id,
-                                      });
-                                      navigate(
-                                        `/shops/products/${sp.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
-                                      );
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter' || e.key === ' ') {
-                                        e.preventDefault();
-                                        trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
-                                          product_id: sp.id,
-                                          product_name: sp.name,
-                                          vendor_id: sf?.id,
-                                          explore_scene_id: scene.id,
-                                        });
-                                        navigate(
-                                          `/shops/products/${sp.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
-                                        );
-                                      }
-                                    }}
-                                    className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer border border-[#e5e5e5] flex flex-col flex-shrink-0 w-[150px]"
-                                  >
-                                    <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
-                                      {sp.image_url ? (
-                                        <img
-                                          src={sp.image_url}
-                                          alt={sp.name}
-                                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-                                        />
-                                      ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-[#999] text-[11px]">
-                                          No image
-                                        </div>
-                                      )}
-                                      <div className="absolute top-1.5 left-1.5 z-[1]">
-                                        <Badge className="bg-gray-900 text-white text-[9px] font-medium border-0 shadow-sm px-1.5 py-0.5 rounded-full max-w-[120px] truncate">
-                                          Sold by{' '}
-                                          {sf?.name ? sf.name.split(' ').slice(0, 2).join(' ') : 'vendor'}
-                                        </Badge>
-                                      </div>
-                                    </div>
-                                    <div className="px-2 pt-2 pb-2.5">
-                                      <h4 className="text-[11px] font-semibold text-gray-900 leading-snug line-clamp-2">
-                                        {sp.name}
-                                      </h4>
-                                      <p className="text-[10px] text-gray-600 mt-0.5">
-                                        {formatVendorPrice(sp)}
-                                      </p>
-                                      {miniDim && (
-                                        <p className="text-[9px] text-gray-500 mt-0.5">{miniDim}</p>
-                                      )}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
+                        <div className="px-2.5 pt-2.5 pb-3 md:px-3 md:pt-3">
+                          <h3 className="text-[13px] md:text-sm font-semibold text-gray-900 leading-snug">
+                            {product.name}
+                          </h3>
+                          <p className="text-xs text-gray-600 mt-1">
+                            {formatVendorPrice(product)}
+                          </p>
+                          {dimensions && (
+                            <p className="text-[11px] text-gray-500 mt-0.5">
+                              {dimensions}
+                            </p>
+                          )}
+                          <p className="text-sm text-gray-500 mt-1.5">Tap to view details →</p>
+                        </div>
                       </div>
                     );
                   })}
@@ -1862,6 +1729,144 @@ export default function ExploreScenePage() {
             </ul>
           </section>
         )}
+
+        {/* Nigerian only: Explore Similar Options — attribute-based matches for seating (after Shop This Look, before More Options) */}
+        {isNigeriaScene &&
+          scene.room_type !== 'tv_wall' &&
+          (() => {
+            const exploreSimilarSeatingItems = furnitureItems.filter(
+              (i) => i.vendor_product?.category === 'seating' && !!i.vendor_product_id,
+            );
+            const hasAnySimilarProducts = exploreSimilarSeatingItems.some((i) => {
+              const s = seatingSimilarByItemId[i.id];
+              return s?.status === 'ready' && s.rows.length > 0;
+            });
+            if (!hasAnySimilarProducts) return null;
+            return (
+              <section className="mb-10">
+                <h2 className="text-xl font-semibold text-[#111111] mb-2">Explore Similar Options</h2>
+                <p className="text-sm text-gray-600 mb-6">Based on items in this room</p>
+                <div className="space-y-8">
+                  {exploreSimilarSeatingItems.map((item) => {
+                    const product = item.vendor_product;
+                    if (!product) return null;
+                    const slot = seatingSimilarByItemId[item.id];
+                    if (slot?.status === 'loading') {
+                      return (
+                        <div key={item.id}>
+                          <h3
+                            className="text-sm font-medium mb-3"
+                            style={{ color: 'hsl(var(--foreground))' }}
+                          >
+                            Similar to {product.name}
+                          </h3>
+                          <div className="flex gap-3 overflow-x-auto scroll-pills-hide-scrollbar pb-1 -mx-4 px-4 md:mx-0 md:px-0">
+                            {[0, 1, 2].map((sk) => (
+                              <Skeleton
+                                key={sk}
+                                className="w-[150px] flex-shrink-0 aspect-[3/4] rounded-2xl"
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+                    if (slot?.status === 'ready' && slot.rows.length > 0) {
+                      return (
+                        <div key={item.id}>
+                          <h3
+                            className="text-sm font-medium mb-3"
+                            style={{ color: 'hsl(var(--foreground))' }}
+                          >
+                            Similar to {product.name}
+                          </h3>
+                          <div className="flex gap-3 overflow-x-auto scroll-pills-hide-scrollbar pb-1 -mx-4 px-4 md:mx-0 md:px-0">
+                            {slot.rows.map(({ product: sp, storefront: sf }) => {
+                              const miniDim = formatVendorDimensions(sp);
+                              return (
+                                <div
+                                  key={sp.id}
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={() => {
+                                    trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
+                                      product_id: sp.id,
+                                      product_name: sp.name,
+                                      vendor_id: sf?.id,
+                                      explore_scene_id: scene.id,
+                                    });
+                                    navigate(
+                                      `/shops/products/${sp.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
+                                    );
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
+                                        product_id: sp.id,
+                                        product_name: sp.name,
+                                        vendor_id: sf?.id,
+                                        explore_scene_id: scene.id,
+                                      });
+                                      navigate(
+                                        `/shops/products/${sp.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
+                                      );
+                                    }
+                                  }}
+                                  className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer border border-[#e5e5e5] flex flex-col flex-shrink-0 w-[150px]"
+                                >
+                                  <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
+                                    {sp.image_url ? (
+                                      <img
+                                        src={sp.image_url}
+                                        alt={sp.name}
+                                        className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                                      />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center text-[#999] text-[11px]">
+                                        No image
+                                      </div>
+                                    )}
+                                    <div className="absolute top-1.5 left-1.5 z-[1]">
+                                      <Badge className="bg-gray-900 text-white text-[9px] font-medium border-0 shadow-sm px-1.5 py-0.5 rounded-full max-w-[120px] truncate">
+                                        Sold by{' '}
+                                        {sf?.name ? sf.name.split(' ').slice(0, 2).join(' ') : 'vendor'}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                  <div className="px-2 pt-2 pb-2.5">
+                                    <h4 className="text-[11px] font-semibold text-gray-900 leading-snug line-clamp-2">
+                                      {sp.name}
+                                    </h4>
+                                    <p className="text-[10px] text-gray-600 mt-0.5">
+                                      {formatVendorPrice(sp)}
+                                    </p>
+                                    {miniDim && (
+                                      <p className="text-[9px] text-gray-500 mt-0.5">{miniDim}</p>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+                <div className="mt-6">
+                  <button
+                    type="button"
+                    className="text-sm font-medium border-0 bg-transparent p-0 cursor-pointer hover:underline text-[#111111]"
+                    onClick={() => navigate('/shops')}
+                  >
+                    See all →
+                  </button>
+                </div>
+              </section>
+            );
+          })()}
 
         {/* Nigerian only: More Options to Love — category carousels (≥3 products per category) */}
         {isNigeriaScene && moreOptionsSections.length > 0 && (
