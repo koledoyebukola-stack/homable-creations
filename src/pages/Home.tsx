@@ -82,7 +82,7 @@ const HERO_CAROUSEL_IMAGES = [
 ];
 
 const HERO_DESCRIPTION_NG =
-  'Turn decor inspiration into a clear plan. Explore curated styles to get an instant shopping list, and invite friends and family to help finish the room.';
+  "See exactly what your space will cost, find verified vendors, and get everything in one place — no back and forth, no guesswork.";
 const HERO_DESCRIPTION_CA =
   "Explore our curated room inspirations or upload any room photo and we'll identify every piece in it. Each item is matched to real products from trusted Canadian retailers so you see exactly what the room costs and can shop it all in one place.";
 const HERO_DESCRIPTION_DEFAULT =
@@ -281,7 +281,9 @@ export default function Home() {
           {/* Left: heading, subtitle, CTAs — vertically centered with carousel on desktop, text left-aligned */}
           <div className="md:max-w-[480px] md:flex md:flex-col md:justify-center">
             <h1 className={`font-bold text-[#111111] leading-tight text-center md:text-left mb-3 ${country === 'NG' ? 'text-3xl md:text-4xl lg:text-5xl' : 'text-4xl md:text-5xl lg:text-6xl'}`}>
-              {country === 'NG' ? 'From inspiration to execution. Built for Nigeria.' : 'From inspiration to execution'}
+              {country === 'NG'
+                ? "Setting up your home in Nigeria shouldn't be this hard."
+                : 'From inspiration to execution'}
             </h1>
             <p className="text-lg md:text-xl text-[#555555] text-center md:text-left mb-10">
               {country === 'NG'
@@ -300,14 +302,14 @@ export default function Home() {
                     onClick={() => exploreSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}
                     className="w-full md:flex-1 h-[56px] md:h-[60px] flex items-center justify-center rounded-xl bg-[#000000] text-white text-base md:text-[18px] font-semibold hover:bg-[#1a1a1a] hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-all duration-200"
                   >
-                    Shop Curated Rooms
+                    Show me ideas & costs
                   </button>
                   <button
                     type="button"
                     onClick={() => browseSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}
                     className="w-full md:flex-1 h-12 md:h-[60px] flex items-center justify-center rounded-xl bg-white text-black text-[15px] md:text-base font-medium border-[1.5px] border-[#e0e0e0] hover:border-black hover:bg-[#fafafa] transition-colors"
                   >
-                    Browse Local Products
+                    Browse local products
                   </button>
                   {/* TEMP: Hidden for Nigerian launch - re-enable once supply is sufficient (50+ vendors) */}
                   {SHOW_UPLOAD_INSPIRATION_FOR_NIGERIA && (
@@ -407,11 +409,13 @@ export default function Home() {
         >
           <div className="max-w-6xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-center text-[#111111] mb-2">
-              Shop Curated Rooms
+              Home Setup Ideas & Costs
             </h2>
             <p className="text-center text-[#555555] text-lg mb-6 md:mb-8 max-w-2xl mx-auto">
-              <span className="font-semibold text-teal-800 underline decoration-2 underline-offset-2 decoration-teal-300/90">Recreate real Nigerian rooms</span>
-              {' '}with a clear budget and locally sourced pieces
+              <span className="font-semibold text-teal-800 underline decoration-2 underline-offset-2 decoration-teal-300/90">
+                Real Nigerian homes
+              </span>
+              , real prices, real vendors. Click any space to see exactly what&apos;s in it, what it costs, and how to set it up.
             </p>
 
             {/* Category filters */}
