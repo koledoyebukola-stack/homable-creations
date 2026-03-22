@@ -38,7 +38,21 @@ import type {
   Checklist,
 } from '@/lib/types';
 import type { User } from '@supabase/supabase-js';
-import { ExternalLink, ShoppingBag, Wrench, Instagram, ListChecks, Upload, ChevronDown, ChevronUp, Store, MessageCircle, Gift, Bookmark } from 'lucide-react';
+import {
+  ExternalLink,
+  ShoppingBag,
+  Wrench,
+  Instagram,
+  ListChecks,
+  Upload,
+  ChevronDown,
+  ChevronUp,
+  Store,
+  MessageCircle,
+  Gift,
+  Bookmark,
+  ShieldCheck,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 function formatNgn(value: number): string {
@@ -1302,10 +1316,21 @@ export default function ExploreScenePage() {
         {/* Section A: Available on Homable — grouped by vendor_type: Furniture (carpenter) then Decorative Items (decor_store) */}
         {!isCanadaScene && catalogItems.length > 0 && (
           <section className="mb-10">
-            <h3 className="text-lg font-semibold text-[#111111] mb-4 flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5" />
-              Shop This Look on Homable
-            </h3>
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-[#111111] flex items-center gap-2">
+                <ShoppingBag className="w-5 h-5" />
+                Shop This Look on Homable
+              </h3>
+              {isNigeriaScene && scene.room_type !== 'tv_wall' && (
+                <p
+                  className="flex items-center gap-1 mt-2 text-[13px] font-normal"
+                  style={{ color: 'hsl(var(--color-text-secondary))' }}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 shrink-0" style={{ color: '#C8860A' }} aria-hidden />
+                  Handpicked by the Homable team
+                </p>
+              )}
+            </div>
 
             {furnitureItems.length > 0 && (
               <div className="mb-8">
@@ -1315,7 +1340,6 @@ export default function ExploreScenePage() {
                     const product = item.vendor_product;
                     if (!product) return null;
                     const dimensions = formatVendorDimensions(product);
-                    const isSeating = product.category === 'seating';
                     return (
                       <div
                         key={item.id}
@@ -1363,14 +1387,6 @@ export default function ExploreScenePage() {
                               Sold by {item.storefront?.name ? item.storefront.name.split(' ').slice(0, 2).join(' ') : 'vendor'}
                             </Badge>
                           </div>
-                          {isSeating && (
-                            <div
-                              className="absolute bottom-0 left-0 right-0 z-[1] h-8 flex items-center justify-center text-white text-[13px] font-medium"
-                              style={{ backgroundColor: '#C8860A' }}
-                            >
-                              ✦ Editor&apos;s Pick
-                            </div>
-                          )}
                         </div>
                         <div className="px-2.5 pt-2.5 pb-3 md:px-3 md:pt-3">
                           <h3 className="text-[13px] md:text-sm font-semibold text-gray-900 leading-snug">
