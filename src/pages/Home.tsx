@@ -331,6 +331,8 @@ export default function Home() {
     window.setTimeout(() => {
       try {
         target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+        // Force a re-render shortly after scrolling so `open` recomputes with updated viewport.
+        window.setTimeout(() => setViewportSig((v) => v + 1), 350);
       } catch {
         // Ignore scroll failures (best-effort).
       }
