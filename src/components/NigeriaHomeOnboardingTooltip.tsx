@@ -20,25 +20,6 @@ export default function NigeriaHomeOnboardingTooltip({
   onNext: () => void;
   onDismiss: () => void;
 }) {
-  // Temporary debug to confirm the tooltip mounts and what's controlling its visibility.
-  // eslint-disable-next-line no-console
-  console.log('[HB onboarding tooltip] render', {
-    open,
-    step,
-    hasTarget: !!targetEl,
-    targetTag: targetEl?.tagName,
-    targetRect: targetEl
-      ? {
-          top: targetEl.getBoundingClientRect().top,
-          bottom: targetEl.getBoundingClientRect().bottom,
-          left: targetEl.getBoundingClientRect().left,
-          right: targetEl.getBoundingClientRect().right,
-          width: targetEl.getBoundingClientRect().width,
-          height: targetEl.getBoundingClientRect().height,
-        }
-      : null,
-    inner: { w: window.innerWidth, h: window.innerHeight },
-  });
   const cardRef = useRef<HTMLDivElement | null>(null);
   const [pos, setPos] = useState<{
     top: number;
@@ -55,7 +36,8 @@ export default function NigeriaHomeOnboardingTooltip({
   useLayoutEffect(() => {
     if (!open || !targetEl) return;
 
-    let raf = 0;
+    let raf1 = 0;
+    let raf2 = 0;
     const compute = () => {
       const t = targetEl.getBoundingClientRect();
       const card = cardRef.current?.getBoundingClientRect();
@@ -86,8 +68,14 @@ export default function NigeriaHomeOnboardingTooltip({
       });
     };
 
-    raf = window.requestAnimationFrame(compute);
-    return () => window.cancelAnimationFrame(raf);
+    // Double rAF: measure after scroll/layout has settled following `open` becoming true.
+    raf1 = window.requestAnimationFrame(() => {
+      raf2 = window.requestAnimationFrame(compute);
+    });
+    return () => {
+      window.cancelAnimationFrame(raf1);
+      window.cancelAnimationFrame(raf2);
+    };
   }, [open, targetEl, step, text, showNext]);
 
   useEffect(() => {

@@ -151,19 +151,12 @@ export default function Home() {
   type WalkthroughStep = 1 | 2 | 3;
   const [walkthroughStep, setWalkthroughStep] = useState<WalkthroughStep | null>(null);
   const isPowerUserRef = useRef(false);
-  const [isPowerUser, setIsPowerUser] = useState(false);
 
-  const [isMobile, setIsMobile] = useState(false);
-  const [viewportSig, setViewportSig] = useState(0);
+  const [onboardingTooltipOpen, setOnboardingTooltipOpen] = useState(false);
   const [step1ShowNext, setStep1ShowNext] = useState(false);
   const [step2ShowNext, setStep2ShowNext] = useState(false);
 
   const step3TimerRef = useRef<number | null>(null);
-  const hasAutoScrolledForStepRef = useRef<Record<WalkthroughStep, boolean>>({
-    1: false,
-    2: false,
-    3: false,
-  });
 
   const HB_ONBOARDING_DONE_KEY = 'hb_onboarding_done';
   const HB_ONBOARDING_STEP_KEY = 'hb_onboarding_step';
@@ -185,30 +178,6 @@ export default function Home() {
       if (!isNaN(y)) window.scrollTo(0, y);
       sessionStorage.removeItem('home_explore_scroll');
     }
-  }, []);
-
-  const isElementVisibleInViewport = useCallback((el: HTMLElement | null) => {
-    if (!el) return false;
-    const rect = el.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth;
-  }, []);
-
-  // Keep an always-updated mobile flag for the "only show tooltip when target is visible" rule.
-  useEffect(() => {
-    const media = window.matchMedia('(max-width: 640px)');
-    const update = () => setIsMobile(media.matches);
-    update();
-    // Safari fallback for older listeners.
-    // eslint-disable-next-line deprecation/deprecation
-    media.addEventListener?.('change', update);
-    // eslint-disable-next-line deprecation/deprecation
-    media.addListener?.(update);
-    return () => {
-      // eslint-disable-next-line deprecation/deprecation
-      media.removeEventListener?.('change', update);
-      // eslint-disable-next-line deprecation/deprecation
-      media.removeListener?.(update);
-    };
   }, []);
 
   // Decide whether to start/stop the walkthrough (NG homepage only) and resume from localStorage.
@@ -234,20 +203,9 @@ export default function Home() {
         const powerUser = signedIn && nextVisitCount > 3;
         if (cancelled) return;
         isPowerUserRef.current = powerUser;
-        setIsPowerUser(powerUser);
 
         const doneLocal = safeLocal.getItem(HB_ONBOARDING_DONE_KEY) === '1';
         const doneSession = safeSession.getItem(HB_ONBOARDING_DONE_KEY) === '1';
-
-        // Temporary debug to confirm boot logic runs and sets walkthroughStep.
-        // eslint-disable-next-line no-console
-        console.log('[HB onboarding boot]', {
-          country,
-          switchingToNG,
-          doneLocal,
-          doneSession,
-          rawStep: safeLocal.getItem(HB_ONBOARDING_STEP_KEY),
-        });
 
         if (doneLocal || doneSession) {
           safeLocal.removeItem(HB_ONBOARDING_STEP_KEY);
@@ -268,11 +226,6 @@ export default function Home() {
           // (unless already completed for this session).
           safeLocal.removeItem(HB_ONBOARDING_STEP_KEY);
           setWalkthroughStep(1);
-          // eslint-disable-next-line no-console
-          console.log('[HB onboarding boot] forced step 1', {
-            switchingToNG,
-            switchedMarker,
-          });
           return;
         }
 
@@ -281,8 +234,6 @@ export default function Home() {
         const parsed = rawStep ? Number(rawStep) : 1;
         const step: WalkthroughStep = parsed === 1 || parsed === 2 || parsed === 3 ? parsed : 1;
         setWalkthroughStep(step);
-        // eslint-disable-next-line no-console
-        console.log('[HB onboarding boot] setting step from storage', { step, parsed });
       } catch {
         // Storage might be blocked (privacy mode). Don't break the homepage.
         if (!cancelled) setWalkthroughStep(1);
@@ -311,55 +262,58 @@ export default function Home() {
     window.localStorage.setItem(HB_ONBOARDING_STEP_KEY, String(walkthroughStep));
   }, [country, walkthroughStep]);
 
-  // On mobile: if Step 1/2 target is off-screen, bring it into view so the tooltip can open.
+  // Scroll target into view, wait 500ms, then show tooltip (position uses rect after open in tooltip component).
   useEffect(() => {
-    if (country !== 'NG') return;
-    if (walkthroughStep !== 1 && walkthroughStep !== 2) return;
-    if (!isMobile) return;
+    if (country !== 'NG' || walkthroughStep == null) {
+      setOnboardingTooltipOpen(false);
+      return;
+    }
 
-    const target =
-      walkthroughStep === 1
-        ? step1CtaRef.current
-        : categoryPillRefs.current[String(exploreCategoryFilter)] ?? null;
+    setOnboardingTooltipOpen(false);
 
-    // Only auto-scroll if we haven't done it for this step yet and the target exists.
-    if (!target) return;
-    if (isElementVisibleInViewport(target)) return;
-    if (hasAutoScrolledForStepRef.current[walkthroughStep]) return;
+    let cancelled = false;
+    let revealTimeout: number | null = null;
+    let rafId = 0;
+    let attemptRaf = 0;
+    const maxAttempts = 45;
 
-    hasAutoScrolledForStepRef.current[walkthroughStep] = true;
-    window.setTimeout(() => {
+    const getTarget = (): HTMLElement | null => {
+      if (walkthroughStep === 1) return step1CtaRef.current;
+      if (walkthroughStep === 2) return categoryPillRefs.current[String(exploreCategoryFilter)] ?? null;
+      return step3GridRef.current;
+    };
+
+    const scrollAndReveal = () => {
+      if (cancelled) return;
+      const target = getTarget();
+      if (!target) {
+        if (walkthroughStep === 3 && loadingExplore) return;
+        if (walkthroughStep === 3 && attemptRaf < maxAttempts) {
+          attemptRaf += 1;
+          rafId = window.requestAnimationFrame(scrollAndReveal);
+        }
+        return;
+      }
+
       try {
         target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-        // Force a re-render shortly after scrolling so `open` recomputes with updated viewport.
-        window.setTimeout(() => setViewportSig((v) => v + 1), 350);
       } catch {
-        // Ignore scroll failures (best-effort).
+        // ignore
       }
-    }, 0);
-  }, [country, walkthroughStep, isMobile, exploreCategoryFilter, viewportSig]);
 
-  // Reset per-step auto-scroll flags when changing steps.
-  useEffect(() => {
-    if (walkthroughStep == null) return;
-    hasAutoScrolledForStepRef.current = { 1: false, 2: false, 3: false };
-  }, [walkthroughStep]);
+      revealTimeout = window.setTimeout(() => {
+        if (!cancelled) setOnboardingTooltipOpen(true);
+      }, 500);
+    };
 
-  // Recompute target visibility while the walkthrough is active.
-  useEffect(() => {
-    if (country !== 'NG') return;
-    if (walkthroughStep == null) return;
-
-    const bump = () => setViewportSig((v) => v + 1);
-    window.addEventListener('scroll', bump, { passive: true });
-    window.addEventListener('resize', bump);
-    bump();
+    rafId = window.requestAnimationFrame(scrollAndReveal);
 
     return () => {
-      window.removeEventListener('scroll', bump);
-      window.removeEventListener('resize', bump);
+      cancelled = true;
+      window.cancelAnimationFrame(rafId);
+      if (revealTimeout != null) window.clearTimeout(revealTimeout);
     };
-  }, [country, walkthroughStep]);
+  }, [country, walkthroughStep, exploreCategoryFilter, loadingExplore]);
 
   const completeWalkthrough = useCallback(() => {
     if (step3TimerRef.current != null) {
@@ -377,6 +331,7 @@ export default function Home() {
       // Ignore storage failures and still finish the UI.
     }
     setWalkthroughStep(null);
+    setOnboardingTooltipOpen(false);
     setStep1ShowNext(false);
     setStep2ShowNext(false);
   }, []);
@@ -391,10 +346,6 @@ export default function Home() {
     setWalkthroughStep(3);
     setStep1ShowNext(false);
     setStep2ShowNext(false);
-    // Best-effort: bring the cards grid into view for mobile.
-    window.setTimeout(() => {
-      step3GridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 0);
   }, []);
 
   // Step 1/2: show "Next →" only if the user didn't click/advance within 8 seconds.
@@ -838,17 +789,7 @@ export default function Home() {
 
           {walkthroughStep != null && (
             <NigeriaHomeOnboardingTooltip
-              open={
-                country === 'NG' &&
-                (walkthroughStep === 1
-                  ? !isMobile || isElementVisibleInViewport(step1CtaRef.current)
-                  : walkthroughStep === 2
-                    ? !isMobile ||
-                      isElementVisibleInViewport(
-                        categoryPillRefs.current[String(exploreCategoryFilter)] ?? null,
-                      )
-                    : !isMobile || isElementVisibleInViewport(step3GridRef.current))
-              }
+              open={country === 'NG' && onboardingTooltipOpen}
               step={walkthroughStep}
               targetEl={
                 walkthroughStep === 1
