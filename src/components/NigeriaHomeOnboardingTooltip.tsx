@@ -27,6 +27,17 @@ export default function NigeriaHomeOnboardingTooltip({
     step,
     hasTarget: !!targetEl,
     targetTag: targetEl?.tagName,
+    targetRect: targetEl
+      ? {
+          top: targetEl.getBoundingClientRect().top,
+          bottom: targetEl.getBoundingClientRect().bottom,
+          left: targetEl.getBoundingClientRect().left,
+          right: targetEl.getBoundingClientRect().right,
+          width: targetEl.getBoundingClientRect().width,
+          height: targetEl.getBoundingClientRect().height,
+        }
+      : null,
+    inner: { w: window.innerWidth, h: window.innerHeight },
   });
   const cardRef = useRef<HTMLDivElement | null>(null);
   const [pos, setPos] = useState<{
