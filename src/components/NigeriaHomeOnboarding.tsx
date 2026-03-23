@@ -5,18 +5,18 @@ type Step = 1 | 2 | 3;
 
 const SWIPE_BACK_MIN_PX = 60;
 
-const ROOM_OPTIONS: { label: string; value: ExploreRoomTypeFilter }[] = [
-  { label: 'Living Room', value: 'living_room' },
-  { label: 'Bedroom', value: 'bedroom' },
-  { label: 'Dining Room', value: 'dining' },
-  { label: 'Home Office', value: 'office' },
+const ROOM_OPTIONS: { emoji: string; label: string; value: ExploreRoomTypeFilter }[] = [
+  { emoji: '🛋️', label: 'Living Room', value: 'living_room' },
+  { emoji: '🛏️', label: 'Bedroom', value: 'bedroom' },
+  { emoji: '🍽️', label: 'Dining Room', value: 'dining' },
+  { emoji: '💼', label: 'Home Office', value: 'office' },
 ];
 
-const PRICE_OPTIONS: { label: string; value: ExplorePriceFilter }[] = [
-  { label: 'Under ₦300k', value: 'under_300' },
-  { label: '₦300k to ₦500k', value: '300_500' },
-  { label: '₦500k to ₦1M', value: '500_1000' },
-  { label: 'Over ₦1M', value: '1000_plus' },
+const PRICE_OPTIONS: { emoji: string; label: string; value: ExplorePriceFilter }[] = [
+  { emoji: '🌱', label: 'Under ₦300k', value: 'under_300' },
+  { emoji: '🪑', label: '₦300k to ₦500k', value: '300_500' },
+  { emoji: '🏡', label: '₦500k to ₦1M', value: '500_1000' },
+  { emoji: '💎', label: 'Over ₦1M', value: '1000_plus' },
 ];
 
 export default function NigeriaHomeOnboarding({
@@ -132,7 +132,7 @@ export default function NigeriaHomeOnboarding({
                 className="flex-1 rounded-[2px]"
                 style={{
                   height: 4,
-                  backgroundColor: step >= s ? '#1a1a1a' : '#e0e0e0',
+                  backgroundColor: step >= s ? '#1a7a4a' : '#e0e0e0',
                   minWidth: 0,
                 }}
               />
@@ -142,13 +142,13 @@ export default function NigeriaHomeOnboarding({
           {step === 1 && (
             <>
               <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">
-                What are you setting up?
+                Let&apos;s set up your home
               </h2>
               <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">
-                Pick the space you want to set up first
+                Which space are you working on first?
               </p>
               <div className="mt-5 grid grid-cols-2 gap-2">
-                {ROOM_OPTIONS.map(({ label, value }) => (
+                {ROOM_OPTIONS.map(({ emoji, label, value }) => (
                   <button
                     key={value}
                     type="button"
@@ -164,7 +164,7 @@ export default function NigeriaHomeOnboarding({
                       color: roomSelected(value) ? '#ffffff' : 'hsl(var(--foreground))',
                     }}
                   >
-                    {label}
+                    {emoji} {label}
                   </button>
                 ))}
                 <button
@@ -181,7 +181,7 @@ export default function NigeriaHomeOnboarding({
                     color: roomSelected('all') ? '#ffffff' : 'hsl(var(--foreground))',
                   }}
                 >
-                  Not sure yet
+                  🤷🏾 Not sure yet
                 </button>
               </div>
             </>
@@ -204,7 +204,7 @@ export default function NigeriaHomeOnboarding({
                 We will show you home setup ideas within your range
               </p>
               <div className="mt-5 grid grid-cols-2 gap-2">
-                {PRICE_OPTIONS.map(({ label, value }) => (
+                {PRICE_OPTIONS.map(({ emoji, label, value }) => (
                   <button
                     key={value}
                     type="button"
@@ -220,7 +220,7 @@ export default function NigeriaHomeOnboarding({
                       color: priceSelected(value) ? '#ffffff' : 'hsl(var(--foreground))',
                     }}
                   >
-                    {label}
+                    {emoji} {label}
                   </button>
                 ))}
                 <button
@@ -237,7 +237,7 @@ export default function NigeriaHomeOnboarding({
                     color: priceSelected('all') ? '#ffffff' : 'hsl(var(--foreground))',
                   }}
                 >
-                  Not sure yet
+                  🤷🏾 Not sure yet
                 </button>
               </div>
             </>
@@ -253,7 +253,9 @@ export default function NigeriaHomeOnboarding({
               >
                 ← Back
               </button>
-              <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">You are ready</h2>
+              <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">
+                Perfect. Let&apos;s go
+              </h2>
               <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">
                 Here are home setup ideas matched to your space and budget. Tap any idea to see
                 everything in it and how much it costs.
