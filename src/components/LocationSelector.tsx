@@ -33,6 +33,13 @@ export default function LocationSelector() {
   }, [country]);
 
   const handleLocationSelect = (location: Location) => {
+    if (location.code === 'NG') {
+      try {
+        window.sessionStorage.setItem('hb_ng_switch_to_ng', '1');
+      } catch {
+        // ignore
+      }
+    }
     setCountry(location.code as CountryCode);
   };
 

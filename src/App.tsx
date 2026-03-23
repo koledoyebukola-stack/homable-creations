@@ -141,7 +141,14 @@ function CaptureReferrerAndRoutes() {
               type="button"
               size="lg"
               className="bg-white text-stone-900 hover:bg-gray-100 border-0 w-48"
-              onClick={() => setCountry('NG')}
+              onClick={() => {
+                try {
+                  window.sessionStorage.setItem('hb_ng_switch_to_ng', '1');
+                } catch {
+                  // ignore
+                }
+                setCountry('NG');
+              }}
             >
               <span className="mr-2">🇳🇬</span>
               <span>Switch to Nigeria</span>

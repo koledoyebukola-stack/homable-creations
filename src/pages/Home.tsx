@@ -136,6 +136,7 @@ export default function Home() {
   const [carouselSlide, setCarouselSlide] = useState(0);
   const [exploreSlide, setExploreSlide] = useState(0);
   const { country } = useCountry();
+  const prevCountryRef = useRef<string>(country);
   const [exploreScenes, setExploreScenes] = useState<ExploreScene[]>([]);
   const [loadingExplore, setLoadingExplore] = useState(false);
   const [exploreCategoryFilter, setExploreCategoryFilter] = useState<ExploreRoomTypeFilter>('all');
@@ -162,6 +163,7 @@ export default function Home() {
   const HB_ONBOARDING_DONE_KEY = 'hb_onboarding_done';
   const HB_ONBOARDING_STEP_KEY = 'hb_onboarding_step';
   const HB_NG_HOME_VISITS_KEY = 'hb_ng_home_visit_count';
+  const HB_NG_SWITCH_TRIGGER_KEY = 'hb_ng_switch_to_ng';
 
   const [browseStorefronts, setBrowseStorefronts] = useState<Storefront[]>([]);
   const [browseProducts, setBrowseProducts] = useState<VendorProduct[]>([]);
@@ -209,6 +211,7 @@ export default function Home() {
     if (country !== 'NG') return;
 
     let cancelled = false;
+    const switchingToNG = prevCountryRef.current !== 'NG';
 
     const boot = async () => {
       try {
@@ -237,6 +240,23 @@ export default function Home() {
           return;
         }
 
+        let switchedMarker = false;
+        try {
+          switchedMarker = safeSession.getItem(HB_NG_SWITCH_TRIGGER_KEY) === '1';
+          if (switchedMarker) safeSession.removeItem(HB_NG_SWITCH_TRIGGER_KEY);
+        } catch {
+          // ignore
+        }
+
+        if (switchingToNG || switchedMarker) {
+          // When the user switches into Nigeria, always restart the walkthrough at Step 1
+          // (unless already completed for this session).
+          safeLocal.removeItem(HB_ONBOARDING_STEP_KEY);
+          setWalkthroughStep(1);
+          return;
+        }
+
+        // When landing directly on NG, resume from the last saved step.
         const rawStep = safeLocal.getItem(HB_ONBOARDING_STEP_KEY);
         const parsed = rawStep ? Number(rawStep) : 1;
         const step: WalkthroughStep = parsed === 1 || parsed === 2 || parsed === 3 ? parsed : 1;
@@ -255,6 +275,11 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
+  }, [country]);
+
+  // Track previous country for "switching to NG" detection.
+  useEffect(() => {
+    prevCountryRef.current = country;
   }, [country]);
 
   // Persist the current step so the walkthrough can resume if the user navigates away mid-flow.
