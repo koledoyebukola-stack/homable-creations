@@ -7,7 +7,7 @@ import { getExploreScenes, getActiveStorefrontsByLocation } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import type { ExploreScene, Storefront, VendorProduct } from '@/lib/types';
 import ExploreSceneCard from '@/components/ExploreSceneCard';
-import NigeriaHomeOnboardingTooltip from '@/components/NigeriaHomeOnboardingTooltip';
+import NigeriaHomeOnboarding from '@/components/NigeriaHomeOnboarding';
 import {
   EXPLORE_CATEGORY_PILLS,
   EXPLORE_PRICE_PILLS,
@@ -136,7 +136,6 @@ export default function Home() {
   const [carouselSlide, setCarouselSlide] = useState(0);
   const [exploreSlide, setExploreSlide] = useState(0);
   const { country } = useCountry();
-  const prevCountryRef = useRef<string>(country);
   const [exploreScenes, setExploreScenes] = useState<ExploreScene[]>([]);
   const [loadingExplore, setLoadingExplore] = useState(false);
   const [exploreCategoryFilter, setExploreCategoryFilter] = useState<ExploreRoomTypeFilter>('all');
@@ -144,22 +143,11 @@ export default function Home() {
   const [exploreDisplayCount, setExploreDisplayCount] = useState(6);
   const exploreSectionRef = useRef<HTMLElement | null>(null);
   const browseSectionRef = useRef<HTMLElement | null>(null);
-  const step1CtaRef = useRef<HTMLButtonElement | null>(null);
-  const categoryPillRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const step3GridRef = useRef<HTMLDivElement | null>(null);
 
-  type WalkthroughStep = 1 | 2 | 3;
-  const [walkthroughStep, setWalkthroughStep] = useState<WalkthroughStep | null>(null);
   const isPowerUserRef = useRef(false);
-
-  const [onboardingTooltipOpen, setOnboardingTooltipOpen] = useState(false);
-  const [step1ShowNext, setStep1ShowNext] = useState(false);
-  const [step2ShowNext, setStep2ShowNext] = useState(false);
-
-  const step3TimerRef = useRef<number | null>(null);
+  const [ngOnboardingOpen, setNgOnboardingOpen] = useState(false);
 
   const HB_ONBOARDING_DONE_KEY = 'hb_onboarding_done';
-  const HB_ONBOARDING_STEP_KEY = 'hb_onboarding_step';
   const HB_NG_HOME_VISITS_KEY = 'hb_ng_home_visit_count';
   const HB_NG_SWITCH_TRIGGER_KEY = 'hb_ng_switch_to_ng';
 
@@ -180,219 +168,79 @@ export default function Home() {
     }
   }, []);
 
-  // Decide whether to start/stop the walkthrough (NG homepage only) and resume from localStorage.
+  const markOnboardingDone = useCallback(() => {
+    try {
+      const storage = isPowerUserRef.current ? window.localStorage : window.sessionStorage;
+      storage.setItem(HB_ONBOARDING_DONE_KEY, '1');
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // NG guided onboarding sheet: visit count, power user, delay vs switch flag.
   useEffect(() => {
-    if (country !== 'NG') return;
+    if (country !== 'NG') {
+      setNgOnboardingOpen(false);
+      return;
+    }
 
     let cancelled = false;
-    const switchingToNG = prevCountryRef.current !== 'NG';
+    let delayTimer: number | null = null;
 
     const boot = async () => {
       try {
         const safeLocal = window.localStorage;
         const safeSession = window.sessionStorage;
 
-        // Track "visits" across sessions for the power-user exception.
         const current = Number(safeLocal.getItem(HB_NG_HOME_VISITS_KEY) || '0');
         safeLocal.setItem(HB_NG_HOME_VISITS_KEY, String(current + 1));
-        const nextVisitCount = current + 1;
 
+        const nextVisitCount = current + 1;
         const { data: authData } = await supabase.auth.getUser();
         const signedIn = !!authData.user;
-
         const powerUser = signedIn && nextVisitCount > 3;
         if (cancelled) return;
         isPowerUserRef.current = powerUser;
 
-        const doneLocal = safeLocal.getItem(HB_ONBOARDING_DONE_KEY) === '1';
-        const doneSession = safeSession.getItem(HB_ONBOARDING_DONE_KEY) === '1';
+        const doneForUser = powerUser
+          ? safeLocal.getItem(HB_ONBOARDING_DONE_KEY) === '1'
+          : safeSession.getItem(HB_ONBOARDING_DONE_KEY) === '1';
 
-        if (doneLocal || doneSession) {
-          safeLocal.removeItem(HB_ONBOARDING_STEP_KEY);
-          setWalkthroughStep(null);
-          return;
-        }
-
-        let switchedMarker = false;
+        let switchFlag = false;
         try {
-          switchedMarker = safeSession.getItem(HB_NG_SWITCH_TRIGGER_KEY) === '1';
-          if (switchedMarker) safeSession.removeItem(HB_NG_SWITCH_TRIGGER_KEY);
+          switchFlag = safeSession.getItem(HB_NG_SWITCH_TRIGGER_KEY) === '1';
         } catch {
           // ignore
         }
 
-        if (switchingToNG || switchedMarker) {
-          // When the user switches into Nigeria, always restart the walkthrough at Step 1
-          // (unless already completed for this session).
-          safeLocal.removeItem(HB_ONBOARDING_STEP_KEY);
-          setWalkthroughStep(1);
+        if (doneForUser) {
+          if (switchFlag) safeSession.removeItem(HB_NG_SWITCH_TRIGGER_KEY);
           return;
         }
 
-        // When landing directly on NG, resume from the last saved step.
-        const rawStep = safeLocal.getItem(HB_ONBOARDING_STEP_KEY);
-        const parsed = rawStep ? Number(rawStep) : 1;
-        const step: WalkthroughStep = parsed === 1 || parsed === 2 || parsed === 3 ? parsed : 1;
-        setWalkthroughStep(step);
-      } catch {
-        // Storage might be blocked (privacy mode). Don't break the homepage.
-        if (!cancelled) setWalkthroughStep(1);
-      }
-    };
-
-    boot().catch(() => {
-      // If anything fails, do not block the homepage.
-      if (!cancelled) setWalkthroughStep(1);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [country]);
-
-  // Track previous country for "switching to NG" detection.
-  useEffect(() => {
-    prevCountryRef.current = country;
-  }, [country]);
-
-  // Persist the current step so the walkthrough can resume if the user navigates away mid-flow.
-  useEffect(() => {
-    if (country !== 'NG') return;
-    if (walkthroughStep == null) return;
-    window.localStorage.setItem(HB_ONBOARDING_STEP_KEY, String(walkthroughStep));
-  }, [country, walkthroughStep]);
-
-  // Scroll target into view, wait 500ms, then show tooltip (position uses rect after open in tooltip component).
-  useEffect(() => {
-    if (country !== 'NG' || walkthroughStep == null) {
-      setOnboardingTooltipOpen(false);
-      return;
-    }
-
-    setOnboardingTooltipOpen(false);
-
-    let cancelled = false;
-    let revealTimeout: number | null = null;
-    let rafId = 0;
-    let attemptRaf = 0;
-    const maxAttempts = 45;
-
-    const getTarget = (): HTMLElement | null => {
-      if (walkthroughStep === 1) return step1CtaRef.current;
-      if (walkthroughStep === 2) return categoryPillRefs.current[String(exploreCategoryFilter)] ?? null;
-      return step3GridRef.current;
-    };
-
-    const scrollAndReveal = () => {
-      if (cancelled) return;
-      const target = getTarget();
-      if (!target) {
-        if (walkthroughStep === 3 && loadingExplore) return;
-        if (walkthroughStep === 3 && attemptRaf < maxAttempts) {
-          attemptRaf += 1;
-          rafId = window.requestAnimationFrame(scrollAndReveal);
+        if (switchFlag) {
+          safeSession.removeItem(HB_NG_SWITCH_TRIGGER_KEY);
+          if (!cancelled) setNgOnboardingOpen(true);
+          return;
         }
-        return;
-      }
 
-      try {
-        target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+        delayTimer = window.setTimeout(() => {
+          if (!cancelled) setNgOnboardingOpen(true);
+        }, 1000);
       } catch {
-        // ignore
+        delayTimer = window.setTimeout(() => {
+          if (!cancelled) setNgOnboardingOpen(true);
+        }, 1000);
       }
-
-      revealTimeout = window.setTimeout(() => {
-        if (!cancelled) setOnboardingTooltipOpen(true);
-      }, 500);
     };
 
-    rafId = window.requestAnimationFrame(scrollAndReveal);
+    boot();
 
     return () => {
       cancelled = true;
-      window.cancelAnimationFrame(rafId);
-      if (revealTimeout != null) window.clearTimeout(revealTimeout);
+      if (delayTimer != null) window.clearTimeout(delayTimer);
     };
-  }, [country, walkthroughStep, exploreCategoryFilter, loadingExplore]);
-
-  const completeWalkthrough = useCallback(() => {
-    if (step3TimerRef.current != null) {
-      window.clearTimeout(step3TimerRef.current);
-      step3TimerRef.current = null;
-    }
-
-    // Power users: store done in localStorage so it stops permanently.
-    // Regular users: store done in sessionStorage so it resets each browser session.
-    try {
-      const storage = isPowerUserRef.current ? window.localStorage : window.sessionStorage;
-      storage.setItem(HB_ONBOARDING_DONE_KEY, '1');
-      window.localStorage.removeItem(HB_ONBOARDING_STEP_KEY);
-    } catch {
-      // Ignore storage failures and still finish the UI.
-    }
-    setWalkthroughStep(null);
-    setOnboardingTooltipOpen(false);
-    setStep1ShowNext(false);
-    setStep2ShowNext(false);
-  }, []);
-
-  const goToStep2 = useCallback(() => {
-    setWalkthroughStep(2);
-    setStep1ShowNext(false);
-    setStep2ShowNext(false);
-  }, []);
-
-  const goToStep3 = useCallback(() => {
-    setWalkthroughStep(3);
-    setStep1ShowNext(false);
-    setStep2ShowNext(false);
-  }, []);
-
-  // Step 1/2: show "Next →" only if the user didn't click/advance within 8 seconds.
-  useEffect(() => {
-    if (country !== 'NG') return;
-    if (walkthroughStep !== 1) {
-      setStep1ShowNext(false);
-      return;
-    }
-    setStep1ShowNext(false);
-    const t = window.setTimeout(() => {
-      setStep1ShowNext(true);
-    }, 8000);
-    return () => window.clearTimeout(t);
-  }, [country, walkthroughStep]);
-
-  useEffect(() => {
-    if (country !== 'NG') return;
-    if (walkthroughStep !== 2) {
-      setStep2ShowNext(false);
-      return;
-    }
-    setStep2ShowNext(false);
-    const t = window.setTimeout(() => {
-      setStep2ShowNext(true);
-    }, 8000);
-    return () => window.clearTimeout(t);
-  }, [country, walkthroughStep]);
-
-  // Step 3: auto-complete after 5 seconds.
-  useEffect(() => {
-    if (country !== 'NG') return;
-    if (walkthroughStep !== 3) return;
-
-    if (step3TimerRef.current != null) return;
-    step3TimerRef.current = window.setTimeout(() => {
-      step3TimerRef.current = null;
-      completeWalkthrough();
-    }, 5000);
-
-    return () => {
-      if (step3TimerRef.current != null) {
-        window.clearTimeout(step3TimerRef.current);
-        step3TimerRef.current = null;
-      }
-    };
-  }, [country, walkthroughStep, completeWalkthrough]);
+  }, [country]);
 
   useEffect(() => {
     // Nigeria: load NG Explore scenes
@@ -534,11 +382,7 @@ export default function Home() {
                 <>
                   <button
                     type="button"
-                    ref={step1CtaRef}
-                    onClick={() => {
-                      if (walkthroughStep === 1) goToStep2();
-                      exploreSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
-                    }}
+                    onClick={() => exploreSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}
                     className="w-full md:flex-1 h-[56px] md:h-[60px] flex items-center justify-center rounded-xl bg-[#000000] text-white text-base md:text-[18px] font-semibold hover:bg-[#1a1a1a] hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-all duration-200"
                   >
                     Show me ideas & costs
@@ -666,10 +510,6 @@ export default function Home() {
                   onClick={() => {
                     setExploreCategoryFilter(value);
                     setExploreDisplayCount(6);
-                    if (walkthroughStep === 2) goToStep3();
-                  }}
-                  ref={(el) => {
-                    categoryPillRefs.current[String(value)] = el;
                   }}
                   className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                     exploreCategoryFilter === value
@@ -739,10 +579,7 @@ export default function Home() {
                     let featuredTopPickCount = 0;
                     return (
                       <>
-                        <div
-                          ref={step3GridRef}
-                          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"
-                        >
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                           {displayScenes.map((scene) => {
                             const showTopPick =
                               scene.is_featured === true && featuredTopPickCount < 3;
@@ -752,7 +589,6 @@ export default function Home() {
                               key={scene.id}
                               scene={scene}
                               onSelect={(slug) => {
-                                if (walkthroughStep === 3) completeWalkthrough();
                                 sessionStorage.setItem('home_explore_scroll', String(window.scrollY));
                                 navigate(`/explore/${slug}`);
                               }}
@@ -787,38 +623,6 @@ export default function Home() {
             )}
           </div>
 
-          {walkthroughStep != null && (
-            <NigeriaHomeOnboardingTooltip
-              open={country === 'NG' && onboardingTooltipOpen}
-              step={walkthroughStep}
-              targetEl={
-                walkthroughStep === 1
-                  ? step1CtaRef.current
-                  : walkthroughStep === 2
-                    ? categoryPillRefs.current[String(exploreCategoryFilter)] ?? null
-                    : step3GridRef.current
-              }
-              text={
-                walkthroughStep === 1
-                  ? 'Start here — see real Nigerian home setups with full costs'
-                  : walkthroughStep === 2
-                    ? "Filter by the space you're setting up — living room, bedroom, dining and more"
-                    : 'Click any space to see everything in it and how much it costs'
-              }
-              showNext={
-                walkthroughStep === 1 ? step1ShowNext : walkthroughStep === 2 ? step2ShowNext : false
-              }
-              onNext={() => {
-                if (walkthroughStep === 1) {
-                  goToStep2();
-                  exploreSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
-                } else if (walkthroughStep === 2) {
-                  goToStep3();
-                }
-              }}
-              onDismiss={completeWalkthrough}
-            />
-          )}
         </section>
       )}
 
@@ -1392,6 +1196,25 @@ export default function Home() {
         </button>
       )}
 
+      {country === 'NG' && (
+        <NigeriaHomeOnboarding
+          open={ngOnboardingOpen}
+          onDismiss={() => {
+            markOnboardingDone();
+            setNgOnboardingOpen(false);
+          }}
+          onComplete={(room, price) => {
+            setExploreCategoryFilter(room);
+            setExplorePriceFilter(price);
+            setExploreDisplayCount(6);
+            markOnboardingDone();
+            setNgOnboardingOpen(false);
+            window.requestAnimationFrame(() => {
+              exploreSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+            });
+          }}
+        />
+      )}
     </div>
   );
 }
