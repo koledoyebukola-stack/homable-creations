@@ -1,11 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Upload, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCountry } from '@/context/CountryContext';
 import { getExploreScenes, getActiveStorefrontsByLocation } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import type { ExploreScene, Storefront, VendorProduct } from '@/lib/types';
 import ExploreSceneCard from '@/components/ExploreSceneCard';
+import NigeriaHomeOnboardingTooltip from '@/components/NigeriaHomeOnboardingTooltip';
 import {
   EXPLORE_CATEGORY_PILLS,
   EXPLORE_PRICE_PILLS,
@@ -141,6 +143,25 @@ export default function Home() {
   const [exploreDisplayCount, setExploreDisplayCount] = useState(6);
   const exploreSectionRef = useRef<HTMLElement | null>(null);
   const browseSectionRef = useRef<HTMLElement | null>(null);
+  const step1CtaRef = useRef<HTMLButtonElement | null>(null);
+  const categoryPillRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const step3GridRef = useRef<HTMLDivElement | null>(null);
+
+  type WalkthroughStep = 1 | 2 | 3;
+  const [walkthroughStep, setWalkthroughStep] = useState<WalkthroughStep | null>(null);
+  const isPowerUserRef = useRef(false);
+  const [isPowerUser, setIsPowerUser] = useState(false);
+
+  const [isMobile, setIsMobile] = useState(false);
+  const [viewportSig, setViewportSig] = useState(0);
+  const [step1ShowNext, setStep1ShowNext] = useState(false);
+  const [step2ShowNext, setStep2ShowNext] = useState(false);
+
+  const step3TimerRef = useRef<number | null>(null);
+
+  const HB_ONBOARDING_DONE_KEY = 'hb_onboarding_done';
+  const HB_ONBOARDING_STEP_KEY = 'hb_onboarding_step';
+  const HB_NG_HOME_VISITS_KEY = 'hb_ng_home_visit_count';
 
   const [browseStorefronts, setBrowseStorefronts] = useState<Storefront[]>([]);
   const [browseProducts, setBrowseProducts] = useState<VendorProduct[]>([]);
@@ -158,6 +179,188 @@ export default function Home() {
       sessionStorage.removeItem('home_explore_scroll');
     }
   }, []);
+
+  const isElementVisibleInViewport = useCallback((el: HTMLElement | null) => {
+    if (!el) return false;
+    const rect = el.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth;
+  }, []);
+
+  // Keep an always-updated mobile flag for the "only show tooltip when target is visible" rule.
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 640px)');
+    const update = () => setIsMobile(media.matches);
+    update();
+    // Safari fallback for older listeners.
+    // eslint-disable-next-line deprecation/deprecation
+    media.addEventListener?.('change', update);
+    // eslint-disable-next-line deprecation/deprecation
+    media.addListener?.(update);
+    return () => {
+      // eslint-disable-next-line deprecation/deprecation
+      media.removeEventListener?.('change', update);
+      // eslint-disable-next-line deprecation/deprecation
+      media.removeListener?.(update);
+    };
+  }, []);
+
+  // Decide whether to start/stop the walkthrough (NG homepage only) and resume from localStorage.
+  useEffect(() => {
+    if (country !== 'NG') return;
+
+    let cancelled = false;
+
+    const boot = async () => {
+      try {
+        const safeLocal = window.localStorage;
+        const safeSession = window.sessionStorage;
+
+        // Track "visits" across sessions for the power-user exception.
+        const current = Number(safeLocal.getItem(HB_NG_HOME_VISITS_KEY) || '0');
+        safeLocal.setItem(HB_NG_HOME_VISITS_KEY, String(current + 1));
+        const nextVisitCount = current + 1;
+
+        const { data: authData } = await supabase.auth.getUser();
+        const signedIn = !!authData.user;
+
+        const powerUser = signedIn && nextVisitCount > 3;
+        if (cancelled) return;
+        isPowerUserRef.current = powerUser;
+        setIsPowerUser(powerUser);
+
+        const doneLocal = safeLocal.getItem(HB_ONBOARDING_DONE_KEY) === '1';
+        const doneSession = safeSession.getItem(HB_ONBOARDING_DONE_KEY) === '1';
+
+        if (doneLocal || doneSession) {
+          safeLocal.removeItem(HB_ONBOARDING_STEP_KEY);
+          setWalkthroughStep(null);
+          return;
+        }
+
+        const rawStep = safeLocal.getItem(HB_ONBOARDING_STEP_KEY);
+        const parsed = rawStep ? Number(rawStep) : 1;
+        const step: WalkthroughStep = parsed === 1 || parsed === 2 || parsed === 3 ? parsed : 1;
+        setWalkthroughStep(step);
+      } catch {
+        // Storage might be blocked (privacy mode). Don't break the homepage.
+        if (!cancelled) setWalkthroughStep(1);
+      }
+    };
+
+    boot().catch(() => {
+      // If anything fails, do not block the homepage.
+      if (!cancelled) setWalkthroughStep(1);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [country]);
+
+  // Persist the current step so the walkthrough can resume if the user navigates away mid-flow.
+  useEffect(() => {
+    if (country !== 'NG') return;
+    if (walkthroughStep == null) return;
+    window.localStorage.setItem(HB_ONBOARDING_STEP_KEY, String(walkthroughStep));
+  }, [country, walkthroughStep]);
+
+  // Recompute target visibility while the walkthrough is active.
+  useEffect(() => {
+    if (country !== 'NG') return;
+    if (walkthroughStep == null) return;
+
+    const bump = () => setViewportSig((v) => v + 1);
+    window.addEventListener('scroll', bump, { passive: true });
+    window.addEventListener('resize', bump);
+    bump();
+
+    return () => {
+      window.removeEventListener('scroll', bump);
+      window.removeEventListener('resize', bump);
+    };
+  }, [country, walkthroughStep]);
+
+  const completeWalkthrough = useCallback(() => {
+    if (step3TimerRef.current != null) {
+      window.clearTimeout(step3TimerRef.current);
+      step3TimerRef.current = null;
+    }
+
+    // Power users: store done in localStorage so it stops permanently.
+    // Regular users: store done in sessionStorage so it resets each browser session.
+    try {
+      const storage = isPowerUserRef.current ? window.localStorage : window.sessionStorage;
+      storage.setItem(HB_ONBOARDING_DONE_KEY, '1');
+      window.localStorage.removeItem(HB_ONBOARDING_STEP_KEY);
+    } catch {
+      // Ignore storage failures and still finish the UI.
+    }
+    setWalkthroughStep(null);
+    setStep1ShowNext(false);
+    setStep2ShowNext(false);
+  }, []);
+
+  const goToStep2 = useCallback(() => {
+    setWalkthroughStep(2);
+    setStep1ShowNext(false);
+    setStep2ShowNext(false);
+  }, []);
+
+  const goToStep3 = useCallback(() => {
+    setWalkthroughStep(3);
+    setStep1ShowNext(false);
+    setStep2ShowNext(false);
+    // Best-effort: bring the cards grid into view for mobile.
+    window.setTimeout(() => {
+      step3GridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
+  }, []);
+
+  // Step 1/2: show "Next →" only if the user didn't click/advance within 8 seconds.
+  useEffect(() => {
+    if (country !== 'NG') return;
+    if (walkthroughStep !== 1) {
+      setStep1ShowNext(false);
+      return;
+    }
+    setStep1ShowNext(false);
+    const t = window.setTimeout(() => {
+      setStep1ShowNext(true);
+    }, 8000);
+    return () => window.clearTimeout(t);
+  }, [country, walkthroughStep]);
+
+  useEffect(() => {
+    if (country !== 'NG') return;
+    if (walkthroughStep !== 2) {
+      setStep2ShowNext(false);
+      return;
+    }
+    setStep2ShowNext(false);
+    const t = window.setTimeout(() => {
+      setStep2ShowNext(true);
+    }, 8000);
+    return () => window.clearTimeout(t);
+  }, [country, walkthroughStep]);
+
+  // Step 3: auto-complete after 5 seconds.
+  useEffect(() => {
+    if (country !== 'NG') return;
+    if (walkthroughStep !== 3) return;
+
+    if (step3TimerRef.current != null) return;
+    step3TimerRef.current = window.setTimeout(() => {
+      step3TimerRef.current = null;
+      completeWalkthrough();
+    }, 5000);
+
+    return () => {
+      if (step3TimerRef.current != null) {
+        window.clearTimeout(step3TimerRef.current);
+        step3TimerRef.current = null;
+      }
+    };
+  }, [country, walkthroughStep, completeWalkthrough]);
 
   useEffect(() => {
     // Nigeria: load NG Explore scenes
@@ -299,7 +502,11 @@ export default function Home() {
                 <>
                   <button
                     type="button"
-                    onClick={() => exploreSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                    ref={step1CtaRef}
+                    onClick={() => {
+                      if (walkthroughStep === 1) goToStep2();
+                      exploreSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+                    }}
                     className="w-full md:flex-1 h-[56px] md:h-[60px] flex items-center justify-center rounded-xl bg-[#000000] text-white text-base md:text-[18px] font-semibold hover:bg-[#1a1a1a] hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-all duration-200"
                   >
                     Show me ideas & costs
@@ -427,6 +634,10 @@ export default function Home() {
                   onClick={() => {
                     setExploreCategoryFilter(value);
                     setExploreDisplayCount(6);
+                    if (walkthroughStep === 2) goToStep3();
+                  }}
+                  ref={(el) => {
+                    categoryPillRefs.current[String(value)] = el;
                   }}
                   className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                     exploreCategoryFilter === value
@@ -496,7 +707,10 @@ export default function Home() {
                     let featuredTopPickCount = 0;
                     return (
                       <>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                        <div
+                          ref={step3GridRef}
+                          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"
+                        >
                           {displayScenes.map((scene) => {
                             const showTopPick =
                               scene.is_featured === true && featuredTopPickCount < 3;
@@ -506,6 +720,7 @@ export default function Home() {
                               key={scene.id}
                               scene={scene}
                               onSelect={(slug) => {
+                                if (walkthroughStep === 3) completeWalkthrough();
                                 sessionStorage.setItem('home_explore_scroll', String(window.scrollY));
                                 navigate(`/explore/${slug}`);
                               }}
@@ -539,6 +754,49 @@ export default function Home() {
               </>
             )}
           </div>
+
+          {walkthroughStep != null && (
+            <NigeriaHomeOnboardingTooltip
+              open={
+                country === 'NG' &&
+                (walkthroughStep === 1
+                  ? !isMobile || isElementVisibleInViewport(step1CtaRef.current)
+                  : walkthroughStep === 2
+                    ? !isMobile ||
+                      isElementVisibleInViewport(
+                        categoryPillRefs.current[String(exploreCategoryFilter)] ?? null,
+                      )
+                    : !isMobile || isElementVisibleInViewport(step3GridRef.current))
+              }
+              step={walkthroughStep}
+              targetEl={
+                walkthroughStep === 1
+                  ? step1CtaRef.current
+                  : walkthroughStep === 2
+                    ? categoryPillRefs.current[String(exploreCategoryFilter)] ?? null
+                    : step3GridRef.current
+              }
+              text={
+                walkthroughStep === 1
+                  ? 'Start here — see real Nigerian home setups with full costs'
+                  : walkthroughStep === 2
+                    ? "Filter by the space you're setting up — living room, bedroom, dining and more"
+                    : 'Click any space to see everything in it and how much it costs'
+              }
+              showNext={
+                walkthroughStep === 1 ? step1ShowNext : walkthroughStep === 2 ? step2ShowNext : false
+              }
+              onNext={() => {
+                if (walkthroughStep === 1) {
+                  goToStep2();
+                  exploreSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+                } else if (walkthroughStep === 2) {
+                  goToStep3();
+                }
+              }}
+              onDismiss={completeWalkthrough}
+            />
+          )}
         </section>
       )}
 
