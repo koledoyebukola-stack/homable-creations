@@ -2,7 +2,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 import Home from './pages/Home';
@@ -72,6 +72,26 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 const REF_STORAGE_KEY = 'homable_ref';
+
+/** Fires Meta Pixel PageView on client-side navigations (initial load is covered by index.html). */
+function MetaPixelPageViewTracker() {
+  const location = useLocation();
+  const skipInitial = useRef(true);
+
+  useEffect(() => {
+    const fbq = window.fbq;
+    if (typeof fbq !== 'function') return;
+
+    if (skipInitial.current) {
+      skipInitial.current = false;
+      return;
+    }
+
+    fbq('track', 'PageView');
+  }, [location.pathname, location.search, location.hash]);
+
+  return null;
+}
 
 function CaptureReferrerAndRoutes() {
   const location = useLocation();
@@ -245,6 +265,7 @@ const App = () => (
       <Toaster />
       <BrowserRouter>
         <CountryProvider>
+          <MetaPixelPageViewTracker />
           <CaptureReferrerAndRoutes />
         </CountryProvider>
       </BrowserRouter>
