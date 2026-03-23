@@ -159,6 +159,11 @@ export default function Home() {
   const [step2ShowNext, setStep2ShowNext] = useState(false);
 
   const step3TimerRef = useRef<number | null>(null);
+  const hasAutoScrolledForStepRef = useRef<Record<WalkthroughStep, boolean>>({
+    1: false,
+    2: false,
+    3: false,
+  });
 
   const HB_ONBOARDING_DONE_KEY = 'hb_onboarding_done';
   const HB_ONBOARDING_STEP_KEY = 'hb_onboarding_step';
@@ -305,6 +310,38 @@ export default function Home() {
     if (walkthroughStep == null) return;
     window.localStorage.setItem(HB_ONBOARDING_STEP_KEY, String(walkthroughStep));
   }, [country, walkthroughStep]);
+
+  // On mobile: if Step 1/2 target is off-screen, bring it into view so the tooltip can open.
+  useEffect(() => {
+    if (country !== 'NG') return;
+    if (walkthroughStep !== 1 && walkthroughStep !== 2) return;
+    if (!isMobile) return;
+
+    const target =
+      walkthroughStep === 1
+        ? step1CtaRef.current
+        : categoryPillRefs.current[String(exploreCategoryFilter)] ?? null;
+
+    // Only auto-scroll if we haven't done it for this step yet and the target exists.
+    if (!target) return;
+    if (isElementVisibleInViewport(target)) return;
+    if (hasAutoScrolledForStepRef.current[walkthroughStep]) return;
+
+    hasAutoScrolledForStepRef.current[walkthroughStep] = true;
+    window.setTimeout(() => {
+      try {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+      } catch {
+        // Ignore scroll failures (best-effort).
+      }
+    }, 0);
+  }, [country, walkthroughStep, isMobile, exploreCategoryFilter, viewportSig]);
+
+  // Reset per-step auto-scroll flags when changing steps.
+  useEffect(() => {
+    if (walkthroughStep == null) return;
+    hasAutoScrolledForStepRef.current = { 1: false, 2: false, 3: false };
+  }, [walkthroughStep]);
 
   // Recompute target visibility while the walkthrough is active.
   useEffect(() => {
