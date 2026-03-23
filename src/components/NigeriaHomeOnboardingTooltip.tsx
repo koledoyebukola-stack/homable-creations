@@ -20,6 +20,14 @@ export default function NigeriaHomeOnboardingTooltip({
   onNext: () => void;
   onDismiss: () => void;
 }) {
+  // Temporary debug to confirm the tooltip mounts and what's controlling its visibility.
+  // eslint-disable-next-line no-console
+  console.log('[HB onboarding tooltip] render', {
+    open,
+    step,
+    hasTarget: !!targetEl,
+    targetTag: targetEl?.tagName,
+  });
   const cardRef = useRef<HTMLDivElement | null>(null);
   const [pos, setPos] = useState<{
     top: number;

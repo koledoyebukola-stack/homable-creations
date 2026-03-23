@@ -234,6 +234,16 @@ export default function Home() {
         const doneLocal = safeLocal.getItem(HB_ONBOARDING_DONE_KEY) === '1';
         const doneSession = safeSession.getItem(HB_ONBOARDING_DONE_KEY) === '1';
 
+        // Temporary debug to confirm boot logic runs and sets walkthroughStep.
+        // eslint-disable-next-line no-console
+        console.log('[HB onboarding boot]', {
+          country,
+          switchingToNG,
+          doneLocal,
+          doneSession,
+          rawStep: safeLocal.getItem(HB_ONBOARDING_STEP_KEY),
+        });
+
         if (doneLocal || doneSession) {
           safeLocal.removeItem(HB_ONBOARDING_STEP_KEY);
           setWalkthroughStep(null);
@@ -253,6 +263,11 @@ export default function Home() {
           // (unless already completed for this session).
           safeLocal.removeItem(HB_ONBOARDING_STEP_KEY);
           setWalkthroughStep(1);
+          // eslint-disable-next-line no-console
+          console.log('[HB onboarding boot] forced step 1', {
+            switchingToNG,
+            switchedMarker,
+          });
           return;
         }
 
@@ -261,6 +276,8 @@ export default function Home() {
         const parsed = rawStep ? Number(rawStep) : 1;
         const step: WalkthroughStep = parsed === 1 || parsed === 2 || parsed === 3 ? parsed : 1;
         setWalkthroughStep(step);
+        // eslint-disable-next-line no-console
+        console.log('[HB onboarding boot] setting step from storage', { step, parsed });
       } catch {
         // Storage might be blocked (privacy mode). Don't break the homepage.
         if (!cancelled) setWalkthroughStep(1);
