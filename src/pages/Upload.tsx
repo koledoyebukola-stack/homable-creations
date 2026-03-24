@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { uploadImage, createBoard, validateDecorImage, getExploreScenes } from '@/lib/api';
 import { toast } from 'sonner';
 import ExploreSceneCard from '@/components/ExploreSceneCard';
+import ExploreNoMatchingFilters from '@/components/ExploreNoMatchingFilters';
 import type { ExploreScene } from '@/lib/types';
 import {
   EXPLORE_CATEGORY_PILLS,
@@ -708,6 +709,9 @@ export default function Upload() {
                           ? Math.max(0, ...filteredScenes.map((s) => s.view_count ?? 0))
                           : 0;
                       if (filteredScenes.length === 0) {
+                        if (exploreScenes.length > 0) {
+                          return <ExploreNoMatchingFilters />;
+                        }
                         const categoryLabel =
                           exploreRoomTypeFilter === 'all'
                             ? ''

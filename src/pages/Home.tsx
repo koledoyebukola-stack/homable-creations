@@ -7,6 +7,7 @@ import { getExploreScenes, getActiveStorefrontsByLocation } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import type { ExploreScene, Storefront, VendorProduct } from '@/lib/types';
 import ExploreSceneCard from '@/components/ExploreSceneCard';
+import ExploreNoMatchingFilters from '@/components/ExploreNoMatchingFilters';
 import NigeriaHomeOnboarding from '@/components/NigeriaHomeOnboarding';
 import {
   EXPLORE_CATEGORY_PILLS,
@@ -839,6 +840,9 @@ export default function Home() {
                     : 0;
 
                 if (filtered.length === 0) {
+                  if (exploreScenes.length > 0) {
+                    return <ExploreNoMatchingFilters />;
+                  }
                   return null;
                 }
 
