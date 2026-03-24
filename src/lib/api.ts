@@ -1733,6 +1733,23 @@ export async function getStorefrontProductsPage(
  * - storefronts: all active vendors in the given location
  * - products: all products from those storefronts (caller can slice for featured grids)
  */
+/**
+ * All storefronts (active and paused) for the public vendor directory.
+ * RLS allows anonymous SELECT on storefronts.
+ */
+export async function getAllStorefronts(): Promise<Storefront[]> {
+  const { data, error } = await supabase
+    .from('storefronts')
+    .select('*')
+    .order('name', { ascending: true });
+
+  if (error) {
+    console.error('Failed to fetch all storefronts:', error);
+    return [];
+  }
+  return (data || []) as Storefront[];
+}
+
 export async function getActiveStorefrontsByLocation(
   location: string
 ): Promise<{ storefronts: Storefront[]; products: VendorProduct[] }> {

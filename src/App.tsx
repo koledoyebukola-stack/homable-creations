@@ -26,6 +26,7 @@ import DesignSpaceAnalyze from './pages/DesignSpaceAnalyze';
 import DesignSpaceOptions from './pages/DesignSpaceOptions';
 import DesignSpaceItems from './pages/DesignSpaceItems';
 import ShopsHome from './pages/ShopsHome';
+import VendorsDirectory from './pages/VendorsDirectory';
 import ShopsSearch from './pages/ShopsSearch';
 import ShopsProductDetail from './pages/ShopsProductDetail';
 import DemoStorefront from './pages/DemoStorefront';
@@ -184,6 +185,7 @@ function CaptureReferrerAndRoutes() {
           <Route path="/template-results/:templateId" element={<TemplateResults />} />
           {/* Homable Shops - public placeholders */}
           <Route path="/shops" element={<ShopsHome />} />
+          <Route path="/shops/vendors" element={<VendorsDirectory />} />
           <Route path="/shops/products/:slug" element={<ShopsProductDetail />} />
           <Route path="/shops/:query" element={<ShopsSearch />} />
           {/* Demo storefront - hidden route, direct access only */}
