@@ -60,9 +60,9 @@ BEGIN
     RETURN;
   END IF;
 
-  SELECT category INTO src_category
-  FROM public.vendor_products
-  WHERE id = p_product_id;
+  SELECT vp.category INTO src_category
+  FROM public.vendor_products vp
+  WHERE vp.id = p_product_id;
 
   IF NOT FOUND OR src_category IS NULL THEN
     RETURN;
@@ -101,22 +101,49 @@ BEGIN
   lim := LEAST(GREATEST(COALESCE(p_limit, 6), 1), 50);
   off := GREATEST(COALESCE(p_offset, 0), 0);
 
-  c2 := c1 - 'style';
-  c3 := c2 - 'seating_material';
-
-  IF src ? 'seating_type' AND src ? 'color_family' THEN
-    c4 := jsonb_build_object(
-      'seating_type', src->'seating_type',
-      'color_family', src->'color_family'
-    );
+  IF src_category = 'artwork' THEN
+    -- Artwork relaxation tiers
+    -- c2: drop dominant_tone
+    c2 := c1 - 'dominant_tone';
+    -- c3: drop color_family too
+    c3 := c2 - 'color_family';
+    -- c4: artwork_subject only
+    IF src ? 'artwork_subject' THEN
+      c4 := jsonb_build_object(
+        'artwork_subject', src->'artwork_subject'
+      );
+    ELSE
+      c4 := '{}'::jsonb;
+    END IF;
+    -- c5: artwork_style only
+    IF src ? 'artwork_style' THEN
+      c5 := jsonb_build_object(
+        'artwork_style', src->'artwork_style'
+      );
+    ELSE
+      c5 := '{}'::jsonb;
+    END IF;
   ELSE
-    c4 := '{}'::jsonb;
-  END IF;
+    -- Original seating relaxation tiers (unchanged)
+    c2 := c1 - 'style';
+    c3 := c2 - 'seating_material';
 
-  IF src ? 'seating_type' THEN
-    c5 := jsonb_build_object('seating_type', src->'seating_type');
-  ELSE
-    c5 := '{}'::jsonb;
+    IF src ? 'seating_type' AND src ? 'color_family' THEN
+      c4 := jsonb_build_object(
+        'seating_type', src->'seating_type',
+        'color_family', src->'color_family'
+      );
+    ELSE
+      c4 := '{}'::jsonb;
+    END IF;
+
+    IF src ? 'seating_type' THEN
+      c5 := jsonb_build_object(
+        'seating_type', src->'seating_type'
+      );
+    ELSE
+      c5 := '{}'::jsonb;
+    END IF;
   END IF;
 
   chosen := NULL;
