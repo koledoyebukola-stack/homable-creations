@@ -1,5 +1,6 @@
 -- Similar products by shared attribute criteria with relaxed fallback.
 -- Uses JSONB containment (@>) on vendor_product_attributes; only active storefronts; excludes source product.
+-- Matches only within the same vendor_products.category as the source product.
 
 BEGIN;
 
@@ -39,6 +40,7 @@ SET search_path = public
 AS $$
 DECLARE
   src jsonb;
+  src_category text;
   c1 jsonb;
   c2 jsonb;
   c3 jsonb;
@@ -58,6 +60,14 @@ BEGIN
     RETURN;
   END IF;
 
+  SELECT category INTO src_category
+  FROM public.vendor_products
+  WHERE id = p_product_id;
+
+  IF NOT FOUND OR src_category IS NULL THEN
+    RETURN;
+  END IF;
+
   c1 := '{}'::jsonb;
   IF src ? 'seating_type' THEN
     c1 := c1 || jsonb_build_object('seating_type', src->'seating_type');
@@ -73,6 +83,15 @@ BEGIN
   END IF;
   IF src ? 'room_type' THEN
     c1 := c1 || jsonb_build_object('room_type', src->'room_type');
+  END IF;
+  IF src ? 'artwork_subject' THEN
+    c1 := c1 || jsonb_build_object('artwork_subject', src->'artwork_subject');
+  END IF;
+  IF src ? 'artwork_style' THEN
+    c1 := c1 || jsonb_build_object('artwork_style', src->'artwork_style');
+  END IF;
+  IF src ? 'dominant_tone' THEN
+    c1 := c1 || jsonb_build_object('dominant_tone', src->'dominant_tone');
   END IF;
 
   IF c1 = '{}'::jsonb THEN
@@ -109,6 +128,7 @@ BEGIN
   INNER JOIN public.vendor_product_attributes vpa ON vpa.vendor_product_id = vp.id
   INNER JOIN public.storefronts sf ON sf.id = vp.storefront_id AND sf.status = 'active'
   WHERE vp.id <> p_product_id
+    AND vp.category = src_category
     AND vpa.attributes @> c1;
   IF cnt >= 3 THEN
     chosen := c1;
@@ -122,6 +142,7 @@ BEGIN
     INNER JOIN public.vendor_product_attributes vpa ON vpa.vendor_product_id = vp.id
     INNER JOIN public.storefronts sf ON sf.id = vp.storefront_id AND sf.status = 'active'
     WHERE vp.id <> p_product_id
+      AND vp.category = src_category
       AND vpa.attributes @> c2;
     IF cnt >= 3 THEN
       chosen := c2;
@@ -136,6 +157,7 @@ BEGIN
     INNER JOIN public.vendor_product_attributes vpa ON vpa.vendor_product_id = vp.id
     INNER JOIN public.storefronts sf ON sf.id = vp.storefront_id AND sf.status = 'active'
     WHERE vp.id <> p_product_id
+      AND vp.category = src_category
       AND vpa.attributes @> c3;
     IF cnt >= 3 THEN
       chosen := c3;
@@ -150,6 +172,7 @@ BEGIN
     INNER JOIN public.vendor_product_attributes vpa ON vpa.vendor_product_id = vp.id
     INNER JOIN public.storefronts sf ON sf.id = vp.storefront_id AND sf.status = 'active'
     WHERE vp.id <> p_product_id
+      AND vp.category = src_category
       AND vpa.attributes @> c4;
     IF cnt >= 3 THEN
       chosen := c4;
@@ -170,6 +193,7 @@ BEGIN
     INNER JOIN public.vendor_product_attributes vpa ON vpa.vendor_product_id = vp.id
     INNER JOIN public.storefronts sf ON sf.id = vp.storefront_id AND sf.status = 'active'
     WHERE vp.id <> p_product_id
+      AND vp.category = src_category
       AND vpa.attributes @> c5;
     IF cnt >= 3 THEN
       chosen := c5;
@@ -209,13 +233,30 @@ BEGIN
     vpa.attributes,
     vpa.created_at,
     vpa.updated_at,
-    (SELECT count(*)::int FROM jsonb_object_keys(chosen)) AS match_score
+    (SELECT count(*)::int FROM jsonb_object_keys(chosen))
+    + CASE
+        WHEN src_category = 'artwork'
+        AND src ? 'orientation'
+        AND vpa.attributes->>'orientation' = src->>'orientation'
+        THEN 1 ELSE 0
+      END AS match_score
   FROM public.vendor_products vp
   INNER JOIN public.vendor_product_attributes vpa ON vpa.vendor_product_id = vp.id
   INNER JOIN public.storefronts sf ON sf.id = vp.storefront_id AND sf.status = 'active'
   WHERE vp.id <> p_product_id
+    AND vp.category = src_category
     AND vpa.attributes @> chosen
-  ORDER BY (SELECT count(*)::int FROM jsonb_object_keys(chosen)) DESC, vp.price_min ASC NULLS LAST
+  ORDER BY
+    (
+      (SELECT count(*)::int FROM jsonb_object_keys(chosen))
+      + CASE
+          WHEN src_category = 'artwork'
+          AND src ? 'orientation'
+          AND vpa.attributes->>'orientation' = src->>'orientation'
+          THEN 1 ELSE 0
+        END
+    ) DESC,
+    vp.price_min ASC NULLS LAST
   LIMIT lim OFFSET off;
 
   RETURN;
@@ -223,7 +264,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.find_similar_vendor_products(uuid, integer, integer) IS
-  'Similar products by JSONB containment; relaxes tiers until >=3 matches (count before LIMIT), else uses loosest tier with any match; match_score = key count in chosen criteria; active storefronts only.';
+  'Similar products by JSONB containment; relaxes tiers until >=3 matches (count before LIMIT), else uses loosest tier with any match; match_score = key count in chosen criteria plus +1 when artwork orientation matches; same category as source only; active storefronts only.';
 
 GRANT EXECUTE ON FUNCTION public.find_similar_vendor_products(uuid, integer, integer)
   TO anon, authenticated;
