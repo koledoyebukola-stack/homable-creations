@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/lib/supabase';
 import { vendorGetDashboardData, vendorSignOut, vendorSubmitNewProductForReview, vendorUpdateProductGrid, type VendorAvailability } from '@/lib/vendor-api';
 import type { VendorDashboardProduct } from '@/lib/vendor-api';
 
@@ -94,7 +95,19 @@ export default function VendorDashboard() {
         };
       });
       setProductEdits(nextEdits);
-    } catch {
+    } catch (error) {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      console.log(
+        '[VENDOR DASH] redirecting to login because:',
+        'session:',
+        session,
+        'loading:',
+        loading,
+        'error:',
+        error,
+      );
       toast.error('Something went wrong. Please try again.');
       navigate('/vendor/login');
     } finally {
@@ -224,6 +237,9 @@ export default function VendorDashboard() {
       setSubmittingNewProduct(false);
     }
   };
+
+  const session = undefined;
+  console.log('[VENDOR DASH] render - session:', session?.user?.email, 'loading:', loading);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
