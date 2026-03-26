@@ -90,13 +90,19 @@ function VendorProtectedRoute({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[VPR] auth state change:', event, session?.user?.email);
       if (!initializedRef.current) return;
       setSession(session ?? null);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const initialized = initializedRef.current;
+  console.log('[VPR] initialized:', initialized);
+  console.log('[VPR] session:', session?.user?.email);
+  console.log('[VPR] redirecting:', !session && initialized);
 
   if (session === undefined) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
