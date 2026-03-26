@@ -219,16 +219,6 @@ function MainAppLayout() {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/vendor/login" element={<VendorLogin />} />
-      <Route path="/vendor/signup" element={<VendorSignup />} />
-      <Route
-        path="/vendor/dashboard"
-        element={
-          <VendorProtectedRoute supabaseClient={supabase}>
-            <VendorDashboard />
-          </VendorProtectedRoute>
-        }
-      />
       <Route element={<MainAppLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/auth" element={<Auth />} />
