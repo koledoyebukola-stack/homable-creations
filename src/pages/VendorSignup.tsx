@@ -18,9 +18,6 @@ export default function VendorSignup() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showCheckEmail, setShowCheckEmail] = useState(false);
 
-  const roomImageUrl =
-    'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Gist%20and%20Chill%20Living%20Room.png';
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -86,20 +83,13 @@ export default function VendorSignup() {
   if (showCheckEmail) {
     return (
       <div className="min-h-screen flex flex-col md:flex-row">
-        <div className="relative w-full h-[180px] md:h-auto md:w-1/2 overflow-hidden bg-[#1a1a1a]">
-          <img
-            src={roomImageUrl}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }} />
-
-          <div className="absolute left-4 bottom-4">
-            <div className="text-white text-[14px] font-medium">Homable Creations</div>
-            <div className="mt-1 text-[#c9b99a] text-[12px] leading-[1.6] max-w-[90%]">
+        <div className="w-full h-[200px] md:min-h-screen md:w-1/2 bg-[#1a1a1a] flex flex-col items-center justify-center px-4 md:items-start md:justify-end md:p-8">
+          <div className="w-full max-w-[280px] md:max-w-[300px] text-center md:text-left mx-auto md:mx-0">
+            <div className="text-[22px] font-semibold text-white mb-2">Homable Creations</div>
+            <p className="text-[13px] text-[#c9b99a] leading-[1.6]">
               Nigeria&apos;s home setup assistant. Reach thousands of homeowners actively setting
               up their spaces.
-            </div>
+            </p>
           </div>
         </div>
 
@@ -129,16 +119,13 @@ export default function VendorSignup() {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
-      <div className="relative w-full h-[180px] md:h-auto md:w-1/2 overflow-hidden bg-[#1a1a1a]">
-        <img src={roomImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
-        <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }} />
-
-        <div className="absolute left-4 bottom-4">
-          <div className="text-white text-[14px] font-medium">Homable Creations</div>
-          <div className="mt-1 text-[#c9b99a] text-[12px] leading-[1.6] max-w-[90%]">
+      <div className="w-full h-[200px] md:min-h-screen md:w-1/2 bg-[#1a1a1a] flex flex-col items-center justify-center px-4 md:items-start md:justify-end md:p-8">
+        <div className="w-full max-w-[280px] md:max-w-[300px] text-center md:text-left mx-auto md:mx-0">
+          <div className="text-[22px] font-semibold text-white mb-2">Homable Creations</div>
+          <p className="text-[13px] text-[#c9b99a] leading-[1.6]">
             Nigeria&apos;s home setup assistant. Reach thousands of homeowners actively setting
             up their spaces.
-          </div>
+          </p>
         </div>
       </div>
 

@@ -1616,7 +1616,7 @@ export async function deleteChecklistItem(itemId: string): Promise<void> {
 
 /** Fields needed for storefront listing only (smaller payload, faster for slow networks). */
 const VENDOR_PRODUCTS_LIST_FIELDS =
-  'id,storefront_id,slug,name,category,room,price_min,price_max,image_url,sort_order,created_at';
+  'id,storefront_id,slug,name,category,room,price_min,price_max,availability,image_url,sort_order,created_at';
 
 const STOREFRONT_PAGE_SIZE = 24;
 const STOREFRONT_PAGINATION_THRESHOLD = 50;

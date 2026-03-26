@@ -678,6 +678,12 @@ function StorefrontActive({
                       <p className="text-xs text-gray-600 mt-1">
                         {formatPrice(product.price_min, product.price_max)}
                       </p>
+                      {product.availability === 'sold_out' && (
+                        <p className="text-xs text-gray-600 mt-1">Sold Out</p>
+                      )}
+                      {product.availability === 'made_to_order' && (
+                        <p className="text-xs text-gray-600 mt-1">Made to Order</p>
+                      )}
                     </div>
                   </div>
                 );

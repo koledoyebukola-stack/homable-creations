@@ -206,6 +206,8 @@ export interface VendorProduct {
   dimension_unit: 'in' | 'ft' | 'cm' | 'm' | null;
   price_min: number | null;
   price_max: number | null;
+  /** in_stock | sold_out | made_to_order */
+  availability?: string | null;
   currency: string | null;
   image_url: string | null;
   image_urls: string[] | null;

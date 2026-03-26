@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/lib/supabase';
 import { vendorGetDashboardData, vendorSignOut, vendorSubmitNewProductForReview, vendorUpdateProductGrid, type VendorAvailability } from '@/lib/vendor-api';
 import type { VendorDashboardProduct } from '@/lib/vendor-api';
 
@@ -95,19 +94,7 @@ export default function VendorDashboard() {
         };
       });
       setProductEdits(nextEdits);
-    } catch (error) {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      console.log(
-        '[VENDOR DASH] redirecting to login because:',
-        'session:',
-        session,
-        'loading:',
-        loading,
-        'error:',
-        error,
-      );
+    } catch {
       toast.error('Something went wrong. Please try again.');
       navigate('/vendor/login');
     } finally {
@@ -238,9 +225,6 @@ export default function VendorDashboard() {
     }
   };
 
-  const session = undefined;
-  console.log('[VENDOR DASH] render - session:', session?.user?.email, 'loading:', loading);
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-stone-50">
       <div className="pb-28 md:pb-0">
@@ -311,7 +295,7 @@ export default function VendorDashboard() {
                       ].join(' ')}
                     >
                       <div className="relative flex-shrink-0">
-                        <div className="h-40 w-full rounded-xl overflow-hidden bg-gray-100">
+                        <div className="h-40 w-full flex-shrink-0 rounded-xl overflow-hidden bg-gray-100">
                           {p.displayImageUrl ? (
                             <img
                               src={p.displayImageUrl}
@@ -413,12 +397,12 @@ export default function VendorDashboard() {
           {!loading && products.length > 0 && (
             <section className="md:hidden">
               <div
-                className="fixed bottom-0 left-0 right-0 z-50 bg-white px-4 py-4"
+                className="fixed bottom-0 left-0 right-0 z-40 bg-white py-3 px-4"
                 style={{ borderTop: '0.5px solid var(--color-border-tertiary)' }}
               >
                 <Button
                   type="button"
-                  className="w-full bg-black text-white hover:bg-black rounded-lg h-12 text-[15px] font-medium"
+                  className="w-full bg-[#1a1a1a] text-white hover:bg-[#1a1a1a] rounded-lg h-12 text-[15px] font-medium"
                   onClick={() => void saveAllChanges()}
                   disabled={saveState === 'saving'}
                 >
@@ -432,7 +416,7 @@ export default function VendorDashboard() {
             <section className="hidden md:block mt-6">
               <Button
                 type="button"
-                className="w-full bg-black text-white hover:bg-black rounded-lg h-12 text-[15px] font-medium"
+                className="w-full bg-[#1a1a1a] text-white hover:bg-[#1a1a1a] rounded-lg h-12 text-[15px] font-medium"
                 onClick={() => void saveAllChanges()}
                 disabled={saveState === 'saving'}
               >
