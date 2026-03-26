@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { User, type Session } from '@supabase/supabase-js';
+import { User, type Session, type SupabaseClient } from '@supabase/supabase-js';
 import Home from './pages/Home';
 import Upload from './pages/Upload';
 import Analyzing from './pages/Analyzing';
@@ -75,14 +75,20 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function VendorProtectedRoute({ children }: { children: React.ReactNode }) {
+function VendorProtectedRoute({
+  children,
+  supabaseClient,
+}: {
+  children: React.ReactNode;
+  supabaseClient: SupabaseClient;
+}) {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const initializedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
 
-    supabase.auth.getSession().then(({ data }) => {
+    supabaseClient.auth.getSession().then(({ data }) => {
       if (cancelled) return;
       setSession(data.session ?? null);
       initializedRef.current = true;
@@ -90,19 +96,13 @@ function VendorProtectedRoute({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[VPR] auth state change:', event, session?.user?.email);
+    } = supabaseClient.auth.onAuthStateChange((_event, session) => {
       if (!initializedRef.current) return;
       setSession(session ?? null);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
-
-  const initialized = initializedRef.current;
-  console.log('[VPR] initialized:', initialized);
-  console.log('[VPR] session:', session?.user?.email);
-  console.log('[VPR] redirecting:', !session && initialized);
+  }, [supabaseClient]);
 
   if (session === undefined) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -218,7 +218,7 @@ function CaptureReferrerAndRoutes() {
           <Route
             path="/vendor/dashboard"
             element={
-              <VendorProtectedRoute>
+              <VendorProtectedRoute supabaseClient={supabase}>
                 <VendorDashboard />
               </VendorProtectedRoute>
             }
