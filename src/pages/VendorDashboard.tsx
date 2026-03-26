@@ -281,13 +281,19 @@ export default function VendorDashboard() {
             <p className="text-sm text-[#555555] mt-1">Update prices and availability for your products</p>
 
             {loading ? (
-              <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
+              <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 items-stretch pb-[100px] md:pb-0">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="aspect-square rounded-2xl bg-gray-200 animate-pulse" />
+                  <div
+                    key={i}
+                    className="rounded-2xl bg-gray-200 animate-pulse flex flex-col overflow-hidden"
+                  >
+                    <div className="h-40 bg-gray-200" />
+                    <div className="flex-1" />
+                  </div>
                 ))}
               </div>
             ) : (
-              <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
+              <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 items-stretch pb-[100px] md:pb-0">
                 {products.map((p) => {
                   const edit = productEdits[p.id] || {
                     priceMinInput: '',
@@ -304,8 +310,8 @@ export default function VendorDashboard() {
                         isPending ? 'opacity-70' : '',
                       ].join(' ')}
                     >
-                      <div className="relative">
-                        <div className="aspect-square w-full rounded-xl overflow-hidden bg-gray-100">
+                      <div className="relative flex-shrink-0">
+                        <div className="h-40 w-full rounded-xl overflow-hidden bg-gray-100">
                           {p.displayImageUrl ? (
                             <img
                               src={p.displayImageUrl}
@@ -328,71 +334,73 @@ export default function VendorDashboard() {
                         )}
                       </div>
 
-                      <h3 className="text-[13px] font-semibold text-gray-900 mt-3 leading-snug line-clamp-2">
-                        {p.name}
-                      </h3>
+                      <div className="flex-1 flex flex-col">
+                        <h3 className="text-[13px] font-semibold text-gray-900 mt-3 leading-snug line-clamp-2">
+                          {p.name}
+                        </h3>
 
-                      <div className="mt-3 space-y-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-[#111111]">₦</span>
-                            <Input
-                              value={edit.priceMinInput}
-                              onChange={(ev) => {
-                                const next = sanitizeDigitsOnly(ev.target.value);
+                        <div className="mt-3 space-y-3 flex-1">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-[#111111]">₦</span>
+                              <Input
+                                value={edit.priceMinInput}
+                                onChange={(ev) => {
+                                  const next = sanitizeDigitsOnly(ev.target.value);
+                                  setProductEdits((prev) => ({
+                                    ...prev,
+                                    [p.id]: { ...edit, priceMinInput: next },
+                                  }));
+                                }}
+                                placeholder="Min price"
+                                className="h-12"
+                                inputMode="numeric"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-[#111111]">₦</span>
+                              <Input
+                                value={edit.priceMaxInput}
+                                onChange={(ev) => {
+                                  const next = sanitizeDigitsOnly(ev.target.value);
+                                  setProductEdits((prev) => ({
+                                    ...prev,
+                                    [p.id]: { ...edit, priceMaxInput: next },
+                                  }));
+                                }}
+                                placeholder="Max (optional)"
+                                className="h-12"
+                                inputMode="numeric"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label className="text-xs text-[#555555]">Availability:</Label>
+                            <Select
+                              value={edit.availability}
+                              onValueChange={(v) => {
                                 setProductEdits((prev) => ({
                                   ...prev,
-                                  [p.id]: { ...edit, priceMinInput: next },
+                                  [p.id]: { ...edit, availability: v as VendorAvailability },
                                 }));
                               }}
-                              placeholder="Min price"
-                              className="h-12"
-                              inputMode="numeric"
-                            />
+                            >
+                              <SelectTrigger className="h-12 mt-1">
+                                <SelectValue placeholder="Availability" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {AVAILABILITY_OPTIONS.map((opt) => (
+                                  <SelectItem key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
-                        </div>
-
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-[#111111]">₦</span>
-                            <Input
-                              value={edit.priceMaxInput}
-                              onChange={(ev) => {
-                                const next = sanitizeDigitsOnly(ev.target.value);
-                                setProductEdits((prev) => ({
-                                  ...prev,
-                                  [p.id]: { ...edit, priceMaxInput: next },
-                                }));
-                              }}
-                              placeholder="Max (optional)"
-                              className="h-12"
-                              inputMode="numeric"
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <Label className="text-xs text-[#555555]">Availability:</Label>
-                          <Select
-                            value={edit.availability}
-                            onValueChange={(v) => {
-                              setProductEdits((prev) => ({
-                                ...prev,
-                                [p.id]: { ...edit, availability: v as VendorAvailability },
-                              }));
-                            }}
-                          >
-                            <SelectTrigger className="h-12 mt-1">
-                              <SelectValue placeholder="Availability" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {AVAILABILITY_OPTIONS.map((opt) => (
-                                <SelectItem key={opt.value} value={opt.value}>
-                                  {opt.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
                         </div>
                       </div>
                     </div>
@@ -404,51 +412,32 @@ export default function VendorDashboard() {
 
           {!loading && products.length > 0 && (
             <section className="md:hidden">
-              <div className="fixed bottom-0 left-0 right-0 z-50 bg-black px-4 py-4">
-                {saveState === 'saved' ? (
-                  <a
-                    href={`/stores/${storefrontSlug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex w-full items-center justify-center bg-black text-white hover:bg-black rounded-xl h-12 text-sm font-medium"
-                  >
-                    View your storefront →
-                  </a>
-                ) : (
-                  <Button
-                    type="button"
-                    className="w-full bg-black text-white hover:bg-gray-900 rounded-xl h-12"
-                    onClick={() => void saveAllChanges()}
-                    disabled={saveState === 'saving'}
-                  >
-                    {saveState === 'saving' ? 'Saving…' : 'Save all changes'}
-                  </Button>
-                )}
+              <div
+                className="fixed bottom-0 left-0 right-0 z-50 bg-white px-4 py-4"
+                style={{ borderTop: '0.5px solid var(--color-border-tertiary)' }}
+              >
+                <Button
+                  type="button"
+                  className="w-full bg-black text-white hover:bg-black rounded-lg h-12 text-[15px] font-medium"
+                  onClick={() => void saveAllChanges()}
+                  disabled={saveState === 'saving'}
+                >
+                  Save all changes
+                </Button>
               </div>
             </section>
           )}
 
           {!loading && products.length > 0 && (
-            <section className="hidden md:block mb-10">
-              {saveState === 'saved' ? (
-                <a
-                  href={`/stores/${storefrontSlug}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex w-full items-center justify-center bg-black text-white hover:bg-gray-900 rounded-xl h-12 text-sm font-medium"
-                >
-                  View your storefront →
-                </a>
-              ) : (
-                <Button
-                  type="button"
-                  className="w-full bg-black text-white hover:bg-gray-900 rounded-xl h-12"
-                  onClick={() => void saveAllChanges()}
-                  disabled={saveState === 'saving'}
-                >
-                  {saveState === 'saving' ? 'Saving…' : 'Save all changes'}
-                </Button>
-              )}
+            <section className="hidden md:block mt-6">
+              <Button
+                type="button"
+                className="w-full bg-black text-white hover:bg-black rounded-lg h-12 text-[15px] font-medium"
+                onClick={() => void saveAllChanges()}
+                disabled={saveState === 'saving'}
+              >
+                Save all changes
+              </Button>
             </section>
           )}
 
