@@ -26,7 +26,7 @@ export default function VendorLogin() {
         setErrorMessage('Incorrect email or password. Please try again.');
         return;
       }
-      navigate('/vendor/dashboard');
+      window.location.href = '/vendor/dashboard';
     } catch {
       setErrorMessage('Incorrect email or password. Please try again.');
     } finally {

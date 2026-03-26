@@ -1,7 +1,7 @@
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User, type Session, type SupabaseClient } from '@supabase/supabase-js';
@@ -137,7 +137,8 @@ function MetaPixelPageViewTracker() {
   return null;
 }
 
-function CaptureReferrerAndRoutes() {
+/** Header, footer, market banner, and ref capture for the main app only (not vendor portal). */
+function MainAppLayout() {
   const location = useLocation();
   useEffect(() => {
     const ref = new URLSearchParams(location.search).get('ref');
@@ -208,116 +209,121 @@ function CaptureReferrerAndRoutes() {
         </div>
       )}
 
-      <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-          <Route path="/vendor/login" element={<VendorLogin />} />
-          <Route path="/vendor/signup" element={<VendorSignup />} />
-          <Route
-            path="/vendor/dashboard"
-            element={
-              <VendorProtectedRoute supabaseClient={supabase}>
-                <VendorDashboard />
-              </VendorProtectedRoute>
-            }
-          />
-          {/* Upload, Analyzing, and ItemDetection routes are PUBLIC - auth modal shows on results page */}
-          <Route path="/upload" element={<Upload />} />
-          <Route path="/explore/:slug" element={<ExploreScenePage />} />
-          <Route path="/analyzing/:boardId" element={<Analyzing />} />
-          <Route path="/item-detection/:boardId" element={<ItemDetection />} />
-          {/* Design Space flow routes - PUBLIC */}
-          <Route path="/design-space/analyze" element={<DesignSpaceAnalyze />} />
-          <Route path="/design-space/options" element={<DesignSpaceOptions />} />
-          <Route path="/design-space/items" element={<DesignSpaceItems />} />
-          {/* Specs flow routes - PUBLIC */}
-          <Route path="/specs/:categoryId" element={<SpecsForm />} />
-          <Route path="/specs-results" element={<SpecsResults />} />
-          <Route path="/template-results/:templateId" element={<TemplateResults />} />
-          {/* Homable Shops - public placeholders */}
-          <Route path="/shops" element={<ShopsHome />} />
-          <Route path="/shops/vendors" element={<VendorsDirectory />} />
-          <Route path="/shops/products/:slug" element={<ShopsProductDetail />} />
-          <Route path="/shops/:query" element={<ShopsSearch />} />
-          {/* Demo storefront - hidden route, direct access only */}
-          <Route path="/stores/demo-decor-store" element={<DemoStorefront />} />
-          {/* Category-specific storefront URL (shareable, e.g. /stores/wafco/beds) */}
-          <Route path="/stores/:slug/:category" element={<StorefrontView />} />
-          {/* Dynamic storefront - real data from Supabase */}
-          <Route path="/stores/:slug" element={<StorefrontView />} />
-          {/* AI Room Generator — 4-step flow (mock payment in Phase 1) */}
-          <Route path="/ai-room-generator" element={<AiRoomGenerator />} />
-          {/* Other results pages require authentication */}
-          <Route
-            path="/products/:boardId/:itemId"
-            element={
-              <ProtectedRoute>
-                <ProductMatches />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/product-matches/:boardId"
-            element={
-              <ProtectedRoute>
-                <ItemDetection />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/board/:boardId"
-            element={
-              <ProtectedRoute>
-                <RoomBoard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/my-boards"
-            element={
-              <ProtectedRoute>
-                <MyBoards />
-              </ProtectedRoute>
-            }
-          />
-          {/* History route - protected */}
-          <Route
-            path="/history"
-            element={
-              <ProtectedRoute>
-                <History />
-              </ProtectedRoute>
-            }
-          />
-          {/* Checklists routes - protected */}
-          <Route
-            path="/checklists"
-            element={
-              <ProtectedRoute>
-                <Checklists />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/checklists/:id"
-            element={
-              <ProtectedRoute>
-                <ChecklistDetail />
-              </ProtectedRoute>
-            }
-          />
-          {/* Shared gifting view - PUBLIC (no auth required) */}
-          <Route
-            path="/checklists/gift/:token"
-            element={<ChecklistGiftingView />}
-          />
-          <Route path="*" element={<NotFound />} />
-      </Routes>
+      <Outlet />
 
       <Footer />
     </>
+  );
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/vendor/login" element={<VendorLogin />} />
+      <Route path="/vendor/signup" element={<VendorSignup />} />
+      <Route
+        path="/vendor/dashboard"
+        element={
+          <VendorProtectedRoute supabaseClient={supabase}>
+            <VendorDashboard />
+          </VendorProtectedRoute>
+        }
+      />
+      <Route element={<MainAppLayout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        {/* Upload, Analyzing, and ItemDetection routes are PUBLIC - auth modal shows on results page */}
+        <Route path="/upload" element={<Upload />} />
+        <Route path="/explore/:slug" element={<ExploreScenePage />} />
+        <Route path="/analyzing/:boardId" element={<Analyzing />} />
+        <Route path="/item-detection/:boardId" element={<ItemDetection />} />
+        {/* Design Space flow routes - PUBLIC */}
+        <Route path="/design-space/analyze" element={<DesignSpaceAnalyze />} />
+        <Route path="/design-space/options" element={<DesignSpaceOptions />} />
+        <Route path="/design-space/items" element={<DesignSpaceItems />} />
+        {/* Specs flow routes - PUBLIC */}
+        <Route path="/specs/:categoryId" element={<SpecsForm />} />
+        <Route path="/specs-results" element={<SpecsResults />} />
+        <Route path="/template-results/:templateId" element={<TemplateResults />} />
+        {/* Homable Shops - public placeholders */}
+        <Route path="/shops" element={<ShopsHome />} />
+        <Route path="/shops/vendors" element={<VendorsDirectory />} />
+        <Route path="/shops/products/:slug" element={<ShopsProductDetail />} />
+        <Route path="/shops/:query" element={<ShopsSearch />} />
+        {/* Demo storefront - hidden route, direct access only */}
+        <Route path="/stores/demo-decor-store" element={<DemoStorefront />} />
+        {/* Category-specific storefront URL (shareable, e.g. /stores/wafco/beds) */}
+        <Route path="/stores/:slug/:category" element={<StorefrontView />} />
+        {/* Dynamic storefront - real data from Supabase */}
+        <Route path="/stores/:slug" element={<StorefrontView />} />
+        {/* AI Room Generator — 4-step flow (mock payment in Phase 1) */}
+        <Route path="/ai-room-generator" element={<AiRoomGenerator />} />
+        {/* Other results pages require authentication */}
+        <Route
+          path="/products/:boardId/:itemId"
+          element={
+            <ProtectedRoute>
+              <ProductMatches />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/product-matches/:boardId"
+          element={
+            <ProtectedRoute>
+              <ItemDetection />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/board/:boardId"
+          element={
+            <ProtectedRoute>
+              <RoomBoard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/my-boards"
+          element={
+            <ProtectedRoute>
+              <MyBoards />
+            </ProtectedRoute>
+          }
+        />
+        {/* History route - protected */}
+        <Route
+          path="/history"
+          element={
+            <ProtectedRoute>
+              <History />
+            </ProtectedRoute>
+          }
+        />
+        {/* Checklists routes - protected */}
+        <Route
+          path="/checklists"
+          element={
+            <ProtectedRoute>
+              <Checklists />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/checklists/:id"
+          element={
+            <ProtectedRoute>
+              <ChecklistDetail />
+            </ProtectedRoute>
+          }
+        />
+        {/* Shared gifting view - PUBLIC (no auth required) */}
+        <Route path="/checklists/gift/:token" element={<ChecklistGiftingView />} />
+        <Route path="*" element={<NotFound />} />
+      </Route>
+    </Routes>
   );
 }
 
@@ -328,7 +334,7 @@ const App = () => (
       <BrowserRouter>
         <CountryProvider>
           <MetaPixelPageViewTracker />
-          <CaptureReferrerAndRoutes />
+          <AppRoutes />
         </CountryProvider>
       </BrowserRouter>
     </TooltipProvider>
