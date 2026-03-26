@@ -255,13 +255,14 @@ export default function VendorDashboard() {
               </div>
 
               <div className="text-right">
-                <button
-                  type="button"
+                <a
+                  href={`/stores/${storefrontSlug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="block text-sm font-medium text-[#111111] hover:underline"
-                  onClick={() => navigate(`/stores/${storefrontSlug}`)}
                 >
                   View your storefront →
-                </button>
+                </a>
                 <button
                   type="button"
                   className="mt-2 block text-xs text-[#555555] hover:underline"
@@ -405,13 +406,14 @@ export default function VendorDashboard() {
             <section className="md:hidden">
               <div className="fixed bottom-0 left-0 right-0 z-50 bg-black px-4 py-4">
                 {saveState === 'saved' ? (
-                  <Button
-                    type="button"
-                    className="w-full bg-black text-white hover:bg-black rounded-xl h-12"
-                    onClick={() => navigate(`/stores/${storefrontSlug}`)}
+                  <a
+                    href={`/stores/${storefrontSlug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex w-full items-center justify-center bg-black text-white hover:bg-black rounded-xl h-12 text-sm font-medium"
                   >
                     View your storefront →
-                  </Button>
+                  </a>
                 ) : (
                   <Button
                     type="button"
@@ -428,14 +430,25 @@ export default function VendorDashboard() {
 
           {!loading && products.length > 0 && (
             <section className="hidden md:block mb-10">
-              <Button
-                type="button"
-                className="w-full bg-black text-white hover:bg-gray-900 rounded-xl h-12"
-                onClick={() => void (saveState === 'saved' ? navigate(`/stores/${storefrontSlug}`) : saveAllChanges())}
-                disabled={saveState === 'saving'}
-              >
-                {saveState === 'saved' ? 'View your storefront →' : saveState === 'saving' ? 'Saving…' : 'Save all changes'}
-              </Button>
+              {saveState === 'saved' ? (
+                <a
+                  href={`/stores/${storefrontSlug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex w-full items-center justify-center bg-black text-white hover:bg-gray-900 rounded-xl h-12 text-sm font-medium"
+                >
+                  View your storefront →
+                </a>
+              ) : (
+                <Button
+                  type="button"
+                  className="w-full bg-black text-white hover:bg-gray-900 rounded-xl h-12"
+                  onClick={() => void saveAllChanges()}
+                  disabled={saveState === 'saving'}
+                >
+                  {saveState === 'saving' ? 'Saving…' : 'Save all changes'}
+                </Button>
+              )}
             </section>
           )}
 
