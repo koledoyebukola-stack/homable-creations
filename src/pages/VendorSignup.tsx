@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { vendorSignUp } from '@/lib/vendor-api';
+import { supabase } from '@/lib/supabase';
 
 export default function VendorSignup() {
   const navigate = useNavigate();
@@ -16,42 +16,91 @@ export default function VendorSignup() {
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showCheckEmail, setShowCheckEmail] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErrorMessage(null);
     try {
-      const res = await vendorSignUp({
-        storefrontSlug,
-        firstName,
-        lastName,
-        email,
-        password,
-      });
+      // Check storefront slug exists and is not already claimed.
+      const { data: storefrontRow, error: storefrontError } = await supabase
+        .from('storefronts')
+        .select('*')
+        .eq('slug', storefrontSlug)
+        .maybeSingle();
 
-      if (!res.ok) {
-        if (res.reason === 'STORE_NOT_FOUND') {
-          setErrorMessage(
-            'We could not find that storefront. Check the slug or contact Homable at homablecreations@gmail.com',
-          );
-          return;
-        }
-        if (res.reason === 'STORE_ALREADY_CLAIMED') {
-          setErrorMessage('This storefront already has an account. Contact Homable if you need help.');
-          return;
-        }
-        setErrorMessage('Something went wrong. Please try again.');
+      if (storefrontError) throw storefrontError;
+      if (!storefrontRow) {
+        setErrorMessage(
+          'We could not find that storefront. Check the slug or contact Homable at homablecreations@gmail.com',
+        );
+        return;
+      }
+      if ((storefrontRow as any).vendor_user_id) {
+        setErrorMessage('This storefront already has an account. Contact Homable if you need help.');
         return;
       }
 
-      navigate('/vendor/dashboard');
+      // Create Supabase auth user.
+      // Email confirmation is enabled, so do not sign in automatically.
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+          },
+          emailRedirectTo: 'https://homablecreations.com/vendor/login',
+        },
+      });
+
+      if (signUpError) throw signUpError;
+
+      const newUserId = (signUpData as any)?.user?.id as string | undefined;
+      if (!newUserId) {
+        // Still show the success screen so the vendor can confirm their email.
+        setShowCheckEmail(true);
+        return;
+      }
+
+      // Claim the storefront for this vendor user.
+      const updateRes = await supabase
+        .from('storefronts')
+        .update({ vendor_user_id: newUserId })
+        .eq('slug', storefrontSlug)
+        .is('vendor_user_id', null);
+
+      setShowCheckEmail(true);
     } catch {
       setErrorMessage('Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
   };
+
+  if (showCheckEmail) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-stone-50 px-4">
+        <div className="w-full max-w-md text-center">
+          <div className="text-3xl font-bold text-[#111111] mb-6">Homable Creations</div>
+          <h1 className="text-2xl font-bold text-[#111111] mb-2">Check your email</h1>
+          <p className="text-[#555555] mb-6">
+            We sent a confirmation link to {email}. Click the link to activate your vendor account,
+            then come back to log in.
+          </p>
+          <Button
+            type="button"
+            className="w-full bg-black text-white hover:bg-gray-900 h-12 rounded-xl"
+            onClick={() => navigate('/vendor/login')}
+          >
+            Go to login →
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-stone-50 px-4">
