@@ -77,6 +77,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function VendorProtectedRoute({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,12 +85,14 @@ function VendorProtectedRoute({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data }) => {
       if (cancelled) return;
       setSession(data.session ?? null);
+      initializedRef.current = true;
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+      if (!initializedRef.current) return;
+      setSession(session ?? null);
     });
 
     return () => subscription.unsubscribe();

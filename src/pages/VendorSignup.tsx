@@ -18,6 +18,9 @@ export default function VendorSignup() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showCheckEmail, setShowCheckEmail] = useState(false);
 
+  const roomImageUrl =
+    'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Gist%20and%20Chill%20Living%20Room.png';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -82,144 +85,198 @@ export default function VendorSignup() {
 
   if (showCheckEmail) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-stone-50 px-4">
-        <div className="w-full max-w-md text-center">
-          <div className="text-3xl font-bold text-[#111111] mb-6">Homable Creations</div>
-          <h1 className="text-2xl font-bold text-[#111111] mb-2">Check your email</h1>
-          <p className="text-[#555555] mb-6">
-            We sent a confirmation link to {email}. Click the link to activate your vendor account,
-            then come back to log in.
-          </p>
-          <Button
-            type="button"
-            className="w-full bg-black text-white hover:bg-gray-900 h-12 rounded-xl"
-            onClick={() => navigate('/vendor/login')}
-          >
-            Go to login →
-          </Button>
+      <div className="min-h-screen flex flex-col md:flex-row">
+        <div className="relative w-full h-[180px] md:h-auto md:w-1/2 overflow-hidden bg-[#1a1a1a]">
+          <img
+            src={roomImageUrl}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }} />
+
+          <div className="absolute left-4 bottom-4">
+            <div className="text-white text-[14px] font-medium">Homable Creations</div>
+            <div className="mt-1 text-[#c9b99a] text-[12px] leading-[1.6] max-w-[90%]">
+              Nigeria&apos;s home setup assistant. Reach thousands of homeowners actively setting
+              up their spaces.
+            </div>
+          </div>
+        </div>
+
+        <div className="md:w-1/2 bg-white flex items-center justify-center">
+          <div className="w-full px-6 py-6 md:px-0 md:py-0 md:max-w-[360px]">
+            <p className="text-[11px] font-medium uppercase tracking-[0.5px] text-[hsl(var(--color-text-secondary))] mb-4">
+              VENDOR PORTAL
+            </p>
+            <h1 className="text-[22px] font-medium text-[#111111] mb-1">Check your email</h1>
+            <p className="text-[13px] text-[hsl(var(--color-text-secondary))] mb-6">
+              We sent a confirmation link to {email}. Click the link to activate your vendor
+              account, then come back to log in.
+            </p>
+
+            <Button
+              type="button"
+              className="w-full bg-[#1a1a1a] text-white hover:bg-gray-900 h-11 rounded-xl border-0 font-medium text-[14px]"
+              onClick={() => navigate('/vendor/login')}
+            >
+              Go to login →
+            </Button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-stone-50 px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="text-3xl font-bold text-[#111111]">Homable Creations</div>
+    <div className="min-h-screen flex flex-col md:flex-row">
+      <div className="relative w-full h-[180px] md:h-auto md:w-1/2 overflow-hidden bg-[#1a1a1a]">
+        <img src={roomImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }} />
+
+        <div className="absolute left-4 bottom-4">
+          <div className="text-white text-[14px] font-medium">Homable Creations</div>
+          <div className="mt-1 text-[#c9b99a] text-[12px] leading-[1.6] max-w-[90%]">
+            Nigeria&apos;s home setup assistant. Reach thousands of homeowners actively setting
+            up their spaces.
+          </div>
         </div>
+      </div>
 
-        <h1 className="text-2xl font-bold text-[#111111] mb-2">Set up your vendor account</h1>
-        <p className="text-[#555555] mb-6">Create your vendor login to manage your storefront</p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="vendor-storefront-slug" className="text-[#111111]">
-              Storefront slug
-            </Label>
-            <Input
-              id="vendor-storefront-slug"
-              value={storefrontSlug}
-              onChange={(e) => setStorefrontSlug(e.target.value)}
-              placeholder="e.g. wafco-construction-limited"
-              required
-              className="h-12"
-              autoComplete="off"
-            />
-            <p className="text-sm text-[#777777]">
-              Contact Homable if unsure of your storefront slug
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="vendor-first-name" className="text-[#111111]">
-              First name
-            </Label>
-            <Input
-              id="vendor-first-name"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
-              className="h-12"
-              autoComplete="given-name"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="vendor-last-name" className="text-[#111111]">
-              Last name
-            </Label>
-            <Input
-              id="vendor-last-name"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              required
-              className="h-12"
-              autoComplete="family-name"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="vendor-email" className="text-[#111111]">
-              Email
-            </Label>
-            <Input
-              id="vendor-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-              className="h-12"
-              autoComplete="email"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="vendor-password" className="text-[#111111]">
-              Password
-            </Label>
-            <Input
-              id="vendor-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="h-12"
-              minLength={8}
-              autoComplete="new-password"
-            />
-            <p className="text-sm text-[#777777]">Minimum 8 characters</p>
-          </div>
-
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-black text-white hover:bg-gray-900 h-12 rounded-xl"
-          >
-            {loading ? 'Creating account…' : 'Create account'}
-          </Button>
-
-          {errorMessage && (
-            <p className="text-sm text-red-600 pt-2" role="alert">
-              {errorMessage}
-            </p>
-          )}
-
-          <p className="text-sm text-[#555555] text-center pt-2">
-            Already have an account?{' '}
-            <a
-              href="/vendor/login"
-              className="text-[#111111] font-medium hover:underline"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate('/vendor/login');
-              }}
-            >
-              Log in →
-            </a>
+      <div className="md:w-1/2 bg-white flex items-center justify-center">
+        <div className="w-full px-6 py-6 md:px-0 md:py-0 md:max-w-[360px]">
+          <p className="text-[11px] font-medium uppercase tracking-[0.5px] text-[hsl(var(--color-text-secondary))] mb-4">
+            VENDOR PORTAL
           </p>
-        </form>
+
+          <h1 className="text-[22px] font-medium text-[#111111] mb-1">Set up your account</h1>
+          <p className="text-[13px] text-[hsl(var(--color-text-secondary))] mb-6">
+            Create your vendor login to manage your storefront
+          </p>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label
+                htmlFor="vendor-storefront-slug"
+                className="text-[12px] text-[hsl(var(--color-text-secondary))] mb-1.5"
+              >
+                Storefront slug
+              </Label>
+              <Input
+                id="vendor-storefront-slug"
+                value={storefrontSlug}
+                onChange={(e) => setStorefrontSlug(e.target.value)}
+                placeholder="e.g. wafco-construction-limited"
+                required
+                className="h-11 min-h-[44px]"
+                autoComplete="off"
+              />
+              <p className="text-sm text-[#777777]">
+                Contact Homable if unsure of your storefront slug
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="vendor-first-name"
+                className="text-[12px] text-[hsl(var(--color-text-secondary))] mb-1.5"
+              >
+                First name
+              </Label>
+              <Input
+                id="vendor-first-name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+                className="h-11 min-h-[44px]"
+                autoComplete="given-name"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="vendor-last-name"
+                className="text-[12px] text-[hsl(var(--color-text-secondary))] mb-1.5"
+              >
+                Last name
+              </Label>
+              <Input
+                id="vendor-last-name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+                className="h-11 min-h-[44px]"
+                autoComplete="family-name"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="vendor-email"
+                className="text-[12px] text-[hsl(var(--color-text-secondary))] mb-1.5"
+              >
+                Email
+              </Label>
+              <Input
+                id="vendor-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                required
+                className="h-11 min-h-[44px]"
+                autoComplete="email"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="vendor-password"
+                className="text-[12px] text-[hsl(var(--color-text-secondary))] mb-1.5"
+              >
+                Password
+              </Label>
+              <Input
+                id="vendor-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="h-11 min-h-[44px]"
+                minLength={8}
+                autoComplete="new-password"
+              />
+              <p className="text-sm text-[#777777]">Minimum 8 characters</p>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#1a1a1a] text-white hover:bg-gray-900 h-11 rounded-xl border-0 font-medium text-[14px]"
+            >
+              {loading ? 'Creating account…' : 'Create account'}
+            </Button>
+
+            {errorMessage && (
+              <p className="text-sm text-red-600 pt-2" role="alert">
+                {errorMessage}
+              </p>
+            )}
+
+            <p className="text-[13px] text-[hsl(var(--color-text-secondary))] text-center mt-4">
+              Already have an account?{' '}
+              <a
+                href="/vendor/login"
+                className="text-[#111111] font-medium hover:underline"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('/vendor/login');
+                }}
+              >
+                Log in →
+              </a>
+            </p>
+          </form>
+        </div>
       </div>
     </div>
   );
