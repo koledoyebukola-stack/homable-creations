@@ -34,6 +34,9 @@ import StorefrontView from './pages/StorefrontView';
 import ExploreScenePage from './pages/ExploreScenePage';
 import AiRoomGenerator from './pages/AiRoomGenerator';
 import NotFound from './pages/NotFound';
+import VendorLogin from './pages/VendorLogin';
+import VendorSignup from './pages/VendorSignup';
+import VendorDashboard from './pages/VendorDashboard';
 import { CountryProvider, useCountry } from '@/context/CountryContext';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
@@ -67,6 +70,37 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function VendorProtectedRoute({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user: u } }) => {
+      setUser(u);
+      setLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/vendor/login" replace />;
   }
 
   return <>{children}</>;
@@ -170,6 +204,16 @@ function CaptureReferrerAndRoutes() {
           <Route path="/auth" element={<Auth />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/vendor/login" element={<VendorLogin />} />
+          <Route path="/vendor/signup" element={<VendorSignup />} />
+          <Route
+            path="/vendor/dashboard"
+            element={
+              <VendorProtectedRoute>
+                <VendorDashboard />
+              </VendorProtectedRoute>
+            }
+          />
           {/* Upload, Analyzing, and ItemDetection routes are PUBLIC - auth modal shows on results page */}
           <Route path="/upload" element={<Upload />} />
           <Route path="/explore/:slug" element={<ExploreScenePage />} />
