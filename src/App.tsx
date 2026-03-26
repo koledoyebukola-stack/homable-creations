@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { User } from '@supabase/supabase-js';
+import { User, type Session } from '@supabase/supabase-js';
 import Home from './pages/Home';
 import Upload from './pages/Upload';
 import Analyzing from './pages/Analyzing';
@@ -76,30 +76,30 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function VendorProtectedRoute({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user: u } }) => {
-      setUser(u);
-      setLoading(false);
+    let cancelled = false;
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      setSession(data.session ?? null);
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
+      setSession(session);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  if (loading) {
+  if (session === undefined) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 
-  if (!user) {
+  if (session === null) {
     return <Navigate to="/vendor/login" replace />;
   }
 

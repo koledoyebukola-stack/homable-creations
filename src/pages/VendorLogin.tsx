@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/supabase';
-import { toast } from 'sonner';
 
 export default function VendorLogin() {
   const navigate = useNavigate();
@@ -24,6 +23,7 @@ export default function VendorLogin() {
         setErrorMessage('Incorrect email or password. Please try again.');
         return;
       }
+      await new Promise((resolve) => setTimeout(resolve, 500));
       navigate('/vendor/dashboard');
     } catch {
       setErrorMessage('Incorrect email or password. Please try again.');
