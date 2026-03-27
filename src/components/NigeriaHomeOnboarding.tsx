@@ -10,6 +10,7 @@ const ROOM_OPTIONS: { emoji: string; label: string; value: ExploreRoomTypeFilter
   { emoji: '🛏️', label: 'Bedroom', value: 'bedroom' },
   { emoji: '🍽️', label: 'Dining Room', value: 'dining' },
   { emoji: '💼', label: 'Home Office', value: 'office' },
+  { emoji: '📐', label: 'Corner Styling', value: 'corner_styling' },
 ];
 
 const PRICE_OPTIONS: { emoji: string; label: string; value: ExplorePriceFilter }[] = [
