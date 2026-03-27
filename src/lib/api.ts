@@ -14,6 +14,22 @@ type SearchResponse = {
   message_category_context?: string;
 };
 
+const EXCLUDED_STOREFRONT_IDS = new Set<string>([
+  'ee5383f7-8d88-4b62-956b-e2e54e6d9aa3',
+]);
+
+function isExcludedStorefrontId(storefrontId: string | null | undefined): boolean {
+  return !!storefrontId && EXCLUDED_STOREFRONT_IDS.has(storefrontId);
+}
+
+function filterExcludedStorefronts<T extends { id: string }>(rows: T[]): T[] {
+  return rows.filter((row) => !isExcludedStorefrontId(row.id));
+}
+
+function filterExcludedVendorProducts<T extends { storefront_id: string }>(rows: T[]): T[] {
+  return rows.filter((row) => !isExcludedStorefrontId(row.storefront_id));
+}
+
 // Helper function to validate product URL
 function isValidProductUrl(url: string | undefined): boolean {
   if (!url) return false;
@@ -1768,7 +1784,12 @@ export async function getActiveStorefrontsByLocation(
     return { storefronts: [], products: [] };
   }
 
-  const storefrontIds = (storefronts as Storefront[]).map(sf => sf.id);
+  const filteredStorefronts = filterExcludedStorefronts(storefronts as Storefront[]);
+  if (filteredStorefronts.length === 0) {
+    return { storefronts: [], products: [] };
+  }
+
+  const storefrontIds = filteredStorefronts.map(sf => sf.id);
 
   const { data: products, error: productsError } = await supabase
     .from('vendor_products')
@@ -1780,14 +1801,14 @@ export async function getActiveStorefrontsByLocation(
   if (productsError) {
     console.error('Failed to fetch vendor products by location:', productsError);
     return {
-      storefronts: storefronts as Storefront[],
+      storefronts: filteredStorefronts,
       products: [],
     };
   }
 
   return {
-    storefronts: storefronts as Storefront[],
-    products: (products || []) as VendorProduct[],
+    storefronts: filteredStorefronts,
+    products: filterExcludedVendorProducts((products || []) as VendorProduct[]),
   };
 }
 
@@ -1806,7 +1827,10 @@ export async function getRandomArtworkProducts(location: string = 'NG', limit: n
     return [];
   }
 
-  const storefrontIds = storefronts.map((s: { id: string }) => s.id);
+  const storefrontIds = filterExcludedStorefronts(storefronts as Array<{ id: string }>).map((s) => s.id);
+  if (storefrontIds.length === 0) {
+    return [];
+  }
 
   const { data: products, error: productsError } = await supabase
     .from('vendor_products')
@@ -1820,7 +1844,7 @@ export async function getRandomArtworkProducts(location: string = 'NG', limit: n
     return [];
   }
 
-  const list = products as VendorProduct[];
+  const list = filterExcludedVendorProducts(products as VendorProduct[]);
   const shuffled = [...list].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, limit);
 }
@@ -1852,7 +1876,10 @@ export async function getCategoryProductsForExplore(
     return [];
   }
 
-  const storefrontIds = storefronts.map((s: { id: string }) => s.id);
+  const storefrontIds = filterExcludedStorefronts(storefronts as Array<{ id: string }>).map((s) => s.id);
+  if (storefrontIds.length === 0) {
+    return [];
+  }
 
   const { data: products, error: productsError } = await supabase
     .from('vendor_products')
@@ -1866,7 +1893,7 @@ export async function getCategoryProductsForExplore(
     return [];
   }
 
-  const list = products as VendorProduct[];
+  const list = filterExcludedVendorProducts(products as VendorProduct[]);
 
   // Group by storefront_id
   const byStorefront = new Map<string, VendorProduct[]>();
@@ -1949,7 +1976,10 @@ export async function getCategoryProductsForExploreByPrice(
     return [];
   }
 
-  const storefrontIds = storefronts.map((s: { id: string }) => s.id);
+  const storefrontIds = filterExcludedStorefronts(storefronts as Array<{ id: string }>).map((s) => s.id);
+  if (storefrontIds.length === 0) {
+    return [];
+  }
 
   // For tables and beds, keep sections strictly ordered by price (no randomization)
   // so "More Affordable" vs "Higher-End" remain intuitive while the catalog is small.
@@ -1970,7 +2000,7 @@ export async function getCategoryProductsForExploreByPrice(
       return [];
     }
 
-    const fixedList = fixedProducts as VendorProduct[];
+    const fixedList = filterExcludedVendorProducts(fixedProducts as VendorProduct[]);
     const uniqueStorefrontIds = [...new Set(fixedList.map((p) => p.storefront_id))];
     const { data: storefrontRows, error: storefrontFetchError } = await supabase
       .from('storefronts')
@@ -2012,7 +2042,7 @@ export async function getCategoryProductsForExploreByPrice(
     return [];
   }
 
-  const list = products as VendorProduct[];
+  const list = filterExcludedVendorProducts(products as VendorProduct[]);
 
   // Randomly sample `limit` products from the price-ordered band
   const pool = [...list];
@@ -2097,7 +2127,10 @@ export async function getProductsForTvWallCompleteTheLook(
     return [];
   }
 
-  const storefrontIds = storefronts.map((s: { id: string }) => s.id);
+  const storefrontIds = filterExcludedStorefronts(storefronts as Array<{ id: string }>).map((s) => s.id);
+  if (storefrontIds.length === 0) {
+    return [];
+  }
   const categories = ['artwork', 'lighting', 'mirror', 'planters'];
 
   const { data: products, error: productsError } = await supabase
@@ -2113,7 +2146,7 @@ export async function getProductsForTvWallCompleteTheLook(
     return [];
   }
 
-  const productList = products as VendorProduct[];
+  const productList = filterExcludedVendorProducts(products as VendorProduct[]);
   const uniqueStorefrontIds = [...new Set(productList.map((p) => p.storefront_id))];
   const { data: storefrontRows, error: storefrontFetchError } = await supabase
     .from('storefronts')
@@ -2378,7 +2411,9 @@ export async function getSimilarProducts(
   }
 
   const rows = (data || []) as FindSimilarVendorProductsRpcRow[];
-  return rows.map((row) => {
+  return rows
+    .filter((row) => !isExcludedStorefrontId((row as any).storefront_id))
+    .map((row) => {
     const {
       attributes: attrDoc,
       attributes_created_at,
@@ -2730,7 +2765,9 @@ export async function getExploreSceneBySlug(slug: string): Promise<{
       .from('vendor_products')
       .select('*')
       .in('id', productIds);
-    products = (productsData || []) as { id: string; [key: string]: unknown }[];
+    products = (productsData || []).filter(
+      (p: any) => !isExcludedStorefrontId(p.storefront_id)
+    ) as { id: string; [key: string]: unknown }[];
 
     const storefrontIds = [...new Set(products.map((p) => p.storefront_id as string))];
     if (storefrontIds.length > 0) {
