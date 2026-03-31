@@ -2248,82 +2248,95 @@ export default function ExploreScenePage() {
           })()}
 
         {/* Nigerian only: More Options to Love — category carousels (≥3 products per category) */}
-        {isNigeriaScene && moreOptionsSections.length > 0 && (
-          <section className="mb-10">
-            <h2 className="text-xl font-semibold text-[#111111] mb-2">More Options to Love</h2>
-            <p className="text-sm text-gray-600 mb-6">
-              Explore more from Nigerian vendors in these categories.
-            </p>
-            <div className="space-y-10">
-              {moreOptionsSections.map(({ title, category, items }) => (
-                <div key={`${category}-${title}`}>
-                  <h3 className="text-base font-semibold text-[#111111] mb-3">{title}</h3>
-                  <div className="overflow-x-auto pb-1 scroll-pills-hide-scrollbar md:overflow-visible -mx-4 md:mx-0 px-4 md:px-0">
-                    <div className="flex gap-4 md:grid md:grid-cols-3 min-w-0 md:min-w-full">
-                      {items.map(({ product, storefront }) => {
-                        const dimensions = formatVendorDimensions(product);
-                        return (
-                          <div
-                            key={product.id}
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => {
-                              trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
-                                product_id: product.id,
-                                product_name: product.name,
-                                vendor_id: storefront.id,
-                                explore_scene_id: scene.id,
-                              });
-                              navigate(
-                                `/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
-                              );
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                navigate(
-                                  `/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
-                                );
-                              }
-                            }}
-                            className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer border border-[#e5e5e5] flex flex-col flex-shrink-0 w-[calc(50%-0.5rem)] min-w-[160px] md:w-full md:min-w-0"
-                          >
-                            <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
-                              {product.image_url ? (
-                                <img
-                                  src={product.image_url}
-                                  alt={product.name}
-                                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-[#999] text-sm">No image</div>
-                              )}
-                              <div className="absolute top-2 left-2">
-                                <Badge className="bg-gray-900 text-white text-[10px] font-medium border-0 shadow-sm px-2 py-1 rounded-full">
-                                  {storefront.name.split(' ').slice(0, 2).join(' ')}
-                                </Badge>
+        {isNigeriaScene &&
+          (() => {
+            const hasMirrorSimilarReady = [...furnitureItems, ...decorativeItems]
+              .filter((i) => i.vendor_product?.category === 'mirror' && !!i.vendor_product_id)
+              .some((i) => {
+                const slot = mirrorSimilarByItemId[i.id];
+                return slot?.status === 'ready' && slot.rows.length > 0;
+              });
+            const visibleMoreOptionsSections = hasMirrorSimilarReady
+              ? moreOptionsSections.filter((section) => section.category !== 'mirror')
+              : moreOptionsSections;
+            if (visibleMoreOptionsSections.length === 0) return null;
+            return (
+              <section className="mb-10">
+                <h2 className="text-xl font-semibold text-[#111111] mb-2">More Options to Love</h2>
+                <p className="text-sm text-gray-600 mb-6">
+                  Explore more from Nigerian vendors in these categories.
+                </p>
+                <div className="space-y-10">
+                  {visibleMoreOptionsSections.map(({ title, category, items }) => (
+                    <div key={`${category}-${title}`}>
+                      <h3 className="text-base font-semibold text-[#111111] mb-3">{title}</h3>
+                      <div className="overflow-x-auto pb-1 scroll-pills-hide-scrollbar md:overflow-visible -mx-4 md:mx-0 px-4 md:px-0">
+                        <div className="flex gap-4 md:grid md:grid-cols-3 min-w-0 md:min-w-full">
+                          {items.map(({ product, storefront }) => {
+                            const dimensions = formatVendorDimensions(product);
+                            return (
+                              <div
+                                key={product.id}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => {
+                                  trackNgEvent(NG_EVENTS.CATALOG_PRODUCT_CLICKED, {
+                                    product_id: product.id,
+                                    product_name: product.name,
+                                    vendor_id: storefront.id,
+                                    explore_scene_id: scene.id,
+                                  });
+                                  navigate(
+                                    `/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
+                                  );
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    navigate(
+                                      `/shops/products/${product.slug}?fromSceneSlug=${encodeURIComponent(scene.slug)}`,
+                                    );
+                                  }
+                                }}
+                                className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer border border-[#e5e5e5] flex flex-col flex-shrink-0 w-[calc(50%-0.5rem)] min-w-[160px] md:w-full md:min-w-0"
+                              >
+                                <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
+                                  {product.image_url ? (
+                                    <img
+                                      src={product.image_url}
+                                      alt={product.name}
+                                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-[#999] text-sm">No image</div>
+                                  )}
+                                  <div className="absolute top-2 left-2">
+                                    <Badge className="bg-gray-900 text-white text-[10px] font-medium border-0 shadow-sm px-2 py-1 rounded-full">
+                                      {storefront.name.split(' ').slice(0, 2).join(' ')}
+                                    </Badge>
+                                  </div>
+                                </div>
+                                <div className="px-2.5 pt-2.5 pb-3 md:px-3 md:pt-3">
+                                  <h4 className="text-[13px] md:text-sm font-semibold text-gray-900 leading-snug line-clamp-2">
+                                    {product.name}
+                                  </h4>
+                                  <p className="text-xs text-gray-600 mt-1">{formatVendorPrice(product)}</p>
+                                  {dimensions && (
+                                    <p className="text-[11px] text-gray-500 mt-0.5">{dimensions}</p>
+                                  )}
+                                  <p className="text-sm text-[#111111] font-medium mt-1.5">View Product →</p>
+                                </div>
                               </div>
-                            </div>
-                            <div className="px-2.5 pt-2.5 pb-3 md:px-3 md:pt-3">
-                              <h4 className="text-[13px] md:text-sm font-semibold text-gray-900 leading-snug line-clamp-2">
-                                {product.name}
-                              </h4>
-                              <p className="text-xs text-gray-600 mt-1">{formatVendorPrice(product)}</p>
-                              {dimensions && (
-                                <p className="text-[11px] text-gray-500 mt-0.5">{dimensions}</p>
-                              )}
-                              <p className="text-sm text-[#111111] font-medium mt-1.5">View Product →</p>
-                            </div>
-                          </div>
-                        );
-                      })}
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </section>
-        )}
+              </section>
+            );
+          })()}
 
         {/* Nigerian only: Featured Vendors This Week */}
         {isNigeriaScene && featuredVendors.length > 0 && (
