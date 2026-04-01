@@ -155,7 +155,7 @@ export interface SpecsHistory {
 
 export interface HistoryItem {
   id: string;
-  type: 'inspiration' | 'specs' | 'explore';
+  type: 'inspiration' | 'specs' | 'explore' | 'ai_generation';
   title: string;
   created_at: string;
   image_url?: string;
@@ -165,6 +165,8 @@ export interface HistoryItem {
   board_id?: string;
   /** For explore scenes: slug to navigate to /explore/[slug] */
   scene_slug?: string;
+  /** AI Room Generator public share slug → /room/[share_slug] */
+  share_slug?: string;
 }
 
 // Storefront (vendor catalog page)

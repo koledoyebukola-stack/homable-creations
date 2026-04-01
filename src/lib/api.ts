@@ -1,4 +1,6 @@
 import { supabase, SUPABASE_ANON_KEY, SUPABASE_URL } from './supabase';
+import { AI_ROOM_MOOD_BY_ID } from './ai-room-moods';
+import type { AiRoomMoodId } from './ai-room-moods';
 import type { Board, DetectedItem, Product, Checklist, ChecklistItem, ChecklistWithItems, HistoryItem, SpecsHistory, CarpenterSpec, Storefront, VendorProduct, VendorProductWithAttributes, ExploreScene, ExploreSceneItem, ExploreSceneItemWithProduct } from './types';
 import type { VendorProductAttributesDocument } from './vendor-product-attributes';
 
@@ -929,6 +931,18 @@ export async function getCombinedHistory(): Promise<HistoryItem[]> {
     console.error('Failed to fetch explore scene views:', exploreError);
   }
 
+  const { data: aiGens, error: aiGensError } = await supabase
+    .from('ai_generations')
+    .select('id, mood, original_image_url, generated_image_url, share_slug, created_at, product_ids')
+    .eq('user_id', user.id)
+    .not('generated_image_url', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (aiGensError) {
+    console.error('Failed to fetch ai_generations:', aiGensError);
+  }
+
   const historyItems: HistoryItem[] = [];
 
   // Convert boards to history items
@@ -980,6 +994,20 @@ export async function getCombinedHistory(): Promise<HistoryItem[]> {
         created_at: view.viewed_at,
         image_url: imageUrl,
         scene_slug: view.scene_slug,
+      });
+    });
+  }
+
+  if (aiGens) {
+    aiGens.forEach((row: { id: string; mood: string; generated_image_url: string | null; share_slug: string | null; created_at: string }) => {
+      const moodLabel = AI_ROOM_MOOD_BY_ID[row.mood as AiRoomMoodId]?.label ?? row.mood;
+      historyItems.push({
+        id: row.id,
+        type: 'ai_generation',
+        title: `${moodLabel} Room`,
+        created_at: row.created_at,
+        image_url: row.generated_image_url ?? undefined,
+        share_slug: row.share_slug ?? undefined,
       });
     });
   }

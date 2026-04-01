@@ -1,62 +1,494 @@
 /**
- * AI Room Generator Edge Function (skeleton).
- * Request: room_photo_url, mood_id, 5–6 products, paystack_reference, amount_paid_kobo.
- * Response: generation_id, generated_image_url (empty until OpenAI wired), product_ids.
- * Provider-agnostic interface; OpenAI Responses API to be implemented in a later phase.
+ * AI Room Generator Edge Function (single-file bundle for Supabase deploy).
  */
 
-import { createClient, SupabaseClient } from 'npm:@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+/**
+ * Room-type + mood composition strings for AI Room image generation.
+ * Combined in buildAiRoomFullPrompt with products + shared Nigerian/layout/quality blocks.
+ */
+
+export type AiRoomMoodId = 'afro_luxe' | 'warm_earthy' | 'minimal_lagos' | 'bold_colourful';
+
+export const NIGERIAN_ROOM_CONTEXT = `Nigerian home context throughout:
+POP tray ceiling with recessed lighting.
+Large format ceramic or porcelain tiles.
+Casement windows with aluminium frames.
+One split unit AC on upper wall only — do not duplicate.
+Warm recessed ceiling lighting.`;
+
+export const LAYOUT_INSTRUCTION = `Keep the room's original architecture exactly — walls, floor, windows, ceiling height, doors, dimensions.
+Do not add or remove walls or doors.
+Do not change window positions or sizes.
+Do not duplicate the AC unit.`;
+
+export const QUALITY_INSTRUCTION = `Shot quality: Architectural Digest / Vogue Living editorial standard.
+Sony A7R V.
+Every surface must have tactile realism — fabric weave visible, wood grain present, wall texture tangible, ceramic tiles reflective.
+Warm natural light from windows.
+No flat or plastic-looking surfaces.
+Photorealistic, not illustrated.`;
+
+const LIVING_ROOM: Record<AiRoomMoodId, string> = {
+  afro_luxe: `Reimagine this living room as a premium Afro-luxe Nigerian space.
+
+WALL TREATMENT:
+One feature wall in deep navy or charcoal with slim vertical batten panels floor to ceiling. One large bold Nigerian figurative painting centred on the feature wall in a thick gold or black frame. Two slim brass picture lights mounted above the painting. Remaining walls warm white.
+
+FURNITURE:
+One large dark sofa — charcoal, navy or deep brown velvet — against the feature wall, seats 3.
+One accent chair in complementary dark tone flanking the sofa.
+One oval or round dark coffee table centred in the seating arrangement.
+All front legs of furniture on the rug.
+
+FLOOR:
+One large area rug in dark tones or deep jewel colour anchoring all seating. Significant tile border visible on all sides.
+
+LIGHTING:
+One statement pendant light or sputnik chandelier centred on ceiling.
+Warm amber recessed lighting.
+
+CURTAINS:
+Floor length curtains in deep velvet — navy, charcoal or forest green. Hung from ceiling height to floor.
+
+ACCESSORIES:
+One tall potted plant in dark ceramic pot in corner.
+Brass decorative objects on any console surface.
+Minimal — every object intentional.
+
+Do not add a second AC unit.
+Do not add more than one coffee table.
+Do not change window positions or sizes.`,
+
+  warm_earthy: `Reimagine this living room as a warm earthy Nigerian space.
+
+WALL TREATMENT:
+One feature wall in terracotta or warm clay smooth plaster. One botanical or figurative painting in natural wood frame centred on feature wall. Remaining walls warm white or cream.
+
+FURNITURE:
+One large cream or warm beige upholstered sofa against main wall, seats 3, clean lines no tufting.
+One natural rattan or woven accent chair flanking the sofa.
+One set of nested natural wood coffee tables centred in arrangement.
+All front legs of furniture on rug.
+
+FLOOR:
+One large jute or wool area rug in cream or natural tones.
+Significant tile border on all sides.
+
+LIGHTING:
+One natural rattan or woven pendant light hanging from ceiling centre.
+Warm Edison bulb clearly visible.
+
+CURTAINS:
+Floor length linen or cotton curtains in warm cream or terracotta tone.
+Hung from ceiling height to floor.
+Sheer white layer behind.
+
+ACCESSORIES:
+One large ceramic floor vase or tall tropical plant in terracotta pot.
+Woven basket. Natural wood objects.
+Warm and organic throughout.
+
+Do not add a second AC unit.
+Do not add more than one coffee table.`,
+
+  minimal_lagos: `Reimagine this living room as a minimal Lagos Nigerian space.
+
+WALL TREATMENT:
+All walls clean warm white smooth plaster. One large abstract painting the only colour accent — thin black frame, hung precisely centred on main wall at exact eye level. One round or oval mirror on the side wall.
+
+FURNITURE:
+One large neutral sofa in cream light grey or white, clean lines, no tufting, seats 3.
+One statement accent chair in contrasting neutral tone.
+One marble or stone coffee table centred in arrangement.
+All front legs of furniture on rug.
+
+FLOOR:
+One thin area rug in cream or light grey. All four sides of rug visible with tile border.
+
+LIGHTING:
+One architectural pendant light or sputnik chandelier.
+Clean white or soft neutral light.
+
+CURTAINS:
+Floor length sheer white curtains.
+Simple and clean.
+
+ACCESSORIES:
+Maximum 3 decorative objects total.
+One architectural plant — snake plant or fiddle leaf fig. Nothing else.
+
+Do not add a second AC unit.
+Do not add more than one coffee table.`,
+
+  bold_colourful: `Reimagine this living room as a bold colourful Nigerian space.
+
+WALL TREATMENT:
+One feature wall in a strong colour — deep teal, burnt orange or rich mustard yellow.
+Smooth plaster finish.
+One large scale abstract artwork in bold colours on feature wall.
+Remaining walls warm white.
+
+FURNITURE:
+One statement velvet sofa in a colour that complements the wall:
+If wall teal → sofa mustard or rust
+If wall orange → sofa teal or green
+If wall mustard → sofa teal or burgundy
+One or two accent chairs in a third complementary colour.
+One sculptural coffee table.
+All front legs of furniture on rug.
+
+FLOOR:
+One patterned area rug with colours tying all furniture together.
+
+LIGHTING:
+One dramatic sculptural pendant.
+Warm lighting throughout.
+
+CURTAINS:
+Floor length curtains in a bold complementary tone.
+
+ACCESSORIES:
+Mixed cushions with complementary patterns. Tall plant. Coloured ceramic vases. Bold but intentional.
+
+Do not add a second AC unit.
+Do not add more than one coffee table.`,
 };
 
-const PRODUCTS_MIN = 3;
-const PRODUCTS_MAX = 6;
-const EXPECTED_AMOUNT_KOBo = 200_000; // ₦2,000
+const BEDROOM: Record<AiRoomMoodId, string> = {
+  afro_luxe: `Reimagine this bedroom as a premium Afro-luxe Nigerian space.
 
-type AiRoomMoodId = 'afro_luxe' | 'warm_earthy' | 'minimal_lagos' | 'bold_colourful';
+WALL TREATMENT:
+Headboard wall in deep navy or charcoal smooth plaster or upholstered fabric panels.
+One large Nigerian portrait painting above or beside the bed.
+Remaining walls warm white.
 
-interface MoodSceneMapping {
-  [key: string]: string[];
-}
+FURNITURE:
+One king or queen bed with upholstered headboard in dark fabric, centred against headboard wall.
+Two matching dark wood bedside tables.
+One upholstered bench at foot of bed.
 
-const MOOD_SCENE_IDS: MoodSceneMapping = {
-  afro_luxe: [
-    '98c41a5b-2bfd-4683-89e3-81428b7107e3',
-    'c540ffe7-dbbc-406a-844e-ed2c9f5daed7',
-    'b5330d7d-4266-4878-b533-38927c7fe1de',
-    'cf58df83-6ac3-478b-886e-e90867b9f64f',
-  ],
-  warm_earthy: [
-    '9f327622-a38b-445d-a0f3-52a7e589587c',
-    '686d5ef9-ef6d-406d-9782-d1147faa155f',
-    'cf928ae9-6de2-436c-b5f4-0c13ea2b0cea',
-    '1b6b4c67-82d3-4015-ad96-c2321c6a648f',
-  ],
-  minimal_lagos: [
-    '3f59a60f-e5a8-4e22-86be-ccf94c1276b1',
-    '6fa69444-622c-4fa5-8ec2-3f18946dfff3',
-    '8b534ed0-bef9-419c-b79a-929b1c371ab2',
-    '8dcd9d8a-449a-4b33-95ff-aed022ff621b',
-  ],
-  bold_colourful: [
-    '4c581220-3450-4cf0-b284-a7b2db85573b',
-    '62d1a845-fdb9-472f-9239-85f6571b1e12',
-    'd63a8250-e585-4ce5-a8a3-41c88413ff8d',
-    '01d22a0f-7f90-4e91-a7d6-a85a7a38c5fa',
-  ],
+FLOOR:
+One large plush rug under lower half of bed and beside tables.
+
+LIGHTING:
+Two bedside table lamps in brass.
+One statement ceiling pendant or chandelier.
+
+CURTAINS:
+Floor length velvet curtains in deep navy or forest green.
+
+Do not add a second AC unit.`,
+
+  warm_earthy: `Reimagine this bedroom as a warm earthy Nigerian space.
+
+WALL TREATMENT:
+Headboard wall in dusty sage or warm terracotta. Botanical artwork in natural wood frame above bed.
+Remaining walls warm white or cream.
+
+FURNITURE:
+One bed with natural linen or boucle upholstered headboard.
+Two natural wood bedside tables.
+
+FLOOR:
+One large natural jute or wool rug under lower half of bed.
+
+LIGHTING:
+Two warm bedside lamps.
+One rattan pendant above centre.
+
+CURTAINS:
+Floor length linen in warm cream or sage tone.
+
+Do not add a second AC unit.`,
+
+  minimal_lagos: `Reimagine this bedroom as a minimal Lagos Nigerian space.
+
+WALL TREATMENT:
+All walls clean warm white.
+One large abstract artwork above bed.
+Simple oval mirror on side wall.
+
+FURNITURE:
+One platform bed, clean lines, light wood or white upholstered.
+Two minimalist bedside tables.
+
+FLOOR:
+One thin neutral rug beside bed.
+
+LIGHTING:
+Two simple bedside lamps.
+One architectural ceiling pendant.
+
+CURTAINS:
+Floor length sheer white curtains.
+
+Do not add a second AC unit.`,
+
+  bold_colourful: `Reimagine this bedroom as a bold colourful Nigerian space.
+
+WALL TREATMENT:
+Headboard wall in a bold colour — deep teal, mustard or emerald green.
+One large bold artwork above bed.
+Remaining walls warm white.
+
+FURNITURE:
+One upholstered bed in a complementary rich tone.
+Two bedside tables in contrasting colour or material.
+
+FLOOR:
+One patterned rug beside bed.
+
+LIGHTING:
+Two statement bedside lamps.
+One dramatic ceiling pendant.
+
+CURTAINS:
+Floor length curtains in bold complementary tone.
+
+Do not add a second AC unit.`,
 };
 
-interface ProductInput {
-  vendor_product_id: string;
-  image_url: string;
-  name: string;
-  description: string | null;
+const DINING_ROOM: Record<AiRoomMoodId, string> = {
+  afro_luxe: `Reimagine this dining room as a premium Afro-luxe Nigerian space.
+
+WALL TREATMENT:
+One feature wall in deep navy or charcoal. One large artwork on feature wall in gold frame.
+Remaining walls warm white.
+
+FURNITURE:
+One rectangular or oval dining table in dark wood or marble top.
+4-6 upholstered dining chairs in dark velvet or leather.
+
+LIGHTING:
+One dramatic pendant or chandelier directly above dining table centre.
+
+CURTAINS:
+Floor length velvet curtains.
+
+Do not add a second AC unit.`,
+
+  warm_earthy: `Reimagine this dining room as a warm earthy Nigerian space.
+
+WALL TREATMENT:
+One feature wall in terracotta.
+Botanical artwork in natural frame.
+Remaining walls warm white.
+
+FURNITURE:
+One natural wood dining table seats 4-6.
+Boucle or fabric dining chairs in cream or warm tone.
+
+LIGHTING:
+One woven rattan pendant above table.
+
+CURTAINS:
+Floor length linen curtains in warm cream or earthy tone.
+
+Do not add a second AC unit.`,
+
+  minimal_lagos: `Reimagine this dining room as a minimal Lagos Nigerian space.
+
+WALL TREATMENT:
+All walls clean warm white.
+One large abstract artwork on main wall.
+
+FURNITURE:
+One clean lined dining table in marble or light wood.
+Simple upholstered dining chairs.
+
+LIGHTING:
+One architectural pendant above table.
+
+CURTAINS:
+Floor length sheer white curtains.
+
+Do not add a second AC unit.`,
+
+  bold_colourful: `Reimagine this dining room as a bold colourful Nigerian space.
+
+WALL TREATMENT:
+One feature wall in bold colour.
+Large scale abstract artwork.
+Remaining walls warm white.
+
+FURNITURE:
+Mixed dining chairs in complementary bold colours around a statement table.
+
+LIGHTING:
+One dramatic sculptural pendant.
+
+CURTAINS:
+Bold complementary floor length curtains.
+
+Do not add a second AC unit.`,
+};
+
+const HOME_OFFICE: Record<AiRoomMoodId, string> = {
+  afro_luxe: `Reimagine this home office as a premium Afro-luxe Nigerian space.
+
+WALL TREATMENT:
+One feature wall in charcoal or forest green. Nigerian artwork or abstract art in gold frame.
+Remaining walls warm white.
+Built-in shelving or floating shelves on side wall if space allows.
+
+FURNITURE:
+One large executive desk in dark wood against or perpendicular to feature wall.
+One premium leather or velvet desk chair in dark tone.
+One bookshelf or storage unit.
+
+LIGHTING:
+One brass desk lamp on desk.
+One statement ceiling pendant.
+
+CURTAINS:
+Floor length curtains in deep tone.
+
+Do not add a second AC unit.`,
+
+  warm_earthy: `Reimagine this home office as a warm earthy Nigerian space.
+
+WALL TREATMENT:
+One feature wall in terracotta or warm sage. Botanical artwork.
+
+FURNITURE:
+One natural wood desk.
+One warm upholstered desk chair.
+One rattan or wood storage unit.
+
+LIGHTING:
+One warm desk lamp.
+One rattan pendant.
+
+CURTAINS:
+Linen curtains in warm cream.
+
+Do not add a second AC unit.`,
+
+  minimal_lagos: `Reimagine this home office as a minimal Lagos Nigerian space.
+
+WALL TREATMENT:
+All walls clean white.
+One large abstract artwork.
+Floating shelves on side wall.
+
+FURNITURE:
+One clean lined white or light wood desk. Minimalist desk chair.
+Simple storage.
+
+LIGHTING:
+One architectural desk lamp.
+One simple pendant.
+
+CURTAINS:
+Sheer white curtains.
+
+Do not add a second AC unit.`,
+
+  bold_colourful: `Reimagine this home office as a bold colourful Nigerian space.
+
+WALL TREATMENT:
+One feature wall in bold colour — teal, mustard or deep orange.
+Large bold abstract artwork.
+
+FURNITURE:
+Statement desk in contrasting colour or material.
+Bold upholstered desk chair.
+
+LIGHTING:
+One sculptural desk lamp.
+One dramatic pendant.
+
+CURTAINS:
+Bold complementary curtains.
+
+Do not add a second AC unit.`,
+};
+
+const WALL_STYLING: Record<AiRoomMoodId, string> = {
+  afro_luxe: `Reimagine this wall as a premium Afro-luxe Nigerian feature wall.
+No furniture except a slim console table or bench against the wall.
+
+WALL TREATMENT:
+Deep navy or charcoal wall with slim vertical batten panels.
+Arrangement of 2-3 Nigerian artworks in gold or black frames.
+Two slim brass picture lights above the largest artwork.
+One floor to near-ceiling arched mirror if wall width allows.
+
+ACCESSORIES:
+One tall plant in dark ceramic pot.
+Brass objects on console if present.
+
+Do not add furniture beyond a slim console or bench.`,
+
+  warm_earthy: `Reimagine this wall as a warm earthy Nigerian feature wall.
+
+WALL TREATMENT:
+Terracotta or warm clay plaster wall.
+2-3 botanical or figurative artworks in natural wood frames.
+One round rattan mirror.
+
+ACCESSORIES:
+Dried pampas grass. Terracotta vases.
+Woven wall hanging if appropriate.`,
+
+  minimal_lagos: `Reimagine this wall as a minimal Lagos Nigerian feature wall.
+
+WALL TREATMENT:
+Clean warm white wall.
+One large oversized abstract artwork perfectly centred — the only element.
+One simple round mirror offset to the side.
+
+No accessories. No clutter.`,
+
+  bold_colourful: `Reimagine this wall as a bold colourful Nigerian feature wall.
+
+WALL TREATMENT:
+One strong colour-blocked wall — deep teal, mustard or burnt orange.
+One large bold abstract artwork.
+One sculptural or sunburst mirror.
+
+ACCESSORIES:
+Coloured ceramic vases.
+Tall dramatic plant.`,
+};
+
+const BY_ROOM_TYPE: Record<string, Record<AiRoomMoodId, string>> = {
+  living_room: LIVING_ROOM,
+  bedroom: BEDROOM,
+  dining_room: DINING_ROOM,
+  home_office: HOME_OFFICE,
+  wall_styling: WALL_STYLING,
+};
+
+export function getCompositionPrompt(roomType: string, mood: AiRoomMoodId): string {
+  const table = BY_ROOM_TYPE[roomType];
+  if (!table) {
+    return BY_ROOM_TYPE.living_room[mood] ?? LIVING_ROOM[mood];
+  }
+  return table[mood] ?? LIVING_ROOM[mood];
 }
 
-interface MoodProduct {
+export function buildAiRoomFullPrompt(params: {
+  roomType: string;
+  mood: AiRoomMoodId;
+  productLines: string[];
+}): string {
+  const { roomType, mood, productLines } = params;
+  const composition = getCompositionPrompt(roomType, mood);
+  const productsBlock = `Feature these specific products:\n${productLines.join('\n')}`;
+  return [composition, productsBlock, NIGERIAN_ROOM_CONTEXT, LAYOUT_INSTRUCTION, QUALITY_INSTRUCTION].join('\n\n');
+}
+
+/**
+ * AI Room product pool + category diversity selection (Deno Edge).
+ */
+export const PRODUCTS_MIN = 3;
+export const PRODUCTS_MAX_DEFAULT = 6;
+export const PRODUCTS_MAX_LIVING = 7;
+
+export interface MoodProduct {
   id: string;
   name: string;
   category: string | null;
@@ -70,8 +502,323 @@ interface MoodProduct {
   storefront_id: string;
 }
 
+interface PoolRow {
+  id: string;
+  name: string;
+  category: string | null;
+  material: string | null;
+  image_url: string | null;
+  price_min: number | null;
+  price_max: number | null;
+  attributes: unknown;
+  vendor_name: string;
+  whatsapp_number: string;
+  storefront_slug: string;
+  storefront_id: string;
+}
+
+type SlotDef = {
+  kind: string;
+  categories: string[];
+  optional?: boolean;
+  anyFallback?: boolean;
+};
+
+function dedupePool(pool: (MoodProduct & { attributes?: unknown })[]): (MoodProduct & { attributes?: unknown })[] {
+  const seen = new Set<string>();
+  return pool.filter((p) => {
+    if (seen.has(p.id)) return false;
+    seen.add(p.id);
+    return true;
+  });
+}
+
+function mapRow(row: PoolRow): MoodProduct & { attributes?: unknown } {
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    material: row.material ?? null,
+    image_url: row.image_url,
+    price_min: row.price_min,
+    price_max: row.price_max,
+    vendor_name: row.vendor_name,
+    whatsapp_number: row.whatsapp_number,
+    storefront_slug: row.storefront_slug,
+    storefront_id: row.storefront_id,
+    attributes: row.attributes,
+  };
+}
+
+function stripAttributes(p: MoodProduct & { attributes?: unknown }): MoodProduct {
+  const { attributes: _a, ...rest } = p;
+  return rest;
+}
+
+function categoryMatches(category: string | null, keywords: string[]): boolean {
+  const c = (category || '').toLowerCase().trim();
+  return keywords.some((kw) => c === kw || c.includes(kw));
+}
+
+function attrsMatchRoomType(attrs: unknown, roomType: string): boolean {
+  if (attrs == null || typeof attrs !== 'object') return false;
+  const a = attrs as Record<string, unknown>;
+  const rt = a.room_type;
+  if (rt === 'any') return true;
+  if (Array.isArray(rt)) return rt.includes(roomType) || rt.includes('any');
+  if (typeof rt === 'string') {
+    return rt.split(/[, ]+/).filter(Boolean).includes(roomType) || rt === 'any';
+  }
+  return false;
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function storefrontCountOk(
+  storefrontId: string,
+  counts: Map<string, number>,
+  maxPerStorefront: number,
+): boolean {
+  return (counts.get(storefrontId) ?? 0) < maxPerStorefront;
+}
+
+function bumpStorefront(storefrontId: string, counts: Map<string, number>): void {
+  counts.set(storefrontId, (counts.get(storefrontId) ?? 0) + 1);
+}
+
+function pickOne(
+  pool: (MoodProduct & { attributes?: unknown })[],
+  used: Set<string>,
+  storefrontCounts: Map<string, number>,
+  slotCategories: string[],
+  roomType: string,
+  options: { anyFallback?: boolean; optional?: boolean },
+): MoodProduct & { attributes?: unknown } | null {
+  const preferred = pool.filter((p) => attrsMatchRoomType(p.attributes, roomType));
+  const other = pool.filter((p) => !attrsMatchRoomType(p.attributes, roomType));
+
+  const tryPick = (candidates: (MoodProduct & { attributes?: unknown })[]): (MoodProduct & { attributes?: unknown }) | null => {
+    const catMatch = (p: MoodProduct) =>
+      options.anyFallback ? true : categoryMatches(p.category, slotCategories);
+    const ordered = shuffle(candidates.filter((p) => !used.has(p.id) && catMatch(p)));
+    for (const p of ordered) {
+      if (!storefrontCountOk(p.storefront_id, storefrontCounts, 2)) continue;
+      return p;
+    }
+    return null;
+  };
+
+  let found = tryPick(preferred);
+  if (!found) found = tryPick(other);
+  return found;
+}
+
+function selectWallStyling(
+  pool: (MoodProduct & { attributes?: unknown })[],
+): (MoodProduct & { attributes?: unknown })[] {
+  const shuffled = shuffle(pool);
+  const counts = new Map<string, number>();
+  const used = new Set<string>();
+  const picked: (MoodProduct & { attributes?: unknown })[] = [];
+  for (const p of shuffled) {
+    if (used.has(p.id)) continue;
+    if (!storefrontCountOk(p.storefront_id, counts, 2)) continue;
+    used.add(p.id);
+    bumpStorefront(p.storefront_id, counts);
+    picked.push(p);
+    if (picked.length >= 6) break;
+  }
+  return picked;
+}
+
+function selectBySlots(
+  roomType: string,
+  pool: (MoodProduct & { attributes?: unknown })[],
+  slots: SlotDef[],
+): (MoodProduct & { attributes?: unknown })[] {
+  const used = new Set<string>();
+  const storefrontCounts = new Map<string, number>();
+  const picked: (MoodProduct & { attributes?: unknown })[] = [];
+
+  for (const slot of slots) {
+    if (slot.kind === 'curtains_or_any') {
+      let chosen = pickOne(pool, used, storefrontCounts, ['curtains', 'curtain'], roomType, {
+        anyFallback: false,
+      });
+      if (!chosen) {
+        chosen = pickOne(pool, used, storefrontCounts, [], roomType, { anyFallback: true });
+      }
+      if (chosen) {
+        used.add(chosen.id);
+        bumpStorefront(chosen.storefront_id, storefrontCounts);
+        picked.push(chosen);
+      }
+      continue;
+    }
+
+    if (slot.kind === 'mirror_or_storage') {
+      let chosen = pickOne(pool, used, storefrontCounts, ['mirror', 'storage'], roomType, {
+        anyFallback: false,
+      });
+      if (!chosen) {
+        chosen = pickOne(pool, used, storefrontCounts, [], roomType, { anyFallback: true });
+      }
+      if (chosen) {
+        used.add(chosen.id);
+        bumpStorefront(chosen.storefront_id, storefrontCounts);
+        picked.push(chosen);
+      }
+      continue;
+    }
+
+    const categories = slot.categories;
+    const anyFb = 'anyFallback' in slot && slot.anyFallback === true;
+
+    let chosen: (MoodProduct & { attributes?: unknown }) | null = pickOne(
+      pool,
+      used,
+      storefrontCounts,
+      categories,
+      roomType,
+      { anyFallback: anyFb },
+    );
+
+    if (!chosen && anyFb) {
+      chosen = pickOne(pool, used, storefrontCounts, [], roomType, { anyFallback: true });
+    }
+
+    if (!chosen && slot.optional) {
+      continue;
+    }
+    if (!chosen) {
+      chosen = pickOne(pool, used, storefrontCounts, categories, roomType, { anyFallback: true });
+    }
+    if (!chosen) {
+      continue;
+    }
+    used.add(chosen.id);
+    bumpStorefront(chosen.storefront_id, storefrontCounts);
+    picked.push(chosen);
+  }
+
+  return picked;
+}
+
+const SLOTS: Record<string, SlotDef[]> = {
+  living_room: [
+    { kind: 'seating', categories: ['seating', 'sofa'] },
+    { kind: 'artwork', categories: ['artwork'] },
+    { kind: 'lighting', categories: ['lighting'] },
+    { kind: 'rugs', categories: ['rugs', 'rug'] },
+    { kind: 'planters_or_mirror', categories: ['planters', 'planter', 'mirror'] },
+    { kind: 'curtains_or_any', categories: ['curtains', 'curtain'] },
+    { kind: 'door_and_panel', categories: ['door and panel', 'door_panel', 'panel', 'tv wall', 'tv_wall'], optional: true },
+  ],
+  bedroom: [
+    { kind: 'bed', categories: ['bed'] },
+    { kind: 'artwork', categories: ['artwork'] },
+    { kind: 'lighting', categories: ['lighting'] },
+    { kind: 'rugs', categories: ['rugs', 'rug'] },
+    { kind: 'mirror', categories: ['mirror'] },
+    { kind: 'storage', categories: ['storage'] },
+  ],
+  dining_room: [
+    { kind: 'dining', categories: ['dining', 'dining-table', 'dining_seating', 'dining table'] },
+    { kind: 'artwork', categories: ['artwork'] },
+    { kind: 'lighting', categories: ['lighting'] },
+    { kind: 'planters', categories: ['planters', 'planter'] },
+    { kind: 'rugs', categories: ['rugs', 'rug'] },
+    { kind: 'mirror_or_storage', categories: ['mirror', 'storage'] },
+  ],
+  home_office: [
+    { kind: 'seating', categories: ['seating', 'sofa', 'chair'] },
+    { kind: 'artwork', categories: ['artwork'] },
+    { kind: 'lighting', categories: ['lighting'] },
+    { kind: 'storage', categories: ['storage'] },
+    { kind: 'planters', categories: ['planters', 'planter'] },
+    { kind: 'mirror', categories: ['mirror'] },
+  ],
+};
+
+export async function getProductsForMood(
+  supabase: SupabaseClient,
+  mood: AiRoomMoodId,
+  roomType: string,
+): Promise<{ products: MoodProduct[]; minimum_spend: number | null }> {
+  let raw: PoolRow[] = [];
+
+  if (roomType === 'wall_styling') {
+    const { data, error } = await supabase.rpc('ai_room_products_wall_styling_scenes');
+    if (error) {
+      console.error('[getProductsForMood] wall_styling RPC:', error);
+      throw new Error('Failed to load products for wall styling');
+    }
+    raw = (data || []) as PoolRow[];
+  } else {
+    const { data, error } = await supabase.rpc('ai_room_products_by_mood_tags', { p_mood: mood });
+    if (error) {
+      console.error('[getProductsForMood] mood_tags RPC:', error);
+      throw new Error('Failed to load products for mood');
+    }
+    raw = (data || []) as PoolRow[];
+  }
+
+  if (!raw.length) {
+    throw new Error('Not enough products available for this style');
+  }
+
+  const pool = dedupePool(raw.map(mapRow));
+
+  let selected: (MoodProduct & { attributes?: unknown })[] = [];
+
+  if (roomType === 'wall_styling') {
+    selected = selectWallStyling(pool);
+  } else {
+    const slots = SLOTS[roomType] ?? SLOTS.living_room;
+    selected = selectBySlots(roomType, pool, slots);
+  }
+
+  if (selected.length < PRODUCTS_MIN) {
+    throw new Error('Not enough products available for this style');
+  }
+
+  const maxCap = roomType === 'living_room' ? PRODUCTS_MAX_LIVING : PRODUCTS_MAX_DEFAULT;
+  const capped = selected.slice(0, maxCap);
+
+  const prices = capped.map((p) => p.price_min).filter((v): v is number => typeof v === 'number');
+  const minimum_spend = prices.length ? prices.reduce((sum, v) => sum + v, 0) : null;
+
+  return {
+    products: capped.map(stripAttributes),
+    minimum_spend,
+  };
+}
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+const EXPECTED_AMOUNT_KOBo = 200_000; // ₦2,000
+
+const ALLOWED_ROOM_TYPES = new Set([
+  'living_room',
+  'bedroom',
+  'dining_room',
+  'home_office',
+  'wall_styling',
+]);
+
 interface RequestBody {
   mood?: AiRoomMoodId;
+  room_type?: string;
   paystack_reference?: string;
   original_image_url?: string;
   user_id?: string;
@@ -85,115 +832,9 @@ function jsonResponse(body: object, status: number) {
   });
 }
 
-/**
- * Phase 1: Select 5–6 curated products for a mood based on existing Explore scenes.
- * Uses sceneIds mapped per mood and enforces max 2 products per storefront.
- */
-async function getProductsForMood(
-  supabase: SupabaseClient,
-  mood: AiRoomMoodId
-): Promise<{ products: MoodProduct[]; minimum_spend: number | null }> {
-  const sceneIds = MOOD_SCENE_IDS[mood];
-  if (!sceneIds || sceneIds.length === 0) {
-    throw new Error(`No sceneIds configured for mood: ${mood}`);
-  }
-
-  const { data, error } = await supabase
-    .from('vendor_products')
-    .select(
-      `
-        id,
-        name,
-        category,
-        material,
-        image_url,
-        price_min,
-        price_max,
-        storefront_id,
-        storefront:storefronts (
-          id,
-          name,
-          whatsapp_number,
-          slug,
-          status
-        ),
-        explore_scene_items!inner (
-          scene_id,
-          item_type
-        )
-      `
-    )
-    .in('explore_scene_items.scene_id', sceneIds)
-    .eq('explore_scene_items.item_type', 'catalog_product')
-    .not('image_url', 'is', null)
-    .neq('image_url', '')
-    .eq('storefront.status', 'active')
-    .order('id', { ascending: true }) // deterministic before randomization
-    .limit(12);
-
-  if (error) {
-    console.error('[getProductsForMood] Supabase error:', error);
-    throw new Error('Failed to load products for mood');
-  }
-
-  const raw = (data || []) as any[];
-  if (!raw.length) {
-    throw new Error('Not enough products available for this style');
-  }
-
-  // Map joined rows into MoodProduct with storefront fields flattened
-  const joined: MoodProduct[] = raw.map((row) => {
-    const sf = (row.storefront || {}) as {
-      id?: string;
-      name?: string;
-      whatsapp_number?: string;
-      slug?: string;
-      status?: string;
-    };
-    return {
-      id: row.id as string,
-      name: row.name as string,
-      category: (row.category as string | null) ?? null,
-      material: (row.material as string | null) ?? null,
-      image_url: (row.image_url as string | null) ?? null,
-      price_min: (row.price_min as number | null) ?? null,
-      price_max: (row.price_max as number | null) ?? null,
-      vendor_name: (sf.name as string) || 'Unknown vendor',
-      whatsapp_number: (sf.whatsapp_number as string) || '',
-      storefront_slug: (sf.slug as string) || '',
-      storefront_id: (sf.id as string) || (row.storefront_id as string),
-    };
-  });
-
-  // Shuffle to emulate ORDER BY RANDOM() within code
-  const shuffled = [...joined].sort(() => Math.random() - 0.5);
-
-  // Enforce max 2 products per storefront
-  const countsByStorefront = new Map<string, number>();
-  const picked: MoodProduct[] = [];
-  for (const p of shuffled) {
-    if (!p.storefront_id) continue;
-    const current = countsByStorefront.get(p.storefront_id) ?? 0;
-    if (current >= 2) continue;
-    countsByStorefront.set(p.storefront_id, current + 1);
-    picked.push(p);
-    if (picked.length >= PRODUCTS_MAX) break;
-  }
-
-  if (picked.length < PRODUCTS_MIN) {
-    throw new Error('Not enough products available for this style');
-  }
-
-  // Minimum spend = sum of price_min where available, else null when all null
-  const prices = picked.map((p) => p.price_min).filter((v): v is number => typeof v === 'number');
-  const minimum_spend = prices.length ? prices.reduce((sum, v) => sum + v, 0) : null;
-
-  return { products: picked, minimum_spend };
-}
-
 async function getProductsByIds(
   supabase: SupabaseClient,
-  ids: string[]
+  ids: string[],
 ): Promise<MoodProduct[]> {
   if (!ids.length) return [];
   const { data, error } = await supabase
@@ -215,7 +856,7 @@ async function getProductsByIds(
           slug,
           status
         )
-      `
+      `,
     )
     .in('id', ids)
     .eq('storefront.status', 'active');
@@ -251,7 +892,6 @@ async function getProductsByIds(
     byId.set(mp.id, mp);
   });
 
-  // Preserve original order of ids
   return ids.map((id) => byId.get(id)).filter((p): p is MoodProduct => !!p);
 }
 
@@ -304,12 +944,16 @@ Deno.serve(async (req: Request) => {
   } catch {
     return jsonResponse({ error: 'invalid_body', message: 'Invalid JSON' }, 400);
   }
-  const { mood, paystack_reference, original_image_url, user_id, test_mode } = body;
+  const { mood, room_type, paystack_reference, original_image_url, user_id, test_mode } = body;
 
-  // 2. Validate required fields
   if (!mood || !['afro_luxe', 'warm_earthy', 'minimal_lagos', 'bold_colourful'].includes(mood)) {
     return jsonResponse({ error: 'invalid_mood', message: 'mood is required and must be a valid mood id' }, 400);
   }
+  if (!room_type || typeof room_type !== 'string' || !ALLOWED_ROOM_TYPES.has(room_type.trim())) {
+    return jsonResponse({ error: 'invalid_room_type', message: 'room_type is required and must be a valid room type' }, 400);
+  }
+  const roomTypeNorm = room_type.trim();
+
   if (!paystack_reference || typeof paystack_reference !== 'string' || !paystack_reference.trim()) {
     return jsonResponse({ error: 'invalid_paystack_reference', message: 'paystack_reference is required' }, 400);
   }
@@ -325,7 +969,6 @@ Deno.serve(async (req: Request) => {
 
   const reference = paystack_reference.trim();
 
-  // 3. Retry safety: return existing generation if already completed
   const { data: existingGen, error: existingError } = await supabase
     .from('ai_generations')
     .select('id, generated_image_url, share_slug, product_ids, amount_paid')
@@ -356,9 +999,6 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  // 4. Verify Paystack payment (skip in test_mode)
-  // TODO: REMOVE test_mode bypass before going live to production.
-  // This allows skipping Paystack verification for testing only.
   if (!test_mode) {
     const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY');
     if (!PAYSTACK_SECRET_KEY) {
@@ -389,11 +1029,10 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  // 5. Select products for this mood
   let moodProducts: MoodProduct[];
   let minimumSpend: number | null;
   try {
-    const { products, minimum_spend } = await getProductsForMood(supabase, mood);
+    const { products, minimum_spend } = await getProductsForMood(supabase, mood, roomTypeNorm);
     moodProducts = products;
     minimumSpend = minimum_spend;
   } catch (e) {
@@ -404,7 +1043,6 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  // 6. OpenAI call — real gpt-image-1 via Responses API
   const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
   if (!OPENAI_API_KEY) {
     console.error('[ai-room-generate] OPENAI_API_KEY not configured');
@@ -414,26 +1052,7 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  // Build prompt from layout instruction, mood template, product list, and quality instruction
-  const layoutInstruction =
-    "Completely reimagine the room's furnishings and decor from scratch in this style. Do not preserve or work around any existing furniture visible in the photo. Use the room's architecture only — walls, floor, windows, ceiling, doors.";
-
-  const moodPromptTemplate = (() => {
-    // Mirror ai-room-moods promptTemplate logic here for brevity; in Phase 2 we can centralize.
-    switch (mood) {
-      case 'afro_luxe':
-        return 'Reimagine this room with a deep navy or charcoal feature wall with vertical batten panels. Brass accents throughout — picture lights, mirror frame, console table legs. One large bold Nigerian figurative painting. Floor to near-ceiling arched mirror. Warm recessed lighting. Nigerian context: POP tray ceiling, large format ceramic tiles, casement windows, split unit AC on upper wall. Premium, unapologetic, dark luxury.';
-      case 'warm_earthy':
-        return 'Reimagine this room with terracotta or warm clay walls. Natural rattan pendant light. Cream or beige upholstered sofa. Nested natural wood coffee tables. Botanical or landscape artwork. Large ceramic floor vase. Jute or wool area rug. Nigerian context: POP tray ceiling, large format ceramic tiles, casement windows, split unit AC on upper wall. Warm, organic, inviting.';
-      case 'minimal_lagos':
-        return 'Reimagine this room with clean warm white walls. One statement piece of furniture. Sputnik or architectural pendant light. One large abstract painting — the only colour accent. Oval or round mirror. No clutter. Nigerian context: POP tray ceiling, large format ceramic tiles, casement windows, split unit AC on upper wall. Quietly confident, restrained luxury.';
-      case 'bold_colourful':
-      default:
-        return 'Reimagine this room with a colour-blocked feature wall — deep teal, mustard or burnt orange. Mixed pattern cushions. Velvet accent chair in contrasting colour. Bold large-scale abstract art. Statement lighting. Nigerian context: POP tray ceiling, large format ceramic tiles, casement windows, split unit AC on upper wall. Full personality, maximalist but intentional.';
-    }
-  })();
-
-  const productsLines = moodProducts.map((p) => {
+  const productLines = moodProducts.map((p) => {
     const priceText =
       typeof p.price_min === 'number'
         ? `priced from ₦${p.price_min.toLocaleString('en-NG')}`
@@ -442,14 +1061,11 @@ Deno.serve(async (req: Request) => {
     return `- ${p.name} by ${p.vendor_name}: ${materialText}${priceText}`;
   });
 
-  const productsInstruction = `Feature these specific products in the room:\n${productsLines.join(
-    '\n',
-  )}`;
-
-  const qualityInstruction =
-    'Shot quality: Architectural Digest / Vogue Living editorial standard. Sony A7R V. Every surface must have tactile realism — fabric weave visible, wood grain present, wall texture tangible, ceramic surfaces reflective. Warm natural light from windows. No flat or plastic-looking surfaces. Photorealistic, not illustrated.';
-
-  const fullPrompt = `${layoutInstruction}\n\n${moodPromptTemplate}\n\n${productsInstruction}\n\n${qualityInstruction}`;
+  const fullPrompt = buildAiRoomFullPrompt({
+    roomType: roomTypeNorm,
+    mood,
+    productLines,
+  });
 
   let generatedImageUrl: string | null = null;
 
@@ -504,8 +1120,8 @@ Deno.serve(async (req: Request) => {
 
     const imageGenerationCalls = Array.isArray(openaiJson?.output)
       ? openaiJson.output.filter(
-          (o: any) => o?.type === 'image_generation_call',
-        )
+        (o: any) => o?.type === 'image_generation_call',
+      )
       : [];
     const imageBase64 =
       imageGenerationCalls.length > 0
@@ -571,10 +1187,8 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  // 7. Upsert ai_generations row with generated_image_url, product_ids, share_slug
   const selectedProductIds = moodProducts.map((p) => p.id);
 
-  // Check if a row already exists for this reference (but without generated_image_url)
   const { data: existingRow, error: existingRowError } = await supabase
     .from('ai_generations')
     .select('id, share_slug')
@@ -590,14 +1204,18 @@ Deno.serve(async (req: Request) => {
     console.error('[ai-room-generate] existing row check error:', existingRowError);
   }
 
+  const rowPayload = {
+    generated_image_url: generatedImageUrl,
+    product_ids: selectedProductIds,
+    share_slug: shareSlug,
+    room_type: roomTypeNorm,
+    mood,
+  };
+
   if (existingRow) {
     const { error: updateError } = await supabase
       .from('ai_generations')
-      .update({
-        generated_image_url: generatedImageUrl,
-        product_ids: selectedProductIds,
-        share_slug: shareSlug,
-      })
+      .update(rowPayload)
       .eq('id', existingRow.id);
 
     if (updateError) {
@@ -610,6 +1228,7 @@ Deno.serve(async (req: Request) => {
       .insert({
         user_id: user.id,
         mood,
+        room_type: roomTypeNorm,
         original_image_url: original_image_url.trim(),
         generated_image_url: generatedImageUrl,
         product_ids: selectedProductIds,
@@ -624,7 +1243,6 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  // 8. Return response
   return jsonResponse(
     {
       generated_image_url: generatedImageUrl,

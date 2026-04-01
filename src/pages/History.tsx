@@ -144,6 +144,14 @@ export default function History() {
   };
 
   const handleItemClick = (item: HistoryItem) => {
+    if (item.type === 'ai_generation') {
+      if (item.share_slug) {
+        navigate(`/room/${item.share_slug}`);
+      } else {
+        navigate('/ai-room-generator');
+      }
+      return;
+    }
     if (item.type === 'inspiration') {
       navigate(`/product-matches/${item.board_id}`);
     } else if (item.type === 'explore' && item.scene_slug) {
@@ -216,7 +224,7 @@ export default function History() {
                 No history yet
               </h3>
               <p className="text-gray-600 text-center mb-8 max-w-lg leading-relaxed">
-                Start by uploading an inspiration image or creating a specs-based search. Your projects will appear here.
+                Start by uploading an inspiration image, creating a specs-based search, or generating an AI room. Your projects will appear here.
               </p>
               <Button
                 onClick={() => navigate('/upload')}
@@ -315,6 +323,47 @@ export default function History() {
             )}
 
             {/* Section 2: Rooms I Viewed */}
+            {(() => {
+              const aiRoomItems = historyItems.filter((i) => i.type === 'ai_generation');
+              if (aiRoomItems.length === 0) return null;
+              return (
+                <section>
+                  <div className="flex items-center gap-3 mb-4">
+                    <h2 className="text-xl font-bold text-[#111111]">AI rooms</h2>
+                    <Badge variant="secondary" className="rounded-full bg-gray-200 text-gray-700 font-medium">
+                      {aiRoomItems.length}
+                    </Badge>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {aiRoomItems.map((item) => (
+                      <Card
+                        key={item.id}
+                        className="hover:shadow-lg transition-shadow cursor-pointer overflow-hidden"
+                        onClick={() => handleItemClick(item)}
+                      >
+                        {item.image_url ? (
+                          <div className="aspect-[4/3] overflow-hidden bg-gray-100">
+                            <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <div className="aspect-[4/3] bg-gradient-to-br from-stone-100 to-stone-200 flex items-center justify-center">
+                            <Sparkles className="h-16 w-16 text-stone-400" />
+                          </div>
+                        )}
+                        <CardContent className="p-4">
+                          <Badge variant="outline" className="mb-2 bg-stone-50 text-stone-800 border-stone-200">
+                            AI Room
+                          </Badge>
+                          <h3 className="text-lg font-semibold text-[#111111] line-clamp-2 mb-2">{item.title}</h3>
+                          <p className="text-sm text-gray-500">{formatDate(item.created_at)}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </section>
+              );
+            })()}
+
             {(() => {
               const roomItems = historyItems.filter((i) => i.type === 'explore');
               if (roomItems.length === 0) return null;

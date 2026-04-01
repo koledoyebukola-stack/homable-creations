@@ -33,6 +33,7 @@ import DemoStorefront from './pages/DemoStorefront';
 import StorefrontView from './pages/StorefrontView';
 import ExploreScenePage from './pages/ExploreScenePage';
 import AiRoomGenerator from './pages/AiRoomGenerator';
+import RoomSharePage from './pages/RoomSharePage';
 import NotFound from './pages/NotFound';
 import VendorLogin from './pages/VendorLogin';
 import VendorSignup from './pages/VendorSignup';
@@ -226,6 +227,7 @@ function AppRoutes() {
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         {/* Upload, Analyzing, and ItemDetection routes are PUBLIC - auth modal shows on results page */}
         <Route path="/upload" element={<Upload />} />
+        <Route path="/room/:shareSlug" element={<RoomSharePage />} />
         <Route path="/explore/:slug" element={<ExploreScenePage />} />
         <Route path="/analyzing/:boardId" element={<Analyzing />} />
         <Route path="/item-detection/:boardId" element={<ItemDetection />} />
