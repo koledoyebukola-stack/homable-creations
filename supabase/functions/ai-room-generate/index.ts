@@ -906,6 +906,64 @@ function generateShareSlug(mood: AiRoomMoodId): string {
   return `${mood}-${suffix}`;
 }
 
+/**
+ * OpenAI Responses API: image is on items with type `image_generation_call` and field `result` (base64).
+ * Some responses nest these under `output[].content[]` — walk the tree if the flat filter misses.
+ */
+function extractImageBase64FromOpenAIResponse(openaiJson: unknown): string | undefined {
+  if (!openaiJson || typeof openaiJson !== 'object') return undefined;
+
+  const tryFromOutputArray = (arr: unknown[]): string | undefined => {
+    for (const o of arr) {
+      if (!o || typeof o !== 'object') continue;
+      const item = o as Record<string, unknown>;
+      if (item.type === 'image_generation_call' && typeof item.result === 'string') {
+        return item.result;
+      }
+      if (Array.isArray(item.content)) {
+        for (const c of item.content) {
+          if (c && typeof c === 'object') {
+            const cc = c as Record<string, unknown>;
+            if (cc.type === 'image_generation_call' && typeof cc.result === 'string') {
+              return cc.result;
+            }
+          }
+        }
+      }
+    }
+    return undefined;
+  };
+
+  const root = openaiJson as Record<string, unknown>;
+  if (Array.isArray(root.output)) {
+    const direct = tryFromOutputArray(root.output);
+    if (direct) return direct;
+  }
+
+  const walk = (node: unknown, depth: number): string | undefined => {
+    if (depth > 20 || node == null) return undefined;
+    if (typeof node === 'object' && !Array.isArray(node)) {
+      const n = node as Record<string, unknown>;
+      if (n.type === 'image_generation_call' && typeof n.result === 'string') {
+        return n.result;
+      }
+      for (const v of Object.values(n)) {
+        const found = walk(v, depth + 1);
+        if (found) return found;
+      }
+    }
+    if (Array.isArray(node)) {
+      for (const el of node) {
+        const found = walk(el, depth + 1);
+        if (found) return found;
+      }
+    }
+    return undefined;
+  };
+
+  return walk(openaiJson, 0);
+}
+
 Deno.serve(async (req: Request) => {
   const requestId = crypto.randomUUID();
 
@@ -1079,6 +1137,7 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         model: 'gpt-4.1',
         tools: [{ type: 'image_generation' }],
+        tool_choice: 'required',
         input: [
           {
             role: 'user',
@@ -1123,17 +1182,29 @@ Deno.serve(async (req: Request) => {
         (o: any) => o?.type === 'image_generation_call',
       )
       : [];
-    const imageBase64 =
+    let imageBase64: string | undefined =
       imageGenerationCalls.length > 0
         ? imageGenerationCalls[0].result
         : undefined;
 
+    if (!imageBase64 || typeof imageBase64 !== 'string') {
+      imageBase64 = extractImageBase64FromOpenAIResponse(openaiJson);
+    }
+
     console.log(
-      '[ai-room-generate] Image found:',
+      '[step] image found:',
       imageBase64 ? 'yes' : 'no',
     );
 
     if (!imageBase64) {
+      try {
+        const types = Array.isArray(openaiJson?.output)
+          ? (openaiJson.output as any[]).map((o) => o?.type)
+          : [];
+        console.error('[ai-room-generate] output item types (debug):', JSON.stringify(types));
+      } catch {
+        // ignore
+      }
       console.error('[ai-room-generate] No image in OpenAI response');
       return jsonResponse(
         {

@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { getActiveStorefrontsByLocation } from '@/lib/api';
-import type { Storefront, VendorProduct } from '@/lib/types';
+import { getActiveStorefrontsByLocation, getSimilarProducts } from '@/lib/api';
+import type { Storefront, VendorProduct, VendorProductWithAttributes } from '@/lib/types';
+import { cn } from '@/lib/utils';
 import { AI_ROOM_MOODS, AI_ROOM_MOOD_BY_ID } from '@/lib/ai-room-moods';
 import type { AiRoomMoodId } from '@/lib/ai-room-moods';
-import { Upload, CreditCard, ImageIcon, Share2, Bookmark, ChevronRight, Check, Shield, X } from 'lucide-react';
+import { Upload, CreditCard, CircleArrowUp, Share2, Bookmark, Check, Shield, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { AI_ROOM_PRODUCTS_MIN } from '@/lib/ai-room-generate-types';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
@@ -110,6 +110,8 @@ export default function AiRoomGenerator() {
   const [productsInRender, setProductsInRender] = useState<VendorProduct[]>([]);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [minimumSpend, setMinimumSpend] = useState<number | null>(null);
+  const [similarProducts, setSimilarProducts] = useState<VendorProduct[]>([]);
+  const [similarLoading, setSimilarLoading] = useState(false);
 
   const [storefronts, setStorefronts] = useState<Storefront[]>([]);
   const [products, setProducts] = useState<VendorProduct[]>([]);
@@ -162,6 +164,47 @@ export default function AiRoomGenerator() {
     }, 4000);
     return () => clearInterval(id);
   }, [paying, step, moodId]);
+
+  useEffect(() => {
+    if (step !== 5 || productsInRender.length === 0) {
+      setSimilarProducts([]);
+      setSimilarLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setSimilarLoading(true);
+    (async () => {
+      const renderIds = new Set(productsInRender.map((p) => p.id));
+      const byId = new Map<string, VendorProductWithAttributes>();
+      await Promise.all(
+        productsInRender.map((p) =>
+          getSimilarProducts(p.id, { limit: 8 }).then((rows) => {
+            for (const row of rows) {
+              if (renderIds.has(row.id) || byId.has(row.id)) continue;
+              byId.set(row.id, row);
+            }
+          }),
+        ),
+      );
+      if (cancelled) return;
+      const sorted = Array.from(byId.values()).sort(
+        (a, b) => (b.match_score ?? 0) - (a.match_score ?? 0),
+      );
+      const capped = sorted.slice(0, 12);
+      setSimilarProducts(
+        capped.map((row) => {
+          const { vendor_product_attributes, match_score, ...rest } = row;
+          void vendor_product_attributes;
+          void match_score;
+          return rest as VendorProduct;
+        }),
+      );
+      setSimilarLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [step, productsInRender]);
 
   const carpenters = useMemo(
     () => storefronts.filter((sf) => sf.vendor_type === 'carpenter'),
@@ -267,7 +310,35 @@ export default function AiRoomGenerator() {
     setProductsInRender([]);
     setGeneratedImageUrl(null);
     setMinimumSpend(null);
+    setSimilarProducts([]);
+    setSimilarLoading(false);
     setStep(1);
+  };
+
+  const showWizardStickyNav =
+    isAuthenticated && step >= 1 && step <= 4 && !(step === 4 && paying);
+
+  const stickyNextDisabled =
+    (step === 1 && !roomPreviewUrl) ||
+    (step === 2 && !roomType) ||
+    (step === 3 && !moodId) ||
+    (step === 4 && paying);
+
+  const stickyPrimaryLabel =
+    step === 1
+      ? 'Next'
+      : step === 2
+        ? 'Next'
+        : step === 3
+          ? 'Next'
+          : 'Generate my room';
+
+  const handleStickyPrimary = () => {
+    if (stickyNextDisabled) return;
+    if (step === 1) setStep(2);
+    else if (step === 2) setStep(3);
+    else if (step === 3) setStep(4);
+    else void handlePayAndGenerate();
   };
 
   return (
@@ -278,7 +349,12 @@ export default function AiRoomGenerator() {
           100% { transform: translateX(400%); }
         }
       `}</style>
-      <main className="flex-1 container mx-auto px-4 md:px-6 py-8 md:py-12 max-w-4xl">
+      <main
+        className={cn(
+          'flex-1 container mx-auto px-4 md:px-6 py-8 md:py-12 max-w-4xl',
+          showWizardStickyNav && 'pb-28 md:pb-32',
+        )}
+      >
         {authLoading ? (
           <div className="min-h-[50vh] flex items-center justify-center text-sm text-gray-500">
             Checking your account…
@@ -312,18 +388,6 @@ export default function AiRoomGenerator() {
           <p className="mt-2 text-gray-600 text-sm md:text-base">
             Reimagine your space with Nigerian-inspired styles. Upload a photo, pick a mood, and get a fresh vision.
           </p>
-          <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-500">
-            <span>Step {step} of 5</span>
-            <div className="flex gap-1">
-              {([1, 2, 3, 4, 5] as const).map((s) => (
-                <span
-                  key={s}
-                  className={`w-2 h-2 rounded-full ${s <= step ? 'bg-[#111]' : 'bg-gray-300'}`}
-                  aria-hidden
-                />
-              ))}
-            </div>
-          </div>
         </header>
 
         {step === 1 && (
@@ -336,7 +400,10 @@ export default function AiRoomGenerator() {
               <p className="mt-2 text-gray-600 text-sm">
                 JPG or PNG, any angle. We’ll use it to reimagine your space in your chosen mood.
               </p>
-              <label className="mt-6 flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50/50 py-12 px-6 cursor-pointer hover:border-gray-400 hover:bg-gray-50 transition-colors">
+              <label
+                className="mt-6 flex flex-col items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white py-12 px-6 cursor-pointer transition-shadow hover:shadow-md"
+                style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}
+              >
                 <input
                   type="file"
                   accept="image/jpeg,image/png"
@@ -353,9 +420,9 @@ export default function AiRoomGenerator() {
                   </div>
                 ) : (
                   <>
-                    <ImageIcon className="w-12 h-12 text-gray-400" />
-                    <span className="mt-2 text-sm font-medium text-gray-600">Click to choose a photo</span>
-                    <span className="text-xs text-gray-500 mt-1">JPEG or PNG, max 10MB</span>
+                    <CircleArrowUp className="w-8 h-8 text-gray-400" aria-hidden />
+                    <span className="mt-3 text-[15px] font-medium text-gray-900">Tap to upload</span>
+                    <span className="text-[13px] text-gray-500 mt-1">JPG or PNG, any angle</span>
                   </>
                 )}
               </label>
@@ -390,16 +457,6 @@ export default function AiRoomGenerator() {
                   Living room · Bedroom · Home office · Dining room · Empty wall
                 </p>
               </div>
-              <div className="mt-6 flex justify-end">
-                <Button
-                  disabled={!roomPreviewUrl}
-                  onClick={() => setStep(2)}
-                  className="rounded-full bg-[#111] text-white hover:bg-gray-800"
-                >
-                  Next: Room type
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
             </div>
           </section>
         )}
@@ -429,19 +486,6 @@ export default function AiRoomGenerator() {
                     <span className="text-[14px] text-gray-900 text-center leading-tight">{rt.label}</span>
                   </button>
                 ))}
-              </div>
-              <div className="mt-6 flex justify-between">
-                <Button variant="outline" onClick={() => setStep(1)} className="rounded-full">
-                  Back
-                </Button>
-                <Button
-                  disabled={!roomType}
-                  onClick={() => setStep(3)}
-                  className="rounded-full bg-[#111] text-white hover:bg-gray-800"
-                >
-                  Next: Pick a mood
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
               </div>
             </div>
           </section>
@@ -490,19 +534,6 @@ export default function AiRoomGenerator() {
                     </div>
                   </button>
                 ))}
-              </div>
-              <div className="mt-6 flex justify-between">
-                <Button variant="outline" onClick={() => setStep(2)} className="rounded-full">
-                  Back
-                </Button>
-                <Button
-                  disabled={!moodId}
-                  onClick={() => setStep(4)}
-                  className="rounded-full bg-[#111] text-white hover:bg-gray-800"
-                >
-                  Next: Review & pay
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
               </div>
             </div>
           </section>
@@ -646,18 +677,6 @@ export default function AiRoomGenerator() {
                       AI-generated results may vary based on photo quality. All vendor products shown are real and available.
                     </p>
                   </div>
-                  <div className="mt-8 flex justify-between">
-                    <Button variant="outline" onClick={() => setStep(3)} className="rounded-full">
-                      Back
-                    </Button>
-                    <Button
-                      disabled={paying}
-                      onClick={handlePayAndGenerate}
-                      className="rounded-full bg-[#111] text-white hover:bg-gray-800"
-                    >
-                      Generate my room
-                    </Button>
-                  </div>
                 </>
               )}
             </div>
@@ -667,10 +686,10 @@ export default function AiRoomGenerator() {
         {step === 5 && (
           <section className="space-y-10" aria-label="Your generated room">
             <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
-              <h2 className="text-lg font-semibold text-gray-900">Your reimagined room</h2>
-              <p className="mt-1 text-sm text-gray-600">
-                Before and after. Every product in your render is from verified Nigerian vendors.
-              </p>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+                Your {ROOM_TYPE_OPTIONS.find((r) => r.id === roomType)?.label ?? 'room'} is ready
+              </h2>
+              {mood && <p className="mt-2 text-sm text-gray-500">{mood.label}</p>}
 
               {/* 1. Before / After */}
               <div className="mt-6 space-y-6">
@@ -700,6 +719,17 @@ export default function AiRoomGenerator() {
                   <p className="mt-1.5 text-xs text-gray-500">Tap image to view full screen</p>
                 </div>
               </div>
+
+              {(productsInRender.length > 0 || (minimumSpend != null && minimumSpend > 0)) && (
+                <div className="mt-8 rounded-xl border border-gray-100 bg-gray-50/80 p-4 md:p-5">
+                  <p className="text-sm font-medium text-gray-500">Minimum spend to achieve this look</p>
+                  <p className="mt-1 text-2xl font-bold text-gray-900">{formatNgn(minimumSpend ?? 0)}</p>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Based on {productsInRender.length} vendor product{productsInRender.length !== 1 ? 's' : ''}{' '}
+                    featured in your render.
+                  </p>
+                </div>
+              )}
 
               {afterImageModalOpen && (
                 <div
@@ -765,10 +795,11 @@ export default function AiRoomGenerator() {
                   {productsInRender.map((product) => {
                     const storefront = storefronts.find((sf) => sf.id === product.storefront_id);
                     return (
-                      <button
+                      <a
                         key={product.id}
-                        type="button"
-                        onClick={() => navigate(`/shops/products/${product.slug}`)}
+                        href={`${window.location.origin}/shops/products/${product.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="rounded-2xl border border-gray-200 overflow-hidden text-left hover:border-gray-300 hover:shadow-lg transition-all flex flex-col"
                       >
                         <div className="aspect-[3/4] bg-gray-100 relative">
@@ -803,7 +834,7 @@ export default function AiRoomGenerator() {
                           <h4 className="text-[13px] font-semibold text-gray-900 leading-snug line-clamp-2">{product.name}</h4>
                           <p className="text-xs text-gray-700 mt-1">{formatPrice(product)}</p>
                         </div>
-                      </button>
+                      </a>
                     );
                   })}
                 </div>
@@ -815,18 +846,69 @@ export default function AiRoomGenerator() {
               </div>
             )}
 
-            {/* 4. Minimum spend to achieve this look */}
-            {(productsInRender.length > 0 || minimumSpend > 0) && (
+            {(similarLoading || similarProducts.length > 0) && (
               <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
-                <p className="text-sm font-medium text-gray-500">Minimum spend to achieve this look</p>
-                <p className="mt-1 text-2xl font-bold text-gray-900">{formatNgn(minimumSpend)}</p>
-                <p className="mt-2 text-xs text-gray-500">
-                  Based on {productsInRender.length} vendor product{productsInRender.length !== 1 ? 's' : ''} featured in your render.
-                </p>
+                <h3 className="text-base font-semibold text-gray-900">Similar items</h3>
+                <p className="mt-1 text-sm text-gray-600">Curated picks related to products in your render.</p>
+                {similarLoading ? (
+                  <p className="mt-4 text-sm text-gray-500">Finding similar pieces…</p>
+                ) : (
+                  <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {similarProducts.map((product) => {
+                      const storefront = storefronts.find((sf) => sf.id === product.storefront_id);
+                      return (
+                        <a
+                          key={product.id}
+                          href={`${window.location.origin}/shops/products/${product.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-2xl border border-gray-200 overflow-hidden text-left hover:border-gray-300 hover:shadow-lg transition-all flex flex-col"
+                        >
+                          <div className="aspect-[3/4] bg-gray-100 relative">
+                            {product.image_url ? (
+                              <img
+                                src={product.image_url}
+                                alt={product.name}
+                                className="w-full h-full object-cover object-center"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                                No image
+                              </div>
+                            )}
+                            {storefront && (
+                              <div className="absolute top-2 left-2 max-w-[90%]">
+                                <span className="inline-flex items-center rounded-full bg-black/80 text-white text-[10px] font-medium px-2 py-1">
+                                  <span
+                                    className="relative h-6 w-6 rounded-full border border-white/70 overflow-hidden flex items-center justify-center text-[10px] font-semibold mr-1 flex-shrink-0"
+                                    style={{ backgroundColor: getVendorColor(storefront.name) }}
+                                  >
+                                    {storefront.logo_url ? (
+                                      <img src={storefront.logo_url} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                      getVendorInitials(storefront.name)
+                                    )}
+                                  </span>
+                                  <span className="truncate max-w-[80px]">{storefront.name}</span>
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="px-2.5 pt-2.5 pb-3">
+                            <h4 className="text-[13px] font-semibold text-gray-900 leading-snug line-clamp-2">
+                              {product.name}
+                            </h4>
+                            <p className="text-xs text-gray-700 mt-1">{formatPrice(product)}</p>
+                          </div>
+                        </a>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
-            {/* 5. Furniture makers — real carpenters */}
+            {/* Furniture makers — real carpenters */}
             {carpenters.length > 0 && (
               <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
                 <h3 className="text-base font-semibold text-gray-900">Furniture makers</h3>
@@ -902,6 +984,47 @@ export default function AiRoomGenerator() {
               </Button>
             </div>
           </section>
+        )}
+
+        {showWizardStickyNav && (
+          <nav
+            className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white"
+            style={{
+              paddingTop: '0.75rem',
+              paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
+              paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+              paddingRight: 'max(1rem, env(safe-area-inset-right))',
+            }}
+            aria-label="Wizard navigation"
+          >
+            <div className="container mx-auto flex max-w-4xl items-center gap-3 px-4 md:px-6">
+              <div className="flex min-h-[44px] w-[88px] shrink-0 items-center justify-start">
+                {step > 1 ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={() => setStep((s) => (s - 1) as Step)}
+                  >
+                    Back
+                  </Button>
+                ) : (
+                  <span className="inline-block w-[88px] shrink-0" aria-hidden />
+                )}
+              </div>
+              <p className="min-w-0 flex-1 text-center text-xs text-gray-500">Step {step} of 5</p>
+              <div className="flex min-h-[44px] min-w-[88px] shrink-0 items-center justify-end">
+                <Button
+                  type="button"
+                  className="rounded-full bg-[#111] text-white hover:bg-gray-800 whitespace-nowrap"
+                  disabled={stickyNextDisabled}
+                  onClick={handleStickyPrimary}
+                >
+                  {stickyPrimaryLabel}
+                </Button>
+              </div>
+            </div>
+          </nav>
         )}
         </>
         )}
