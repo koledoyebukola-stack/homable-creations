@@ -5,7 +5,7 @@ import { getActiveStorefrontsByLocation } from '@/lib/api';
 import type { Storefront, VendorProduct } from '@/lib/types';
 import { AI_ROOM_MOODS, AI_ROOM_MOOD_BY_ID } from '@/lib/ai-room-moods';
 import type { AiRoomMoodId } from '@/lib/ai-room-moods';
-import { Upload, Sparkles, CreditCard, ImageIcon, Share2, Bookmark, ChevronRight, Check, Shield } from 'lucide-react';
+import { Upload, Sparkles, CreditCard, ImageIcon, Share2, Bookmark, ChevronRight, Check, Shield, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { AI_ROOM_PRODUCTS_MIN } from '@/lib/ai-room-generate-types';
 import { supabase } from '@/lib/supabase';
@@ -48,6 +48,14 @@ const SAMPLE_ROOM_PHOTOS: { id: string; label: string; url: string }[] = [
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png'];
 
+const ROOM_TYPE_OPTIONS: { id: string; icon: string; label: string }[] = [
+  { id: 'living_room', icon: '🛋', label: 'Living room' },
+  { id: 'bedroom', icon: '🛏', label: 'Bedroom' },
+  { id: 'dining_room', icon: '🍽', label: 'Dining room' },
+  { id: 'home_office', icon: '💼', label: 'Home office' },
+  { id: 'wall_styling', icon: '🖼', label: 'Wall styling' },
+];
+
 function formatNgn(value: number): string {
   return `₦${Number(value).toLocaleString('en-NG')}`;
 }
@@ -78,7 +86,7 @@ function getVendorColor(name: string): string {
   return `hsl(${hue}, 70%, 40%)`;
 }
 
-type Step = 1 | 2 | 3 | 4;
+type Step = 1 | 2 | 3 | 4 | 5;
 
 export default function AiRoomGenerator() {
   const navigate = useNavigate();
@@ -91,8 +99,12 @@ export default function AiRoomGenerator() {
   /** 'upload' = user selected file, 'sample' = user picked a sample room photo */
   const [roomSource, setRoomSource] = useState<'upload' | 'sample' | null>(null);
   const [roomPhotoError, setRoomPhotoError] = useState<string | null>(null);
+  const [roomType, setRoomType] = useState<string | null>(null);
   const [moodId, setMoodId] = useState<AiRoomMoodId | null>(null);
   const [paying, setPaying] = useState(false);
+  const [processingMessages, setProcessingMessages] = useState<string[]>([]);
+  const [processingMsgIndex, setProcessingMsgIndex] = useState(0);
+  const [afterImageModalOpen, setAfterImageModalOpen] = useState(false);
   const [mockGenerationId, setMockGenerationId] = useState<string | null>(null);
   /** Products passed to OpenAI for this generation (mock: 5–6 from productsByMood at pay time) */
   const [productsInRender, setProductsInRender] = useState<VendorProduct[]>([]);
@@ -133,6 +145,23 @@ export default function AiRoomGenerator() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!paying || step !== 4) return;
+    const moodLabel = moodId ? AI_ROOM_MOOD_BY_ID[moodId]?.label ?? 'your chosen' : 'your chosen';
+    const messages = [
+      'Analysing your room…',
+      `Applying ${moodLabel} style…`,
+      'Sourcing Nigerian vendor products…',
+      'Building your render…',
+    ];
+    setProcessingMessages(messages);
+    setProcessingMsgIndex(0);
+    const id = window.setInterval(() => {
+      setProcessingMsgIndex((i) => (i + 1) % messages.length);
+    }, 4000);
+    return () => clearInterval(id);
+  }, [paying, step, moodId]);
 
   const carpenters = useMemo(
     () => storefronts.filter((sf) => sf.vendor_type === 'carpenter'),
@@ -179,7 +208,7 @@ export default function AiRoomGenerator() {
   };
 
   const handlePayAndGenerate = async () => {
-    if (!roomPreviewUrl || !moodId || !user?.id) return;
+    if (!roomPreviewUrl || !moodId || !roomType || !user?.id) return;
     setPaying(true);
 
     try {
@@ -188,6 +217,7 @@ export default function AiRoomGenerator() {
       const { data, error } = await supabase.functions.invoke('ai-room-generate', {
         body: {
           mood: moodId,
+          room_type: roomType,
           paystack_reference: reference,
           original_image_url: roomPreviewUrl,
           user_id: user.id,
@@ -206,7 +236,7 @@ export default function AiRoomGenerator() {
       setMinimumSpend(
         typeof data.minimum_spend === 'number' ? data.minimum_spend : null,
       );
-      setStep(4);
+      setStep(5);
     } finally {
       setPaying(false);
     }
@@ -230,8 +260,10 @@ export default function AiRoomGenerator() {
     setRoomPreviewUrl(null);
     setRoomSource(null);
     setRoomPhotoError(null);
+    setRoomType(null);
     setMoodId(null);
     setMockGenerationId(null);
+    setAfterImageModalOpen(false);
     setProductsInRender([]);
     setGeneratedImageUrl(null);
     setMinimumSpend(null);
@@ -240,6 +272,12 @@ export default function AiRoomGenerator() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#fafaf9]">
+      <style>{`
+        @keyframes ai-room-progress-shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(400%); }
+        }
+      `}</style>
       <main className="flex-1 container mx-auto px-4 md:px-6 py-8 md:py-12 max-w-4xl">
         {authLoading ? (
           <div className="min-h-[50vh] flex items-center justify-center text-sm text-gray-500">
@@ -275,9 +313,9 @@ export default function AiRoomGenerator() {
             Reimagine your space with Nigerian-inspired styles. Upload a photo, pick a mood, and get a fresh vision.
           </p>
           <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-500">
-            <span>Step {step} of 4</span>
+            <span>Step {step} of 5</span>
             <div className="flex gap-1">
-              {([1, 2, 3, 4] as const).map((s) => (
+              {([1, 2, 3, 4, 5] as const).map((s) => (
                 <span
                   key={s}
                   className={`w-2 h-2 rounded-full ${s <= step ? 'bg-[#111]' : 'bg-gray-300'}`}
@@ -358,7 +396,7 @@ export default function AiRoomGenerator() {
                   onClick={() => setStep(2)}
                   className="rounded-full bg-[#111] text-white hover:bg-gray-800"
                 >
-                  Next: Pick a mood
+                  Next: Room type
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
               </div>
@@ -367,6 +405,49 @@ export default function AiRoomGenerator() {
         )}
 
         {step === 2 && (
+          <section className="space-y-6" aria-label="Choose room type">
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
+              <h2 className="text-lg font-semibold text-gray-900">What kind of room?</h2>
+              <p className="mt-2 text-gray-600 text-sm">
+                Pick the space you&apos;re styling so we can tailor the result.
+              </p>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                {ROOM_TYPE_OPTIONS.map((rt) => (
+                  <button
+                    key={rt.id}
+                    type="button"
+                    onClick={() => setRoomType(rt.id)}
+                    className={`rounded-xl p-4 flex flex-col items-center justify-start gap-2 transition-colors min-h-[100px] ${
+                      roomType === rt.id
+                        ? 'border-2 border-[#111] bg-white'
+                        : 'border-[0.5px] border-gray-400 bg-white hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="text-[24px] leading-none" aria-hidden>
+                      {rt.icon}
+                    </span>
+                    <span className="text-[14px] text-gray-900 text-center leading-tight">{rt.label}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="mt-6 flex justify-between">
+                <Button variant="outline" onClick={() => setStep(1)} className="rounded-full">
+                  Back
+                </Button>
+                <Button
+                  disabled={!roomType}
+                  onClick={() => setStep(3)}
+                  className="rounded-full bg-[#111] text-white hover:bg-gray-800"
+                >
+                  Next: Pick a mood
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {step === 3 && (
           <section className="space-y-6" aria-label="Pick a mood">
             <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
               <h2 className="text-lg font-semibold text-gray-900">
@@ -411,12 +492,12 @@ export default function AiRoomGenerator() {
                 ))}
               </div>
               <div className="mt-6 flex justify-between">
-                <Button variant="outline" onClick={() => setStep(1)} className="rounded-full">
+                <Button variant="outline" onClick={() => setStep(2)} className="rounded-full">
                   Back
                 </Button>
                 <Button
                   disabled={!moodId}
-                  onClick={() => setStep(3)}
+                  onClick={() => setStep(4)}
                   className="rounded-full bg-[#111] text-white hover:bg-gray-800"
                 >
                   Next: Review & pay
@@ -427,81 +508,110 @@ export default function AiRoomGenerator() {
           </section>
         )}
 
-        {step === 3 && (
-          <section className="space-y-6" aria-label="Review and pay">
+        {step === 4 && (
+          <section className="space-y-6" aria-label={paying ? 'Generating your room' : 'Review and pay'}>
             <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <CreditCard className="w-5 h-5" />
-                Review & pay
-              </h2>
-              <p className="mt-2 text-gray-600 text-sm">
-                Confirm your photo and mood, then pay ₦2,000 to generate your room.
-              </p>
-              <div className="mt-6 flex flex-col md:flex-row gap-6">
-                {roomPreviewUrl && (
-                  <div className="w-full md:w-48 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 aspect-[4/3]">
-                    <img src={roomPreviewUrl} alt="Your room" className="w-full h-full object-cover" />
+              {paying ? (
+                <>
+                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5" />
+                    Generating your room
+                  </h2>
+                  <p className="mt-4 text-base text-gray-900 min-h-[3rem]">
+                    {processingMessages[processingMsgIndex] ?? 'Starting…'}
+                  </p>
+                  <p className="mt-2 text-sm text-gray-500">This usually takes 45–90 seconds</p>
+                  <div className="mt-6 relative h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                    <div
+                      className="absolute top-0 bottom-0 left-0 w-[38%] rounded-full bg-gradient-to-r from-gray-300 via-gray-50 to-gray-300 shadow-sm"
+                      style={{ animation: 'ai-room-progress-shimmer 2s linear infinite' }}
+                    />
                   </div>
-                )}
-                <div className="flex-1">
-                  {mood && (
-                    <div className="rounded-lg bg-gray-50 p-4">
-                      <span className="text-xs text-gray-500">Mood</span>
-                      <p className="font-semibold text-gray-900">{mood.label}</p>
-                      <p className="text-sm text-gray-600">{mood.subtitle}</p>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <CreditCard className="w-5 h-5" />
+                    Review & pay
+                  </h2>
+                  <p className="mt-2 text-gray-600 text-sm">
+                    Confirm your photo, room type, and mood, then pay ₦2,000 to generate your room.
+                  </p>
+                  <div className="mt-6 flex flex-col md:flex-row gap-6">
+                    {roomPreviewUrl && (
+                      <div className="w-full md:w-48 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 aspect-[4/3]">
+                        <img src={roomPreviewUrl} alt="Your room" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    <div className="flex-1 space-y-3">
+                      {roomType && (
+                        <div className="rounded-lg bg-gray-50 p-4">
+                          <span className="text-xs text-gray-500">Room type</span>
+                          <p className="font-semibold text-gray-900">
+                            {ROOM_TYPE_OPTIONS.find((r) => r.id === roomType)?.label ?? roomType}
+                          </p>
+                        </div>
+                      )}
+                      {mood && (
+                        <div className="rounded-lg bg-gray-50 p-4">
+                          <span className="text-xs text-gray-500">Mood</span>
+                          <p className="font-semibold text-gray-900">{mood.label}</p>
+                          <p className="text-sm text-gray-600">{mood.subtitle}</p>
+                        </div>
+                      )}
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-2xl font-bold text-gray-900">{formatNgn(PRICE_KOBO / 100)}</span>
+                        <span className="text-gray-500 text-sm">per generation</span>
+                      </div>
                     </div>
-                  )}
-                  <div className="mt-4 flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-gray-900">{formatNgn(PRICE_KOBO / 100)}</span>
-                    <span className="text-gray-500 text-sm">per generation</span>
                   </div>
-                </div>
-              </div>
-              <div className="mt-8">
-                <h3 className="text-base font-semibold text-gray-900">What you get for ₦2,000</h3>
-                <ul className="mt-3 space-y-2 text-sm text-gray-700">
-                  <li className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                    <span>AI room transformation in your chosen style</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                    <span>Real verified Nigerian vendor products built into your render — not AI invented furniture</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                    <span>Every item is sourceable and available to buy today</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                    <span>Interior decorators charge ₦150,000–₦500,000 for a mood board. This is ₦2,000.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Shield className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                    <span>Payment secured by Paystack — Nigeria&apos;s most trusted payment gateway</span>
-                  </li>
-                </ul>
-                <p className="mt-4 text-xs text-gray-500">
-                  AI-generated results may vary based on photo quality. All vendor products shown are real and available.
-                </p>
-              </div>
-              <div className="mt-8 flex justify-between">
-                <Button variant="outline" onClick={() => setStep(2)} className="rounded-full">
-                  Back
-                </Button>
-                <Button
-                  disabled={paying}
-                  onClick={handlePayAndGenerate}
-                  className="rounded-full bg-[#111] text-white hover:bg-gray-800"
-                >
-                  {paying ? 'Processing…' : 'Generate my room'}
-                </Button>
-              </div>
+                  <div className="mt-8">
+                    <h3 className="text-base font-semibold text-gray-900">What you get for ₦2,000</h3>
+                    <ul className="mt-3 space-y-2 text-sm text-gray-700">
+                      <li className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                        <span>AI room transformation in your chosen style</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                        <span>Real verified Nigerian vendor products built into your render — not AI invented furniture</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                        <span>Every item is sourceable and available to buy today</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                        <span>Interior decorators charge ₦150,000–₦500,000 for a mood board. This is ₦2,000.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Shield className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                        <span>Payment secured by Paystack — Nigeria&apos;s most trusted payment gateway</span>
+                      </li>
+                    </ul>
+                    <p className="mt-4 text-xs text-gray-500">
+                      AI-generated results may vary based on photo quality. All vendor products shown are real and available.
+                    </p>
+                  </div>
+                  <div className="mt-8 flex justify-between">
+                    <Button variant="outline" onClick={() => setStep(3)} className="rounded-full">
+                      Back
+                    </Button>
+                    <Button
+                      disabled={paying}
+                      onClick={handlePayAndGenerate}
+                      className="rounded-full bg-[#111] text-white hover:bg-gray-800"
+                    >
+                      Generate my room
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           </section>
         )}
 
-        {step === 4 && (
+        {step === 5 && (
           <section className="space-y-10" aria-label="Your generated room">
             <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
               <h2 className="text-lg font-semibold text-gray-900">Your reimagined room</h2>
@@ -510,10 +620,10 @@ export default function AiRoomGenerator() {
               </p>
 
               {/* 1. Before / After */}
-              <div className="mt-6 grid grid-cols-2 gap-4">
+              <div className="mt-6 space-y-6">
                 <div>
                   <p className="text-xs font-medium text-gray-500 mb-2">Before</p>
-                  <div className="aspect-[4/3] rounded-xl overflow-hidden bg-gray-100">
+                  <div className="h-[140px] w-full rounded-xl overflow-hidden bg-gray-100">
                     {roomPreviewUrl ? (
                       <img src={roomPreviewUrl} alt="Your room" className="w-full h-full object-cover" />
                     ) : (
@@ -522,16 +632,61 @@ export default function AiRoomGenerator() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-gray-500 mb-2">After (AI — placeholder)</p>
-                  <div className="aspect-[4/3] rounded-xl overflow-hidden bg-gray-100">
+                  <p className="text-xs font-medium text-gray-500 mb-2">After</p>
+                  <button
+                    type="button"
+                    onClick={() => setAfterImageModalOpen(true)}
+                    className="block w-full rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] text-left ring-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
+                  >
                     <img
                       src={generatedImageUrl || PLACEHOLDER_AI_IMAGE}
-                      alt="AI-generated room (placeholder)"
+                      alt="AI-generated room"
                       className="w-full h-full object-cover"
                     />
-                  </div>
+                  </button>
+                  <p className="mt-1.5 text-xs text-gray-500">Tap image to view full screen</p>
                 </div>
               </div>
+
+              {afterImageModalOpen && (
+                <div
+                  className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Generated room full screen"
+                  style={{
+                    minHeight: '100dvh',
+                    paddingTop: 'max(1rem, env(safe-area-inset-top))',
+                    paddingRight: 'max(1rem, env(safe-area-inset-right))',
+                    paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+                    paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setAfterImageModalOpen(false)}
+                    className="absolute z-[101] flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+                    style={{
+                      top: 'max(0.75rem, env(safe-area-inset-top))',
+                      right: 'max(0.75rem, env(safe-area-inset-right))',
+                    }}
+                    aria-label="Close full screen image"
+                  >
+                    <X className="h-7 w-7" strokeWidth={2.5} />
+                  </button>
+                  <button
+                    type="button"
+                    className="max-h-[min(85dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] w-full max-w-4xl overflow-hidden rounded-lg"
+                    onClick={() => setAfterImageModalOpen(false)}
+                  >
+                    <img
+                      src={generatedImageUrl || PLACEHOLDER_AI_IMAGE}
+                      alt="AI-generated room full size"
+                      className="max-h-[85dvh] w-full object-contain"
+                    />
+                  </button>
+                </div>
+              )}
 
               {/* 2. Share + Save */}
               <div className="mt-6 flex flex-wrap gap-3">
