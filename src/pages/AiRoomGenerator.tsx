@@ -5,7 +5,7 @@ import { getActiveStorefrontsByLocation } from '@/lib/api';
 import type { Storefront, VendorProduct } from '@/lib/types';
 import { AI_ROOM_MOODS, AI_ROOM_MOOD_BY_ID } from '@/lib/ai-room-moods';
 import type { AiRoomMoodId } from '@/lib/ai-room-moods';
-import { Upload, Sparkles, CreditCard, ImageIcon, Share2, Bookmark, ChevronRight, Check, Shield, X } from 'lucide-react';
+import { Upload, CreditCard, ImageIcon, Share2, Bookmark, ChevronRight, Check, Shield, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { AI_ROOM_PRODUCTS_MIN } from '@/lib/ai-room-generate-types';
 import { supabase } from '@/lib/supabase';
@@ -513,10 +513,7 @@ export default function AiRoomGenerator() {
             <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
               {paying ? (
                 <>
-                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    <Sparkles className="w-5 h-5" />
-                    Generating your room
-                  </h2>
+                  <h2 className="text-lg font-semibold text-gray-900">Building your room...</h2>
                   <p className="mt-4 text-base text-gray-900 min-h-[3rem]">
                     {processingMessages[processingMsgIndex] ?? 'Starting…'}
                   </p>
@@ -526,6 +523,62 @@ export default function AiRoomGenerator() {
                       className="absolute top-0 bottom-0 left-0 w-[38%] rounded-full bg-gradient-to-r from-gray-300 via-gray-50 to-gray-300 shadow-sm"
                       style={{ animation: 'ai-room-progress-shimmer 2s linear infinite' }}
                     />
+                  </div>
+
+                  <div
+                    className="mt-8 pointer-events-none cursor-default select-none"
+                    aria-hidden
+                  >
+                    <p className="text-xs text-gray-500 mb-3">Products going into your room</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {productsInRender.length > 0
+                        ? productsInRender.map((product) => {
+                            const storefront = storefronts.find((sf) => sf.id === product.storefront_id);
+                            return (
+                              <div key={product.id} className="flex flex-col gap-1.5">
+                                <div className="aspect-square w-full overflow-hidden rounded-lg bg-gray-100">
+                                  {product.image_url ? (
+                                    <img
+                                      src={product.image_url}
+                                      alt=""
+                                      className="h-full w-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="h-full w-full bg-gray-200" />
+                                  )}
+                                </div>
+                                <p className="text-[12px] font-medium leading-snug text-gray-900 line-clamp-2">
+                                  {product.name}
+                                </p>
+                                <p className="text-[10px] text-gray-500 truncate">
+                                  {storefront?.name ?? 'Vendor'}
+                                </p>
+                              </div>
+                            );
+                          })
+                        : Array.from({ length: 4 }).map((_, i) => (
+                            <div key={`processing-product-skeleton-${i}`} className="flex flex-col gap-1.5">
+                              <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-gray-200">
+                                <div
+                                  className="absolute inset-y-0 left-0 w-[38%] rounded-full bg-gradient-to-r from-gray-300 via-gray-50 to-gray-300 opacity-90"
+                                  style={{ animation: 'ai-room-progress-shimmer 2s linear infinite' }}
+                                />
+                              </div>
+                              <div className="relative h-3 w-4/5 overflow-hidden rounded-md bg-gray-200">
+                                <div
+                                  className="absolute inset-y-0 left-0 w-[38%] rounded-full bg-gradient-to-r from-gray-300 via-gray-50 to-gray-300 opacity-90"
+                                  style={{ animation: 'ai-room-progress-shimmer 2s linear infinite' }}
+                                />
+                              </div>
+                              <div className="relative h-2.5 w-1/2 overflow-hidden rounded-md bg-gray-200">
+                                <div
+                                  className="absolute inset-y-0 left-0 w-[38%] rounded-full bg-gradient-to-r from-gray-300 via-gray-50 to-gray-300 opacity-90"
+                                  style={{ animation: 'ai-room-progress-shimmer 2s linear infinite' }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                    </div>
                   </div>
                 </>
               ) : (
