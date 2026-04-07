@@ -11,6 +11,8 @@ export default function VendorLogin() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [forgotPasswordMessage, setForgotPasswordMessage] = useState<string | null>(null);
+  const [forgotPasswordError, setForgotPasswordError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +31,29 @@ export default function VendorLogin() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleForgotPassword = async () => {
+    const trimmedEmail = email.trim();
+    setForgotPasswordError(null);
+    if (!trimmedEmail) {
+      setForgotPasswordMessage(null);
+      setForgotPasswordError('Enter your email above first');
+      return;
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+      redirectTo: 'https://homablecreations.com/vendor/login',
+    });
+
+    if (error) {
+      setForgotPasswordMessage(null);
+      setForgotPasswordError('Unable to send reset link right now. Please try again.');
+      return;
+    }
+
+    setForgotPasswordError(null);
+    setForgotPasswordMessage('Check your email for a reset link');
   };
 
   return (
@@ -100,6 +125,26 @@ export default function VendorLogin() {
             >
               {loading ? 'Logging in…' : 'Log in'}
             </Button>
+
+            {forgotPasswordMessage ? (
+              <p className="text-[13px] text-[hsl(var(--color-text-secondary))] text-center">
+                {forgotPasswordMessage}
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void handleForgotPassword()}
+                className="text-[13px] text-[hsl(var(--color-text-secondary))] text-center w-full hover:underline"
+              >
+                Forgot your password?
+              </button>
+            )}
+
+            {forgotPasswordError && (
+              <p className="text-[13px] text-red-600 text-center" role="alert">
+                {forgotPasswordError}
+              </p>
+            )}
 
             {errorMessage && (
               <p className="text-sm text-red-600 mt-2" role="alert">
