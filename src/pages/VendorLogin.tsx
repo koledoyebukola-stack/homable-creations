@@ -43,7 +43,7 @@ export default function VendorLogin() {
     }
 
     const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
-      redirectTo: 'https://homablecreations.com/vendor/login',
+      redirectTo: 'https://homablecreations.com/vendor/reset-password',
     });
 
     if (error) {

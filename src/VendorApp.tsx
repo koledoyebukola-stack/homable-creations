@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import VendorLogin from './pages/VendorLogin';
 import VendorSignup from './pages/VendorSignup';
 import VendorDashboard from './pages/VendorDashboard';
+import VendorResetPassword from './pages/VendorResetPassword';
 
 function VendorDashboardProtected() {
   const [checking, setChecking] = useState(true);
@@ -35,6 +36,7 @@ export default function VendorApp() {
         <Routes>
           <Route path="/vendor/login" element={<VendorLogin />} />
           <Route path="/vendor/signup" element={<VendorSignup />} />
+          <Route path="/vendor/reset-password" element={<VendorResetPassword />} />
           <Route path="/vendor/dashboard" element={<VendorDashboardProtected />} />
           <Route path="*" element={<VendorLogin />} />
         </Routes>
