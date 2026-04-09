@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import ImageUploader from '@/components/ImageUploader';
 import { getActiveStorefrontsByLocation, getSimilarProducts } from '@/lib/api';
 import type { Storefront, VendorProduct, VendorProductWithAttributes } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { AI_ROOM_MOODS, AI_ROOM_MOOD_BY_ID } from '@/lib/ai-room-moods';
 import type { AiRoomMoodId } from '@/lib/ai-room-moods';
-import { Upload, CreditCard, CircleArrowUp, Share2, Bookmark, Check, Shield, X } from 'lucide-react';
+import { Upload, CreditCard, Info, AlertCircle, Share2, Bookmark, Check, Shield, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
@@ -70,6 +73,24 @@ function formatPrice(product: VendorProduct): string {
   return 'Price on request';
 }
 
+/** Matches Explore scene detail `formatVendorPrice` for similar-product cards. */
+function formatVendorPrice(p: VendorProduct): string {
+  return formatPrice(p);
+}
+
+/** Matches Explore scene detail `formatVendorDimensions`. */
+function formatVendorDimensions(p: VendorProduct): string | null {
+  const { dimension_width, dimension_height, dimension_unit } = p;
+  if (!dimension_width || !dimension_height || !dimension_unit) return null;
+  return `${dimension_width} × ${dimension_height} ${dimension_unit}`;
+}
+
+type SimilarReadyRow = { product: VendorProductWithAttributes; storefront: Storefront | null };
+type SimilarSlot =
+  | { status: 'loading' }
+  | { status: 'empty' }
+  | { status: 'ready'; rows: SimilarReadyRow[] };
+
 function getVendorInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   const first = parts[0]?.[0] ?? '';
@@ -110,8 +131,8 @@ export default function AiRoomGenerator() {
   const [productsInRender, setProductsInRender] = useState<VendorProduct[]>([]);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [minimumSpend, setMinimumSpend] = useState<number | null>(null);
-  const [similarProducts, setSimilarProducts] = useState<VendorProduct[]>([]);
-  const [similarLoading, setSimilarLoading] = useState(false);
+  const [similarByProductId, setSimilarByProductId] = useState<Record<string, SimilarSlot>>({});
+  const [resultSheetEntered, setResultSheetEntered] = useState(false);
 
   const [storefronts, setStorefronts] = useState<Storefront[]>([]);
   const [products, setProducts] = useState<VendorProduct[]>([]);
@@ -167,44 +188,62 @@ export default function AiRoomGenerator() {
 
   useEffect(() => {
     if (step !== 5 || productsInRender.length === 0) {
-      setSimilarProducts([]);
-      setSimilarLoading(false);
+      setSimilarByProductId({});
       return;
     }
     let cancelled = false;
-    setSimilarLoading(true);
-    (async () => {
-      const renderIds = new Set(productsInRender.map((p) => p.id));
-      const byId = new Map<string, VendorProductWithAttributes>();
+    const renderIds = new Set(productsInRender.map((p) => p.id));
+    const initial: Record<string, SimilarSlot> = {};
+    productsInRender.forEach((p) => {
+      initial[p.id] = { status: 'loading' };
+    });
+    setSimilarByProductId(initial);
+
+    void (async () => {
       await Promise.all(
-        productsInRender.map((p) =>
-          getSimilarProducts(p.id, { limit: 8 }).then((rows) => {
-            for (const row of rows) {
-              if (renderIds.has(row.id) || byId.has(row.id)) continue;
-              byId.set(row.id, row);
+        productsInRender.map(async (product) => {
+          try {
+            const raw = await getSimilarProducts(product.id, { limit: 6 });
+            const filtered = raw.filter((p) => !renderIds.has(p.id));
+            if (cancelled) return;
+            if (filtered.length === 0) {
+              setSimilarByProductId((prev) => ({ ...prev, [product.id]: { status: 'empty' } }));
+              return;
             }
-          }),
-        ),
-      );
-      if (cancelled) return;
-      const sorted = Array.from(byId.values()).sort(
-        (a, b) => (b.match_score ?? 0) - (a.match_score ?? 0),
-      );
-      const capped = sorted.slice(0, 12);
-      setSimilarProducts(
-        capped.map((row) => {
-          const { vendor_product_attributes, match_score, ...rest } = row;
-          void vendor_product_attributes;
-          void match_score;
-          return rest as VendorProduct;
+            const ids = [...new Set(filtered.map((p) => p.storefront_id))];
+            const { data: srows } = await supabase.from('storefronts').select('*').in('id', ids);
+            if (cancelled) return;
+            const storefrontList = (srows as Storefront[] | null) ?? [];
+            const smap = new Map(storefrontList.map((s) => [s.id, s]));
+            const rows: SimilarReadyRow[] = filtered.map((p) => ({
+              product: p,
+              storefront: smap.get(p.storefront_id) ?? null,
+            }));
+            setSimilarByProductId((prev) => ({ ...prev, [product.id]: { status: 'ready', rows } }));
+          } catch {
+            if (!cancelled) {
+              setSimilarByProductId((prev) => ({ ...prev, [product.id]: { status: 'empty' } }));
+            }
+          }
         }),
       );
-      setSimilarLoading(false);
     })();
+
     return () => {
       cancelled = true;
     };
   }, [step, productsInRender]);
+
+  useEffect(() => {
+    if (step !== 5) {
+      setResultSheetEntered(false);
+      return;
+    }
+    const id = window.requestAnimationFrame(() => {
+      setResultSheetEntered(true);
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [step]);
 
   const carpenters = useMemo(
     () => storefronts.filter((sf) => sf.vendor_type === 'carpenter'),
@@ -221,10 +260,8 @@ export default function AiRoomGenerator() {
     return products.filter((p) => p.category && mood.categories.includes(p.category));
   }, [products, mood]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setRoomPhotoError(null);
+  /** Mirrors `Upload.tsx` `handleImageSelect` lifecycle (file preview via object URL). */
+  const handleImageSelect = (file: File) => {
     if (!ACCEPTED_TYPES.includes(file.type)) {
       toast.error('Please choose a JPEG or PNG image.');
       return;
@@ -233,10 +270,22 @@ export default function AiRoomGenerator() {
       toast.error('Image must be under 10MB.');
       return;
     }
-    if (roomPreviewUrl && roomSource === 'upload') URL.revokeObjectURL(roomPreviewUrl);
     setRoomFile(file);
-    setRoomPreviewUrl(URL.createObjectURL(file));
+    setRoomPhotoError(null);
     setRoomSource('upload');
+    const url = URL.createObjectURL(file);
+    setRoomPreviewUrl(url);
+  };
+
+  /** Mirrors `Upload.tsx` `handleClear` lifecycle (revoke blob URL when from upload). */
+  const handleClear = () => {
+    setRoomFile(null);
+    setRoomPhotoError(null);
+    setRoomSource(null);
+    if (roomPreviewUrl && roomSource === 'upload') {
+      URL.revokeObjectURL(roomPreviewUrl);
+    }
+    setRoomPreviewUrl(null);
   };
 
   /** Same guardrail as Analyze flow: when backend says image is not a room, show this. */
@@ -310,8 +359,8 @@ export default function AiRoomGenerator() {
     setProductsInRender([]);
     setGeneratedImageUrl(null);
     setMinimumSpend(null);
-    setSimilarProducts([]);
-    setSimilarLoading(false);
+    setSimilarByProductId({});
+    setResultSheetEntered(false);
     setStep(1);
   };
 
@@ -326,12 +375,14 @@ export default function AiRoomGenerator() {
 
   const stickyPrimaryLabel =
     step === 1
-      ? 'Next'
+      ? 'Next: Room type'
       : step === 2
-        ? 'Next'
+        ? 'Next: Pick a mood'
         : step === 3
-          ? 'Next'
-          : 'Generate my room';
+          ? 'Next: Review'
+          : 'Generate my room →';
+
+  const showResultStickyBar = isAuthenticated && step === 5;
 
   const handleStickyPrimary = () => {
     if (stickyNextDisabled) return;
@@ -353,6 +404,7 @@ export default function AiRoomGenerator() {
         className={cn(
           'flex-1 container mx-auto px-4 md:px-6 py-8 md:py-12 max-w-4xl',
           showWizardStickyNav && 'pb-28 md:pb-32',
+          showResultStickyBar && 'pb-28 md:pb-32',
         )}
       >
         {authLoading ? (
@@ -400,36 +452,40 @@ export default function AiRoomGenerator() {
               <p className="mt-2 text-gray-600 text-sm">
                 JPG or PNG, any angle. We’ll use it to reimagine your space in your chosen mood.
               </p>
-              <label
-                className="mt-6 flex flex-col items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white py-12 px-6 cursor-pointer transition-shadow hover:shadow-md"
-                style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}
-              >
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png"
-                  className="sr-only"
-                  onChange={handleFileChange}
-                />
-                {roomPreviewUrl ? (
-                  <div className="w-full max-w-sm aspect-[4/3] rounded-lg overflow-hidden bg-gray-100">
-                    <img
-                      src={roomPreviewUrl}
-                      alt="Your room"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <>
-                    <CircleArrowUp className="w-8 h-8 text-gray-400" aria-hidden />
-                    <span className="mt-3 text-[15px] font-medium text-gray-900">Tap to upload</span>
-                    <span className="text-[13px] text-gray-500 mt-1">JPG or PNG, any angle</span>
-                  </>
-                )}
-              </label>
+              <div className="mt-6 mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                <div className="flex items-start gap-3">
+                  <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-blue-900">
+                    <span className="font-medium">Homable works best with home and event decor photos.</span> Non-decor
+                    images may not be analyzed.
+                  </p>
+                </div>
+              </div>
+              <ImageUploader
+                onImageSelect={handleImageSelect}
+                previewUrl={roomPreviewUrl ?? ''}
+                onClear={handleClear}
+              />
               {roomPhotoError && (
-                <p className="mt-3 text-sm text-red-600" role="alert">
-                  {roomPhotoError}
-                </p>
+                <div className="mt-6 p-6 bg-amber-50 border border-amber-200 rounded-2xl">
+                  <div className="flex items-start gap-3 mb-4">
+                    <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-amber-900 mb-2">{roomPhotoError}</p>
+                      <p className="text-xs text-amber-700">
+                        Try uploading a photo that shows furniture, a room, or home decor items.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleClear}
+                    variant="outline"
+                    className="w-full border-amber-300 text-amber-700 hover:bg-amber-100"
+                  >
+                    Try another photo
+                  </Button>
+                </div>
               )}
               <div className="mt-6">
                 <p className="text-sm font-medium text-gray-700">Don&apos;t have a photo?</p>
@@ -846,67 +902,125 @@ export default function AiRoomGenerator() {
               </div>
             )}
 
-            {(similarLoading || similarProducts.length > 0) && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
-                <h3 className="text-base font-semibold text-gray-900">Similar items</h3>
-                <p className="mt-1 text-sm text-gray-600">Curated picks related to products in your render.</p>
-                {similarLoading ? (
-                  <p className="mt-4 text-sm text-gray-500">Finding similar pieces…</p>
-                ) : (
-                  <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {similarProducts.map((product) => {
-                      const storefront = storefronts.find((sf) => sf.id === product.storefront_id);
-                      return (
-                        <a
-                          key={product.id}
-                          href={`${window.location.origin}/shops/products/${product.slug}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="rounded-2xl border border-gray-200 overflow-hidden text-left hover:border-gray-300 hover:shadow-lg transition-all flex flex-col"
-                        >
-                          <div className="aspect-[3/4] bg-gray-100 relative">
-                            {product.image_url ? (
-                              <img
-                                src={product.image_url}
-                                alt={product.name}
-                                className="w-full h-full object-cover object-center"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                                No image
+            {productsInRender.length > 0 &&
+              (() => {
+                const hasAnySimilar = productsInRender.some((p) => {
+                  const s = similarByProductId[p.id];
+                  return s?.status === 'loading' || (s?.status === 'ready' && s.rows.length > 0);
+                });
+                if (!hasAnySimilar) return null;
+                return (
+                  <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
+                    <h2 className="text-xl font-semibold text-[#111111] mb-2">Explore Similar Options</h2>
+                    <p className="text-sm text-gray-600 mb-6">Based on products in your render</p>
+                    <div className="space-y-8">
+                      {productsInRender.map((product) => {
+                        const slot = similarByProductId[product.id];
+                        if (slot?.status === 'loading') {
+                          return (
+                            <div key={product.id}>
+                              <h3
+                                className="text-sm font-medium mb-3"
+                                style={{ color: 'hsl(var(--foreground))' }}
+                              >
+                                Similar to {product.name}
+                              </h3>
+                              <div className="flex gap-3 overflow-x-auto scroll-pills-hide-scrollbar pb-1 -mx-4 px-4 md:mx-0 md:px-0">
+                                {[0, 1, 2].map((sk) => (
+                                  <Skeleton
+                                    key={sk}
+                                    className="w-[150px] flex-shrink-0 aspect-[3/4] rounded-2xl"
+                                  />
+                                ))}
                               </div>
-                            )}
-                            {storefront && (
-                              <div className="absolute top-2 left-2 max-w-[90%]">
-                                <span className="inline-flex items-center rounded-full bg-black/80 text-white text-[10px] font-medium px-2 py-1">
-                                  <span
-                                    className="relative h-6 w-6 rounded-full border border-white/70 overflow-hidden flex items-center justify-center text-[10px] font-semibold mr-1 flex-shrink-0"
-                                    style={{ backgroundColor: getVendorColor(storefront.name) }}
-                                  >
-                                    {storefront.logo_url ? (
-                                      <img src={storefront.logo_url} alt="" className="w-full h-full object-cover" />
-                                    ) : (
-                                      getVendorInitials(storefront.name)
-                                    )}
-                                  </span>
-                                  <span className="truncate max-w-[80px]">{storefront.name}</span>
-                                </span>
+                              <div className="mt-3">
+                                <button
+                                  type="button"
+                                  className="text-sm font-medium border-0 bg-transparent p-0 cursor-pointer hover:underline text-[#111111]"
+                                  onClick={() => navigate('/shops')}
+                                >
+                                  See all →
+                                </button>
                               </div>
-                            )}
-                          </div>
-                          <div className="px-2.5 pt-2.5 pb-3">
-                            <h4 className="text-[13px] font-semibold text-gray-900 leading-snug line-clamp-2">
-                              {product.name}
-                            </h4>
-                            <p className="text-xs text-gray-700 mt-1">{formatPrice(product)}</p>
-                          </div>
-                        </a>
-                      );
-                    })}
+                            </div>
+                          );
+                        }
+                        if (slot?.status === 'ready' && slot.rows.length > 0) {
+                          return (
+                            <div key={product.id}>
+                              <h3
+                                className="text-sm font-medium mb-3"
+                                style={{ color: 'hsl(var(--foreground))' }}
+                              >
+                                Similar to {product.name}
+                              </h3>
+                              <div className="flex gap-3 overflow-x-auto scroll-pills-hide-scrollbar pb-1 -mx-4 px-4 md:mx-0 md:px-0">
+                                {slot.rows.map(({ product: sp, storefront: sf }) => {
+                                  const miniDim = formatVendorDimensions(sp);
+                                  return (
+                                    <div
+                                      key={sp.id}
+                                      role="button"
+                                      tabIndex={0}
+                                      onClick={() => navigate(`/shops/products/${sp.slug}`)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                          e.preventDefault();
+                                          navigate(`/shops/products/${sp.slug}`);
+                                        }
+                                      }}
+                                      className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer border border-[#e5e5e5] flex flex-col flex-shrink-0 w-[150px]"
+                                    >
+                                      <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
+                                        {sp.image_url ? (
+                                          <img
+                                            src={sp.image_url}
+                                            alt={sp.name}
+                                            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                                          />
+                                        ) : (
+                                          <div className="w-full h-full flex items-center justify-center text-[#999] text-[11px]">
+                                            No image
+                                          </div>
+                                        )}
+                                        <div className="absolute top-1.5 left-1.5 z-[1]">
+                                          <Badge className="bg-gray-900 text-white text-[9px] font-medium border-0 shadow-sm px-1.5 py-0.5 rounded-full max-w-[120px] truncate">
+                                            Sold by{' '}
+                                            {sf?.name ? sf.name.split(' ').slice(0, 2).join(' ') : 'vendor'}
+                                          </Badge>
+                                        </div>
+                                      </div>
+                                      <div className="px-2 pt-2 pb-2.5">
+                                        <h4 className="text-[11px] font-semibold text-gray-900 leading-snug line-clamp-2">
+                                          {sp.name}
+                                        </h4>
+                                        <p className="text-[10px] text-gray-600 mt-0.5">{formatVendorPrice(sp)}</p>
+                                        {miniDim && (
+                                          <p className="text-[9px] text-gray-500 mt-0.5">{miniDim}</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <div className="mt-3">
+                                <button
+                                  type="button"
+                                  className="text-sm font-medium border-0 bg-transparent p-0 cursor-pointer hover:underline text-[#111111]"
+                                  onClick={() => navigate('/shops')}
+                                >
+                                  See all →
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })}
+                    </div>
                   </div>
-                )}
-              </div>
-            )}
+                );
+              })()}
 
             {/* Furniture makers — real carpenters */}
             {carpenters.length > 0 && (
@@ -977,33 +1091,26 @@ export default function AiRoomGenerator() {
             {loadingData && (
               <p className="text-center text-sm text-gray-500">Loading vendors and products…</p>
             )}
-
-            <div className="flex justify-center pt-4">
-              <Button variant="outline" onClick={resetFlow} className="rounded-full text-gray-700">
-                Generate another room
-              </Button>
-            </div>
           </section>
         )}
 
         {showWizardStickyNav && (
           <nav
-            className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white"
+            className="fixed bottom-0 left-0 right-0 z-50 flex min-h-[72px] items-stretch bg-white border-t border-[#E5E7EB] shadow-[0_-4px_12px_rgba(0,0,0,0.08)]"
             style={{
-              paddingTop: '0.75rem',
-              paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
+              paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
               paddingLeft: 'max(1rem, env(safe-area-inset-left))',
               paddingRight: 'max(1rem, env(safe-area-inset-right))',
             }}
             aria-label="Wizard navigation"
           >
-            <div className="container mx-auto flex max-w-4xl items-center gap-3 px-4 md:px-6">
-              <div className="flex min-h-[44px] w-[88px] shrink-0 items-center justify-start">
+            <div className="container mx-auto flex w-full max-w-4xl min-h-[72px] items-center gap-3 px-4 md:px-6 py-2">
+              <div className="flex w-[88px] shrink-0 items-center justify-start">
                 {step > 1 ? (
                   <Button
                     type="button"
                     variant="outline"
-                    className="rounded-full"
+                    className="rounded-full border-gray-300 text-gray-700 hover:bg-gray-50"
                     onClick={() => setStep((s) => (s - 1) as Step)}
                   >
                     Back
@@ -1012,11 +1119,11 @@ export default function AiRoomGenerator() {
                   <span className="inline-block w-[88px] shrink-0" aria-hidden />
                 )}
               </div>
-              <p className="min-w-0 flex-1 text-center text-xs text-gray-500">Step {step} of 5</p>
-              <div className="flex min-h-[44px] min-w-[88px] shrink-0 items-center justify-end">
+              <p className="min-w-0 flex-1 text-center text-[10px] font-medium text-gray-400">Step {step} of 5</p>
+              <div className="flex min-w-[140px] shrink-0 items-center justify-end">
                 <Button
                   type="button"
-                  className="rounded-full bg-[#111] text-white hover:bg-gray-800 whitespace-nowrap"
+                  className="min-w-[140px] rounded-full bg-[#111] px-7 py-3 font-semibold text-white h-auto hover:bg-gray-900"
                   disabled={stickyNextDisabled}
                   onClick={handleStickyPrimary}
                 >
@@ -1025,6 +1132,32 @@ export default function AiRoomGenerator() {
               </div>
             </div>
           </nav>
+        )}
+
+        {showResultStickyBar && (
+          <div
+            className={cn(
+              'fixed bottom-0 left-0 right-0 z-50 flex min-h-[72px] items-center bg-white border-t border-[#E5E7EB] shadow-[0_-4px_12px_rgba(0,0,0,0.08)] transition-transform duration-300 ease-out',
+              resultSheetEntered ? 'translate-y-0' : 'translate-y-full',
+            )}
+            style={{
+              paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+              paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+              paddingRight: 'max(1rem, env(safe-area-inset-right))',
+            }}
+            role="region"
+            aria-label="Generate another room"
+          >
+            <div className="container mx-auto w-full max-w-4xl px-4 md:px-6">
+              <Button
+                type="button"
+                className="w-full rounded-full bg-[#111] py-3 font-semibold text-white h-12 hover:bg-gray-900"
+                onClick={resetFlow}
+              >
+                Generate another room
+              </Button>
+            </div>
+          </div>
         )}
         </>
         )}
