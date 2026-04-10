@@ -304,6 +304,35 @@ export default function AiRoomGenerator() {
     setPaying(true);
 
     try {
+      let imageUrlForEdgeFunction = roomPreviewUrl;
+
+      if (roomSource === 'upload' && roomFile) {
+        const ext = roomFile.name.split('.').pop() ?? 'jpg';
+        const uploadPath = `uploads/${user.id}/${Date.now()}.${ext}`;
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('ai-rooms')
+          .upload(uploadPath, roomFile, {
+            contentType: roomFile.type,
+            upsert: false,
+          });
+
+        if (uploadError) {
+          toast.error('Failed to upload your photo. Please try again.');
+          setPaying(false);
+          return;
+        }
+
+        const { data: urlData } = supabase.storage.from('ai-rooms').getPublicUrl(uploadData.path);
+
+        imageUrlForEdgeFunction = urlData.publicUrl;
+
+        if (roomPreviewUrl?.startsWith('blob:')) {
+          URL.revokeObjectURL(roomPreviewUrl);
+        }
+        setRoomPreviewUrl(urlData.publicUrl);
+      }
+
       const reference = `test_${crypto.randomUUID()}`;
 
       const { data, error } = await supabase.functions.invoke('ai-room-generate', {
@@ -311,7 +340,7 @@ export default function AiRoomGenerator() {
           mood: moodId,
           room_type: roomType,
           paystack_reference: reference,
-          original_image_url: roomPreviewUrl,
+          original_image_url: imageUrlForEdgeFunction,
           user_id: user.id,
           test_mode: true,
         },
