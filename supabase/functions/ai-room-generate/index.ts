@@ -1031,6 +1031,7 @@ Deno.serve(async (req: Request) => {
     .from('ai_generations')
     .select('id, generated_image_url, share_slug, product_ids, amount_paid')
     .eq('paystack_reference', reference)
+    .eq('user_id', user.id)
     .not('generated_image_url', 'is', null)
     .maybeSingle();
 
@@ -1039,6 +1040,15 @@ Deno.serve(async (req: Request) => {
   }
 
   if (existingGen && existingGen.generated_image_url) {
+    const { error: shareFlagError } = await supabase
+      .from('ai_generations')
+      .update({ shared: true })
+      .eq('id', existingGen.id)
+      .eq('user_id', user.id);
+    if (shareFlagError) {
+      console.error(`[${requestId}] failed to set shared on cached generation:`, shareFlagError);
+    }
+
     const productIdsExisting = (existingGen.product_ids as string[]) || [];
     const products = await getProductsByIds(supabase, productIdsExisting);
     const prices = products
@@ -1264,6 +1274,7 @@ Deno.serve(async (req: Request) => {
     .from('ai_generations')
     .select('id, share_slug')
     .eq('paystack_reference', reference)
+    .eq('user_id', user.id)
     .maybeSingle();
 
   let shareSlug = existingRow?.share_slug as string | null;
@@ -1285,17 +1296,23 @@ Deno.serve(async (req: Request) => {
   };
 
   if (existingRow) {
-    const { error: updateError } = await supabase
+    const { data: updatedRows, error: updateError } = await supabase
       .from('ai_generations')
       .update(rowPayload)
-      .eq('id', existingRow.id);
+      .eq('id', existingRow.id)
+      .eq('user_id', user.id)
+      .select('id');
 
     if (updateError) {
       console.error('[ai-room-generate] update ai_generations error:', updateError);
       return jsonResponse({ error: 'generation_failed', message: 'Failed to save generation' }, 500);
     }
+    if (!updatedRows?.length) {
+      console.error('[ai-room-generate] update ai_generations affected 0 rows (RLS or missing row)');
+      return jsonResponse({ error: 'generation_failed', message: 'Failed to save generation' }, 500);
+    }
   } else {
-    const { error: insertError } = await supabase
+    const { data: insertedRows, error: insertError } = await supabase
       .from('ai_generations')
       .insert({
         user_id: user.id,
@@ -1308,10 +1325,15 @@ Deno.serve(async (req: Request) => {
         amount_paid: EXPECTED_AMOUNT_KOBo,
         share_slug: shareSlug,
         shared: true,
-      });
+      })
+      .select('id');
 
     if (insertError) {
       console.error('[ai-room-generate] insert ai_generations error:', insertError);
+      return jsonResponse({ error: 'generation_failed', message: 'Failed to save generation' }, 500);
+    }
+    if (!insertedRows?.length) {
+      console.error('[ai-room-generate] insert ai_generations returned 0 rows');
       return jsonResponse({ error: 'generation_failed', message: 'Failed to save generation' }, 500);
     }
   }
