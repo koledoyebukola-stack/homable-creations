@@ -1,22 +1,30 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { getActiveStorefrontsByLocation, getProductsByIds, getSimilarProducts } from '@/lib/api';
 import { AI_ROOM_MOOD_BY_ID } from '@/lib/ai-room-moods';
 import type { AiRoomMoodId } from '@/lib/ai-room-moods';
-import type { Storefront, VendorProduct } from '@/lib/types';
+import type { Storefront, VendorProduct, VendorProductWithAttributes } from '@/lib/types';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
-import { Loader2, ChevronRight } from 'lucide-react';
+import { Loader2, Share2, Bookmark, X } from 'lucide-react';
+import { toast } from 'sonner';
+import type { User } from '@supabase/supabase-js';
 
 const LOCATION = 'NG';
 
-const ROOM_TYPE_LABELS: Record<string, string> = {
-  living_room: 'Living room',
-  bedroom: 'Bedroom',
-  dining_room: 'Dining room',
-  home_office: 'Home office',
-  wall_styling: 'Wall styling',
-};
+const PLACEHOLDER_AI_IMAGE =
+  'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Noir%20Botanical%20Living%20Room.png';
+
+const ROOM_TYPE_OPTIONS: { id: string; label: string }[] = [
+  { id: 'living_room', label: 'Living room' },
+  { id: 'bedroom', label: 'Bedroom' },
+  { id: 'dining_room', label: 'Dining room' },
+  { id: 'home_office', label: 'Home office' },
+  { id: 'wall_styling', label: 'Wall styling' },
+];
 
 function formatNgn(value: number): string {
   return `₦${Number(value).toLocaleString('en-NG')}`;
@@ -30,6 +38,16 @@ function formatPrice(product: VendorProduct): string {
   if (price_min != null) return `From ${formatNgn(price_min)}`;
   if (price_max != null) return `From ${formatNgn(price_max)}`;
   return 'Price on request';
+}
+
+function formatVendorPrice(p: VendorProduct): string {
+  return formatPrice(p);
+}
+
+function formatVendorDimensions(p: VendorProduct): string | null {
+  const { dimension_width, dimension_height, dimension_unit } = p;
+  if (!dimension_width || !dimension_height || !dimension_unit) return null;
+  return `${dimension_width} × ${dimension_height} ${dimension_unit}`;
 }
 
 function getVendorInitials(name: string): string {
@@ -48,36 +66,58 @@ function getVendorColor(name: string): string {
   return `hsl(${hue}, 70%, 40%)`;
 }
 
+type SimilarReadyRow = { product: VendorProductWithAttributes; storefront: Storefront | null };
+type SimilarSlot =
+  | { status: 'loading' }
+  | { status: 'empty' }
+  | { status: 'ready'; rows: SimilarReadyRow[] };
+
 type AiGenRow = {
   id: string;
+  user_id: string | null;
   mood: string;
   room_type: string | null;
   original_image_url: string;
   generated_image_url: string | null;
   product_ids: string[];
+  share_slug: string | null;
 };
 
 export default function RoomSharePage() {
-  const { shareSlug } = useParams<{ shareSlug: string }>();
+  const { shareSlug: shareSlugParam } = useParams<{ shareSlug: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [row, setRow] = useState<AiGenRow | null>(null);
-  const [products, setProducts] = useState<VendorProduct[]>([]);
+  const [productsInRender, setProductsInRender] = useState<VendorProduct[]>([]);
   const [storefronts, setStorefronts] = useState<Storefront[]>([]);
-  const [similar, setSimilar] = useState<VendorProduct[]>([]);
-  const [loadingData, setLoadingData] = useState(true);
+  const [loadingVendors, setLoadingVendors] = useState(true);
+  const [similarByProductId, setSimilarByProductId] = useState<Record<string, SimilarSlot>>({});
+  const [sessionUser, setSessionUser] = useState<User | null>(null);
+  const [afterImageModalOpen, setAfterImageModalOpen] = useState(false);
+  const [ownerSheetEntered, setOwnerSheetEntered] = useState(false);
+
+  const shareSlug = shareSlugParam?.trim() ?? '';
+
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSessionUser(session?.user ?? null);
+    });
+    supabase.auth.getUser().then(({ data: { user } }) => setSessionUser(user));
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    setLoadingData(true);
+    setLoadingVendors(true);
     getActiveStorefrontsByLocation(LOCATION)
       .then((res) => {
-        if (cancelled) return;
-        setStorefronts(res.storefronts);
+        if (!cancelled) setStorefronts(res.storefronts);
       })
       .finally(() => {
-        if (!cancelled) setLoadingData(false);
+        if (!cancelled) setLoadingVendors(false);
       });
     return () => {
       cancelled = true;
@@ -87,7 +127,7 @@ export default function RoomSharePage() {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      if (!shareSlug?.trim()) {
+      if (!shareSlug) {
         setError('Invalid link');
         setLoading(false);
         return;
@@ -95,7 +135,7 @@ export default function RoomSharePage() {
       setLoading(true);
       setError(null);
       const { data: rpcData, error: rpcError } = await supabase.rpc('get_ai_generation_by_share_slug', {
-        p_slug: shareSlug.trim(),
+        p_slug: shareSlug,
       });
       if (cancelled) return;
       if (rpcError) {
@@ -115,7 +155,7 @@ export default function RoomSharePage() {
 
       const ids = (gen.product_ids || []) as string[];
       if (ids.length === 0) {
-        setProducts([]);
+        setProductsInRender([]);
         setLoading(false);
         return;
       }
@@ -125,12 +165,7 @@ export default function RoomSharePage() {
       resolved.forEach((r) => {
         if (r) mapped.push(r.product);
       });
-      setProducts(mapped);
-
-      if (mapped[0]?.id) {
-        const sim = await getSimilarProducts(mapped[0].id, { limit: 8 });
-        setSimilar(sim.map((s) => s as VendorProduct));
-      }
+      setProductsInRender(mapped);
       setLoading(false);
     }
     load();
@@ -138,6 +173,67 @@ export default function RoomSharePage() {
       cancelled = true;
     };
   }, [shareSlug]);
+
+  useEffect(() => {
+    if (productsInRender.length === 0) {
+      setSimilarByProductId({});
+      return;
+    }
+    let cancelled = false;
+    const renderIds = new Set(productsInRender.map((p) => p.id));
+    const initial: Record<string, SimilarSlot> = {};
+    productsInRender.forEach((p) => {
+      initial[p.id] = { status: 'loading' };
+    });
+    setSimilarByProductId(initial);
+
+    void (async () => {
+      await Promise.all(
+        productsInRender.map(async (product) => {
+          try {
+            const raw = await getSimilarProducts(product.id, { limit: 6 });
+            const filtered = raw.filter((p) => !renderIds.has(p.id));
+            if (cancelled) return;
+            if (filtered.length === 0) {
+              setSimilarByProductId((prev) => ({ ...prev, [product.id]: { status: 'empty' } }));
+              return;
+            }
+            const sfIds = [...new Set(filtered.map((p) => p.storefront_id))];
+            const { data: srows } = await supabase.from('storefronts').select('*').in('id', sfIds);
+            if (cancelled) return;
+            const storefrontList = (srows as Storefront[] | null) ?? [];
+            const smap = new Map(storefrontList.map((s) => [s.id, s]));
+            const rows: SimilarReadyRow[] = filtered.map((p) => ({
+              product: p,
+              storefront: smap.get(p.storefront_id) ?? null,
+            }));
+            setSimilarByProductId((prev) => ({ ...prev, [product.id]: { status: 'ready', rows } }));
+          } catch {
+            if (!cancelled) {
+              setSimilarByProductId((prev) => ({ ...prev, [product.id]: { status: 'empty' } }));
+            }
+          }
+        }),
+      );
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [productsInRender]);
+
+  const isOwner = Boolean(
+    sessionUser?.id && row?.user_id && sessionUser.id === row.user_id,
+  );
+
+  useEffect(() => {
+    if (!isOwner || !row) {
+      setOwnerSheetEntered(false);
+      return;
+    }
+    const id = window.requestAnimationFrame(() => setOwnerSheetEntered(true));
+    return () => window.cancelAnimationFrame(id);
+  }, [isOwner, row?.id]);
 
   const carpenters = useMemo(
     () => storefronts.filter((sf) => sf.vendor_type === 'carpenter'),
@@ -148,13 +244,25 @@ export default function RoomSharePage() {
     [storefronts],
   );
 
-  const moodLabel = row?.mood ? AI_ROOM_MOOD_BY_ID[row.mood as AiRoomMoodId]?.label ?? row.mood : '';
-  const roomLabel = row?.room_type ? ROOM_TYPE_LABELS[row.room_type] ?? row.room_type : '';
+  const mood = row?.mood ? AI_ROOM_MOOD_BY_ID[row.mood as AiRoomMoodId] : null;
+  const roomTypeLabel =
+    row?.room_type != null
+      ? ROOM_TYPE_OPTIONS.find((r) => r.id === row.room_type)?.label ?? row.room_type
+      : 'room';
 
   const minimumSpend = useMemo(() => {
-    const prices = products.map((p) => p.price_min).filter((v): v is number => typeof v === 'number');
+    const prices = productsInRender.map((p) => p.price_min).filter((v): v is number => typeof v === 'number');
     return prices.length ? prices.reduce((a, b) => a + b, 0) : null;
-  }, [products]);
+  }, [productsInRender]);
+
+  const roomPublicUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/room/${encodeURIComponent(shareSlug)}`;
+
+  const copyRoomLink = () => {
+    navigator.clipboard.writeText(roomPublicUrl).then(
+      () => toast.success('Link copied to clipboard'),
+      () => toast.error('Could not copy link'),
+    );
+  };
 
   if (loading) {
     return (
@@ -175,56 +283,163 @@ export default function RoomSharePage() {
     );
   }
 
+  const generatedImageUrl = row.generated_image_url;
+
   return (
     <div className="min-h-screen flex flex-col bg-[#fafaf9]">
       <div className="border-b border-gray-200 bg-white">
         <div className="container mx-auto max-w-4xl px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-sm text-gray-600">Shared AI room</p>
-          <Button asChild className="rounded-full bg-[#111] text-white hover:bg-gray-800 w-fit">
-            <Link to="/ai-room-generator">
-              Like this? Create your own
-              <ChevronRight className="w-4 h-4 ml-1" />
-            </Link>
-          </Button>
+          {isOwner ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" variant="outline" className="rounded-full" onClick={copyRoomLink}>
+                <Share2 className="w-4 h-4 mr-2" />
+                Copy link
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-full"
+                onClick={() => navigate('/history')}
+              >
+                <Bookmark className="w-4 h-4 mr-2" />
+                View in history
+              </Button>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-600 sm:sr-only">Shared AI room</p>
+          )}
+          {!isOwner && (
+            <Button asChild className="rounded-full bg-[#111] text-white hover:bg-gray-800 w-fit sm:ml-auto">
+              <Link to="/ai-room-generator">
+                Like this? Create your own →
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
-      <main className="flex-1 container mx-auto px-4 md:px-6 py-8 md:py-12 max-w-4xl space-y-10">
+      <main
+        className={cn(
+          'flex-1 container mx-auto px-4 md:px-6 py-8 md:py-12 max-w-4xl space-y-10',
+          isOwner && 'pb-28 md:pb-32',
+        )}
+      >
         <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
-          <h1 className="text-lg font-semibold text-gray-900">AI room</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            {moodLabel}
-            {roomLabel ? ` · ${roomLabel}` : ''}
-          </p>
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Your {roomTypeLabel} is ready</h2>
+          {mood && <p className="mt-2 text-sm text-gray-500">{mood.label}</p>}
 
           <div className="mt-6 space-y-6">
             <div>
               <p className="text-xs font-medium text-gray-500 mb-2">Before</p>
               <div className="h-[140px] w-full rounded-xl overflow-hidden bg-gray-100">
-                <img src={row.original_image_url} alt="Original room" className="w-full h-full object-cover" />
+                {row.original_image_url ? (
+                  <img
+                    src={row.original_image_url}
+                    alt="Your room"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">No photo</div>
+                )}
               </div>
             </div>
             <div>
               <p className="text-xs font-medium text-gray-500 mb-2">After</p>
-              <div className="rounded-xl overflow-hidden bg-gray-100 aspect-[4/3]">
-                <img src={row.generated_image_url} alt="Generated room" className="w-full h-full object-cover" />
-              </div>
+              <button
+                type="button"
+                onClick={() => setAfterImageModalOpen(true)}
+                className="block w-full rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] text-left ring-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
+              >
+                <img
+                  src={generatedImageUrl || PLACEHOLDER_AI_IMAGE}
+                  alt="AI-generated room"
+                  className="w-full h-full object-cover"
+                />
+              </button>
+              <p className="mt-1.5 text-xs text-gray-500">Tap image to view full screen</p>
             </div>
           </div>
+
+          {(productsInRender.length > 0 || (minimumSpend != null && minimumSpend > 0)) && (
+            <div className="mt-8 rounded-xl border border-gray-100 bg-gray-50/80 p-4 md:p-5">
+              <p className="text-sm font-medium text-gray-500">Minimum spend to achieve this look</p>
+              <p className="mt-1 text-2xl font-bold text-gray-900">{formatNgn(minimumSpend ?? 0)}</p>
+              <p className="mt-2 text-xs text-gray-500">
+                Based on {productsInRender.length} vendor product{productsInRender.length !== 1 ? 's' : ''} featured in
+                your render.
+              </p>
+            </div>
+          )}
+
+          {afterImageModalOpen && (
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Generated room full screen"
+              style={{
+                minHeight: '100dvh',
+                paddingTop: 'max(1rem, env(safe-area-inset-top))',
+                paddingRight: 'max(1rem, env(safe-area-inset-right))',
+                paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+                paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setAfterImageModalOpen(false)}
+                className="absolute z-[101] flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+                style={{
+                  top: 'max(0.75rem, env(safe-area-inset-top))',
+                  right: 'max(0.75rem, env(safe-area-inset-right))',
+                }}
+                aria-label="Close full screen image"
+              >
+                <X className="h-7 w-7" strokeWidth={2.5} />
+              </button>
+              <button
+                type="button"
+                className="max-h-[min(85dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] w-full max-w-4xl overflow-hidden rounded-lg"
+                onClick={() => setAfterImageModalOpen(false)}
+              >
+                <img
+                  src={generatedImageUrl || PLACEHOLDER_AI_IMAGE}
+                  alt="AI-generated room full size"
+                  className="max-h-[85dvh] w-full object-contain"
+                />
+              </button>
+            </div>
+          )}
+
+          {isOwner && (
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button variant="outline" onClick={copyRoomLink} className="rounded-full">
+                <Share2 className="w-4 h-4 mr-2" />
+                Share my room
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/history')} className="rounded-full">
+                <Bookmark className="w-4 h-4 mr-2" />
+                View in history
+              </Button>
+            </div>
+          )}
         </div>
 
-        {products.length > 0 && (
+        {productsInRender.length > 0 && (
           <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
-            <h2 className="text-base font-semibold text-gray-900">Products in this room</h2>
-            <p className="mt-1 text-sm text-gray-600">Tap an item to view the product page.</p>
+            <h3 className="text-base font-semibold text-gray-900">Products in your render</h3>
+            <p className="mt-1 text-sm text-gray-600">
+              These exact products were used to generate your room. Tap any item to contact the vendor directly.
+            </p>
             <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {products.map((product) => {
+              {productsInRender.map((product) => {
                 const storefront = storefronts.find((sf) => sf.id === product.storefront_id);
                 return (
-                  <button
+                  <a
                     key={product.id}
-                    type="button"
-                    onClick={() => navigate(`/shops/products/${product.slug}`)}
+                    href={`${window.location.origin}/shops/products/${product.slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="rounded-2xl border border-gray-200 overflow-hidden text-left hover:border-gray-300 hover:shadow-lg transition-all flex flex-col"
                   >
                     <div className="aspect-[3/4] bg-gray-100 relative">
@@ -256,58 +471,142 @@ export default function RoomSharePage() {
                       )}
                     </div>
                     <div className="px-2.5 pt-2.5 pb-3">
-                      <h3 className="text-[13px] font-semibold text-gray-900 leading-snug line-clamp-2">{product.name}</h3>
+                      <h4 className="text-[13px] font-semibold text-gray-900 leading-snug line-clamp-2">{product.name}</h4>
                       <p className="text-xs text-gray-700 mt-1">{formatPrice(product)}</p>
                     </div>
-                  </button>
+                  </a>
                 );
               })}
             </div>
-          </div>
-        )}
-
-        {(products.length > 0 || (minimumSpend != null && minimumSpend > 0)) && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
-            <p className="text-sm font-medium text-gray-500">Minimum spend to achieve this look</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">{formatNgn(minimumSpend ?? 0)}</p>
-            <p className="mt-2 text-xs text-gray-500">
-              Based on {products.length} vendor product{products.length !== 1 ? 's' : ''} featured in this render.
-            </p>
-          </div>
-        )}
-
-        {similar.length > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
-            <h2 className="text-base font-semibold text-gray-900">Similar items</h2>
-            <p className="mt-1 text-sm text-gray-600">Curated picks in a similar style.</p>
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-              {similar.slice(0, 8).map((product) => (
-                <button
-                  key={product.id}
-                  type="button"
-                  onClick={() => navigate(`/shops/products/${product.slug}`)}
-                  className="rounded-xl border border-gray-200 overflow-hidden text-left hover:border-gray-300 transition-all"
-                >
-                  <div className="aspect-square bg-gray-100">
-                    {product.image_url ? (
-                      <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">No image</div>
-                    )}
-                  </div>
-                  <div className="p-2">
-                    <p className="text-xs font-medium text-gray-900 line-clamp-2">{product.name}</p>
-                    <p className="text-xs text-gray-600 mt-0.5">{formatPrice(product)}</p>
-                  </div>
-                </button>
-              ))}
+            <div className="mt-4">
+              <Button variant="outline" className="rounded-full" onClick={() => navigate('/shops')}>
+                See more products
+              </Button>
             </div>
           </div>
         )}
 
+        {productsInRender.length > 0 &&
+          (() => {
+            const hasAnySimilar = productsInRender.some((p) => {
+              const s = similarByProductId[p.id];
+              return s?.status === 'loading' || (s?.status === 'ready' && s.rows.length > 0);
+            });
+            if (!hasAnySimilar) return null;
+            return (
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
+                <h2 className="text-xl font-semibold text-[#111111] mb-2">Explore Similar Options</h2>
+                <p className="text-sm text-gray-600 mb-6">Based on products in your render</p>
+                <div className="space-y-8">
+                  {productsInRender.map((product) => {
+                    const slot = similarByProductId[product.id];
+                    if (slot?.status === 'loading') {
+                      return (
+                        <div key={product.id}>
+                          <h3
+                            className="text-sm font-medium mb-3"
+                            style={{ color: 'hsl(var(--foreground))' }}
+                          >
+                            Similar to {product.name}
+                          </h3>
+                          <div className="flex gap-3 overflow-x-auto scroll-pills-hide-scrollbar pb-1 -mx-4 px-4 md:mx-0 md:px-0">
+                            {[0, 1, 2].map((sk) => (
+                              <Skeleton
+                                key={sk}
+                                className="w-[150px] flex-shrink-0 aspect-[3/4] rounded-2xl"
+                              />
+                            ))}
+                          </div>
+                          <div className="mt-3">
+                            <button
+                              type="button"
+                              className="text-sm font-medium border-0 bg-transparent p-0 cursor-pointer hover:underline text-[#111111]"
+                              onClick={() => navigate('/shops')}
+                            >
+                              See all →
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
+                    if (slot?.status === 'ready' && slot.rows.length > 0) {
+                      return (
+                        <div key={product.id}>
+                          <h3
+                            className="text-sm font-medium mb-3"
+                            style={{ color: 'hsl(var(--foreground))' }}
+                          >
+                            Similar to {product.name}
+                          </h3>
+                          <div className="flex gap-3 overflow-x-auto scroll-pills-hide-scrollbar pb-1 -mx-4 px-4 md:mx-0 md:px-0">
+                            {slot.rows.map(({ product: sp, storefront: sf }) => {
+                              const miniDim = formatVendorDimensions(sp);
+                              return (
+                                <div
+                                  key={sp.id}
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={() => navigate(`/shops/products/${sp.slug}`)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      navigate(`/shops/products/${sp.slug}`);
+                                    }
+                                  }}
+                                  className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer border border-[#e5e5e5] flex flex-col flex-shrink-0 w-[150px]"
+                                >
+                                  <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
+                                    {sp.image_url ? (
+                                      <img
+                                        src={sp.image_url}
+                                        alt={sp.name}
+                                        className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                                      />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center text-[#999] text-[11px]">
+                                        No image
+                                      </div>
+                                    )}
+                                    <div className="absolute top-1.5 left-1.5 z-[1]">
+                                      <Badge className="bg-gray-900 text-white text-[9px] font-medium border-0 shadow-sm px-1.5 py-0.5 rounded-full max-w-[120px] truncate">
+                                        Sold by{' '}
+                                        {sf?.name ? sf.name.split(' ').slice(0, 2).join(' ') : 'vendor'}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                  <div className="px-2 pt-2 pb-2.5">
+                                    <h4 className="text-[11px] font-semibold text-gray-900 leading-snug line-clamp-2">
+                                      {sp.name}
+                                    </h4>
+                                    <p className="text-[10px] text-gray-600 mt-0.5">{formatVendorPrice(sp)}</p>
+                                    {miniDim && <p className="text-[9px] text-gray-500 mt-0.5">{miniDim}</p>}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="mt-3">
+                            <button
+                              type="button"
+                              className="text-sm font-medium border-0 bg-transparent p-0 cursor-pointer hover:underline text-[#111111]"
+                              onClick={() => navigate('/shops')}
+                            >
+                              See all →
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
         {carpenters.length > 0 && (
           <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
-            <h2 className="text-base font-semibold text-gray-900">Furniture makers</h2>
+            <h3 className="text-base font-semibold text-gray-900">Furniture makers</h3>
             <p className="mt-1 text-sm text-gray-600">Active carpenter storefronts.</p>
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {carpenters.map((sf) => (
@@ -339,7 +638,7 @@ export default function RoomSharePage() {
 
         {decorVendors.length > 0 && (
           <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
-            <h2 className="text-base font-semibold text-gray-900">Decor sellers</h2>
+            <h3 className="text-base font-semibold text-gray-900">Decor sellers</h3>
             <p className="mt-1 text-sm text-gray-600">Active decor storefronts.</p>
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {decorVendors.map((sf) => (
@@ -369,8 +668,36 @@ export default function RoomSharePage() {
           </div>
         )}
 
-        {loadingData && <p className="text-center text-sm text-gray-500">Loading vendors…</p>}
+        {loadingVendors && (
+          <p className="text-center text-sm text-gray-500">Loading vendors and products…</p>
+        )}
       </main>
+
+      {isOwner && (
+        <div
+          className={cn(
+            'fixed bottom-0 left-0 right-0 z-50 flex min-h-[72px] items-center bg-white border-t border-[#E5E7EB] shadow-[0_-4px_12px_rgba(0,0,0,0.08)] transition-transform duration-300 ease-out',
+            ownerSheetEntered ? 'translate-y-0' : 'translate-y-full',
+          )}
+          style={{
+            paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+            paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+            paddingRight: 'max(1rem, env(safe-area-inset-right))',
+          }}
+          role="region"
+          aria-label="Generate another room"
+        >
+          <div className="container mx-auto w-full max-w-4xl px-4 md:px-6">
+            <Button
+              type="button"
+              className="w-full rounded-full bg-[#111] py-3 font-semibold text-white h-12 hover:bg-gray-900"
+              onClick={() => navigate('/ai-room-generator')}
+            >
+              Generate another room
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

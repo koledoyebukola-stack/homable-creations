@@ -1281,6 +1281,7 @@ Deno.serve(async (req: Request) => {
     share_slug: shareSlug,
     room_type: roomTypeNorm,
     mood,
+    shared: true,
   };
 
   if (existingRow) {
@@ -1306,6 +1307,7 @@ Deno.serve(async (req: Request) => {
         paystack_reference: reference,
         amount_paid: EXPECTED_AMOUNT_KOBo,
         share_slug: shareSlug,
+        shared: true,
       });
 
     if (insertError) {

@@ -1,24 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import ImageUploader from '@/components/ImageUploader';
-import { getActiveStorefrontsByLocation, getSimilarProducts } from '@/lib/api';
-import type { Storefront, VendorProduct, VendorProductWithAttributes } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { AI_ROOM_MOODS, AI_ROOM_MOOD_BY_ID } from '@/lib/ai-room-moods';
 import type { AiRoomMoodId } from '@/lib/ai-room-moods';
-import { Upload, CreditCard, Info, AlertCircle, Share2, Bookmark, Check, Shield, X } from 'lucide-react';
+import { Upload, CreditCard, Info, AlertCircle, Check, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
-const LOCATION = 'NG';
 const PRICE_KOBO = 200_000; // ₦2,000
-const PLACEHOLDER_AI_IMAGE =
-  'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/explore-inspirations/Noir%20Botanical%20Living%20Room.png';
-
 /** Sample empty Nigerian room photos — user can tap one instead of uploading. */
 const SAMPLE_ROOM_PHOTOS: { id: string; label: string; url: string }[] = [
   {
@@ -63,51 +55,7 @@ function formatNgn(value: number): string {
   return `₦${Number(value).toLocaleString('en-NG')}`;
 }
 
-function formatPrice(product: VendorProduct): string {
-  const { price_min, price_max } = product;
-  if (price_min != null && price_max != null && price_min !== price_max) {
-    return `${formatNgn(price_min)} – ${formatNgn(price_max)}`;
-  }
-  if (price_min != null) return `From ${formatNgn(price_min)}`;
-  if (price_max != null) return `From ${formatNgn(price_max)}`;
-  return 'Price on request';
-}
-
-/** Matches Explore scene detail `formatVendorPrice` for similar-product cards. */
-function formatVendorPrice(p: VendorProduct): string {
-  return formatPrice(p);
-}
-
-/** Matches Explore scene detail `formatVendorDimensions`. */
-function formatVendorDimensions(p: VendorProduct): string | null {
-  const { dimension_width, dimension_height, dimension_unit } = p;
-  if (!dimension_width || !dimension_height || !dimension_unit) return null;
-  return `${dimension_width} × ${dimension_height} ${dimension_unit}`;
-}
-
-type SimilarReadyRow = { product: VendorProductWithAttributes; storefront: Storefront | null };
-type SimilarSlot =
-  | { status: 'loading' }
-  | { status: 'empty' }
-  | { status: 'ready'; rows: SimilarReadyRow[] };
-
-function getVendorInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const first = parts[0]?.[0] ?? '';
-  const second = parts[1]?.[0] ?? '';
-  return (first + second).toUpperCase() || 'V';
-}
-
-function getVendorColor(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i += 1) {
-    hash = (hash * 31 + name.charCodeAt(i)) | 0;
-  }
-  const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 70%, 40%)`;
-}
-
-type Step = 1 | 2 | 3 | 4 | 5;
+type Step = 1 | 2 | 3 | 4;
 
 export default function AiRoomGenerator() {
   const navigate = useNavigate();
@@ -125,19 +73,6 @@ export default function AiRoomGenerator() {
   const [paying, setPaying] = useState(false);
   const [processingMessages, setProcessingMessages] = useState<string[]>([]);
   const [processingMsgIndex, setProcessingMsgIndex] = useState(0);
-  const [afterImageModalOpen, setAfterImageModalOpen] = useState(false);
-  const [mockGenerationId, setMockGenerationId] = useState<string | null>(null);
-  /** Products passed to OpenAI for this generation (mock: 5–6 from productsByMood at pay time) */
-  const [productsInRender, setProductsInRender] = useState<VendorProduct[]>([]);
-  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
-  const [minimumSpend, setMinimumSpend] = useState<number | null>(null);
-  const [similarByProductId, setSimilarByProductId] = useState<Record<string, SimilarSlot>>({});
-  const [resultSheetEntered, setResultSheetEntered] = useState(false);
-
-  const [storefronts, setStorefronts] = useState<Storefront[]>([]);
-  const [products, setProducts] = useState<VendorProduct[]>([]);
-  const [loadingData, setLoadingData] = useState(true);
-
   // Require login before showing wizard
   useEffect(() => {
     let cancelled = false;
@@ -147,23 +82,6 @@ export default function AiRoomGenerator() {
       setIsAuthenticated(!!user);
       setAuthLoading(false);
     });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoadingData(true);
-    getActiveStorefrontsByLocation(LOCATION)
-      .then((res) => {
-        if (cancelled) return;
-        setStorefronts(res.storefronts);
-        setProducts(res.products);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingData(false);
-      });
     return () => {
       cancelled = true;
     };
@@ -186,79 +104,7 @@ export default function AiRoomGenerator() {
     return () => clearInterval(id);
   }, [paying, step, moodId]);
 
-  useEffect(() => {
-    if (step !== 5 || productsInRender.length === 0) {
-      setSimilarByProductId({});
-      return;
-    }
-    let cancelled = false;
-    const renderIds = new Set(productsInRender.map((p) => p.id));
-    const initial: Record<string, SimilarSlot> = {};
-    productsInRender.forEach((p) => {
-      initial[p.id] = { status: 'loading' };
-    });
-    setSimilarByProductId(initial);
-
-    void (async () => {
-      await Promise.all(
-        productsInRender.map(async (product) => {
-          try {
-            const raw = await getSimilarProducts(product.id, { limit: 6 });
-            const filtered = raw.filter((p) => !renderIds.has(p.id));
-            if (cancelled) return;
-            if (filtered.length === 0) {
-              setSimilarByProductId((prev) => ({ ...prev, [product.id]: { status: 'empty' } }));
-              return;
-            }
-            const ids = [...new Set(filtered.map((p) => p.storefront_id))];
-            const { data: srows } = await supabase.from('storefronts').select('*').in('id', ids);
-            if (cancelled) return;
-            const storefrontList = (srows as Storefront[] | null) ?? [];
-            const smap = new Map(storefrontList.map((s) => [s.id, s]));
-            const rows: SimilarReadyRow[] = filtered.map((p) => ({
-              product: p,
-              storefront: smap.get(p.storefront_id) ?? null,
-            }));
-            setSimilarByProductId((prev) => ({ ...prev, [product.id]: { status: 'ready', rows } }));
-          } catch {
-            if (!cancelled) {
-              setSimilarByProductId((prev) => ({ ...prev, [product.id]: { status: 'empty' } }));
-            }
-          }
-        }),
-      );
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [step, productsInRender]);
-
-  useEffect(() => {
-    if (step !== 5) {
-      setResultSheetEntered(false);
-      return;
-    }
-    const id = window.requestAnimationFrame(() => {
-      setResultSheetEntered(true);
-    });
-    return () => window.cancelAnimationFrame(id);
-  }, [step]);
-
-  const carpenters = useMemo(
-    () => storefronts.filter((sf) => sf.vendor_type === 'carpenter'),
-    [storefronts],
-  );
-  const decorVendors = useMemo(
-    () => storefronts.filter((sf) => sf.vendor_type === 'decor_store'),
-    [storefronts],
-  );
-
   const mood = moodId ? AI_ROOM_MOOD_BY_ID[moodId] : null;
-  const productsByMood = useMemo(() => {
-    if (!mood) return [];
-    return products.filter((p) => p.category && mood.categories.includes(p.category));
-  }, [products, mood]);
 
   /** Mirrors `Upload.tsx` `handleImageSelect` lifecycle (file preview via object URL). */
   const handleImageSelect = (file: File) => {
@@ -287,9 +133,6 @@ export default function AiRoomGenerator() {
     }
     setRoomPreviewUrl(null);
   };
-
-  /** Same guardrail as Analyze flow: when backend says image is not a room, show this. */
-  const setNotRoomError = () => setRoomPhotoError('Please upload a photo of a room or space.');
 
   const handleSampleRoomSelect = (url: string) => {
     setRoomPhotoError(null);
@@ -352,45 +195,19 @@ export default function AiRoomGenerator() {
         return;
       }
 
-      setGeneratedImageUrl(data.generated_image_url || null);
-      setProductsInRender(data.products || []);
-      setMinimumSpend(
-        typeof data.minimum_spend === 'number' ? data.minimum_spend : null,
-      );
-      setStep(5);
+      const shareSlug =
+        typeof (data as { share_slug?: unknown }).share_slug === 'string'
+          ? (data as { share_slug: string }).share_slug.trim()
+          : '';
+      if (!shareSlug) {
+        toast.error('Could not create your room link. Please try again.');
+        return;
+      }
+
+      navigate(`/room/${encodeURIComponent(shareSlug)}`, { replace: true });
     } finally {
       setPaying(false);
     }
-  };
-
-  const handleShare = () => {
-    const url = window.location.origin + '/ai-room-generator';
-    navigator.clipboard.writeText(url).then(
-      () => toast.success('Link copied to clipboard'),
-      () => toast.error('Could not copy link'),
-    );
-  };
-
-  const handleSave = () => {
-    toast.success('Saved to your profile (mock).');
-  };
-
-  const resetFlow = () => {
-    if (roomPreviewUrl && roomSource === 'upload') URL.revokeObjectURL(roomPreviewUrl);
-    setRoomFile(null);
-    setRoomPreviewUrl(null);
-    setRoomSource(null);
-    setRoomPhotoError(null);
-    setRoomType(null);
-    setMoodId(null);
-    setMockGenerationId(null);
-    setAfterImageModalOpen(false);
-    setProductsInRender([]);
-    setGeneratedImageUrl(null);
-    setMinimumSpend(null);
-    setSimilarByProductId({});
-    setResultSheetEntered(false);
-    setStep(1);
   };
 
   const showWizardStickyNav =
@@ -410,8 +227,6 @@ export default function AiRoomGenerator() {
         : step === 3
           ? 'Next: Review'
           : 'Generate my room →';
-
-  const showResultStickyBar = isAuthenticated && step === 5;
 
   const handleStickyPrimary = () => {
     if (stickyNextDisabled) return;
@@ -433,7 +248,6 @@ export default function AiRoomGenerator() {
         className={cn(
           'flex-1 container mx-auto px-4 md:px-6 py-8 md:py-12 max-w-4xl',
           showWizardStickyNav && 'pb-28 md:pb-32',
-          showResultStickyBar && 'pb-28 md:pb-32',
         )}
       >
         {authLoading ? (
@@ -647,53 +461,28 @@ export default function AiRoomGenerator() {
                   >
                     <p className="text-xs text-gray-500 mb-3">Products going into your room</p>
                     <div className="grid grid-cols-2 gap-3">
-                      {productsInRender.length > 0
-                        ? productsInRender.map((product) => {
-                            const storefront = storefronts.find((sf) => sf.id === product.storefront_id);
-                            return (
-                              <div key={product.id} className="flex flex-col gap-1.5">
-                                <div className="aspect-square w-full overflow-hidden rounded-lg bg-gray-100">
-                                  {product.image_url ? (
-                                    <img
-                                      src={product.image_url}
-                                      alt=""
-                                      className="h-full w-full object-cover"
-                                    />
-                                  ) : (
-                                    <div className="h-full w-full bg-gray-200" />
-                                  )}
-                                </div>
-                                <p className="text-[12px] font-medium leading-snug text-gray-900 line-clamp-2">
-                                  {product.name}
-                                </p>
-                                <p className="text-[10px] text-gray-500 truncate">
-                                  {storefront?.name ?? 'Vendor'}
-                                </p>
-                              </div>
-                            );
-                          })
-                        : Array.from({ length: 4 }).map((_, i) => (
-                            <div key={`processing-product-skeleton-${i}`} className="flex flex-col gap-1.5">
-                              <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-gray-200">
-                                <div
-                                  className="absolute inset-y-0 left-0 w-[38%] rounded-full bg-gradient-to-r from-gray-300 via-gray-50 to-gray-300 opacity-90"
-                                  style={{ animation: 'ai-room-progress-shimmer 2s linear infinite' }}
-                                />
-                              </div>
-                              <div className="relative h-3 w-4/5 overflow-hidden rounded-md bg-gray-200">
-                                <div
-                                  className="absolute inset-y-0 left-0 w-[38%] rounded-full bg-gradient-to-r from-gray-300 via-gray-50 to-gray-300 opacity-90"
-                                  style={{ animation: 'ai-room-progress-shimmer 2s linear infinite' }}
-                                />
-                              </div>
-                              <div className="relative h-2.5 w-1/2 overflow-hidden rounded-md bg-gray-200">
-                                <div
-                                  className="absolute inset-y-0 left-0 w-[38%] rounded-full bg-gradient-to-r from-gray-300 via-gray-50 to-gray-300 opacity-90"
-                                  style={{ animation: 'ai-room-progress-shimmer 2s linear infinite' }}
-                                />
-                              </div>
-                            </div>
-                          ))}
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={`processing-product-skeleton-${i}`} className="flex flex-col gap-1.5">
+                          <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-gray-200">
+                            <div
+                              className="absolute inset-y-0 left-0 w-[38%] rounded-full bg-gradient-to-r from-gray-300 via-gray-50 to-gray-300 opacity-90"
+                              style={{ animation: 'ai-room-progress-shimmer 2s linear infinite' }}
+                            />
+                          </div>
+                          <div className="relative h-3 w-4/5 overflow-hidden rounded-md bg-gray-200">
+                            <div
+                              className="absolute inset-y-0 left-0 w-[38%] rounded-full bg-gradient-to-r from-gray-300 via-gray-50 to-gray-300 opacity-90"
+                              style={{ animation: 'ai-room-progress-shimmer 2s linear infinite' }}
+                            />
+                          </div>
+                          <div className="relative h-2.5 w-1/2 overflow-hidden rounded-md bg-gray-200">
+                            <div
+                              className="absolute inset-y-0 left-0 w-[38%] rounded-full bg-gradient-to-r from-gray-300 via-gray-50 to-gray-300 opacity-90"
+                              style={{ animation: 'ai-room-progress-shimmer 2s linear infinite' }}
+                            />
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </>
@@ -768,361 +557,6 @@ export default function AiRoomGenerator() {
           </section>
         )}
 
-        {step === 5 && (
-          <section className="space-y-10" aria-label="Your generated room">
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
-                Your {ROOM_TYPE_OPTIONS.find((r) => r.id === roomType)?.label ?? 'room'} is ready
-              </h2>
-              {mood && <p className="mt-2 text-sm text-gray-500">{mood.label}</p>}
-
-              {/* 1. Before / After */}
-              <div className="mt-6 space-y-6">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 mb-2">Before</p>
-                  <div className="h-[140px] w-full rounded-xl overflow-hidden bg-gray-100">
-                    {roomPreviewUrl ? (
-                      <img src={roomPreviewUrl} alt="Your room" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">No photo</div>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 mb-2">After</p>
-                  <button
-                    type="button"
-                    onClick={() => setAfterImageModalOpen(true)}
-                    className="block w-full rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] text-left ring-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
-                  >
-                    <img
-                      src={generatedImageUrl || PLACEHOLDER_AI_IMAGE}
-                      alt="AI-generated room"
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                  <p className="mt-1.5 text-xs text-gray-500">Tap image to view full screen</p>
-                </div>
-              </div>
-
-              {(productsInRender.length > 0 || (minimumSpend != null && minimumSpend > 0)) && (
-                <div className="mt-8 rounded-xl border border-gray-100 bg-gray-50/80 p-4 md:p-5">
-                  <p className="text-sm font-medium text-gray-500">Minimum spend to achieve this look</p>
-                  <p className="mt-1 text-2xl font-bold text-gray-900">{formatNgn(minimumSpend ?? 0)}</p>
-                  <p className="mt-2 text-xs text-gray-500">
-                    Based on {productsInRender.length} vendor product{productsInRender.length !== 1 ? 's' : ''}{' '}
-                    featured in your render.
-                  </p>
-                </div>
-              )}
-
-              {afterImageModalOpen && (
-                <div
-                  className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
-                  role="dialog"
-                  aria-modal="true"
-                  aria-label="Generated room full screen"
-                  style={{
-                    minHeight: '100dvh',
-                    paddingTop: 'max(1rem, env(safe-area-inset-top))',
-                    paddingRight: 'max(1rem, env(safe-area-inset-right))',
-                    paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
-                    paddingLeft: 'max(1rem, env(safe-area-inset-left))',
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setAfterImageModalOpen(false)}
-                    className="absolute z-[101] flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
-                    style={{
-                      top: 'max(0.75rem, env(safe-area-inset-top))',
-                      right: 'max(0.75rem, env(safe-area-inset-right))',
-                    }}
-                    aria-label="Close full screen image"
-                  >
-                    <X className="h-7 w-7" strokeWidth={2.5} />
-                  </button>
-                  <button
-                    type="button"
-                    className="max-h-[min(85dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] w-full max-w-4xl overflow-hidden rounded-lg"
-                    onClick={() => setAfterImageModalOpen(false)}
-                  >
-                    <img
-                      src={generatedImageUrl || PLACEHOLDER_AI_IMAGE}
-                      alt="AI-generated room full size"
-                      className="max-h-[85dvh] w-full object-contain"
-                    />
-                  </button>
-                </div>
-              )}
-
-              {/* 2. Share + Save */}
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Button variant="outline" onClick={handleShare} className="rounded-full">
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Share my room
-                </Button>
-                <Button variant="outline" onClick={() => navigate('/history')} className="rounded-full">
-                  <Bookmark className="w-4 h-4 mr-2" />
-                  View in history
-                </Button>
-              </div>
-            </div>
-
-            {/* 3. Products in your render */}
-            {productsInRender.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
-                <h3 className="text-base font-semibold text-gray-900">Products in your render</h3>
-                <p className="mt-1 text-sm text-gray-600">
-                  These exact products were used to generate your room. Tap any item to contact the vendor directly.
-                </p>
-                <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {productsInRender.map((product) => {
-                    const storefront = storefronts.find((sf) => sf.id === product.storefront_id);
-                    return (
-                      <a
-                        key={product.id}
-                        href={`${window.location.origin}/shops/products/${product.slug}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="rounded-2xl border border-gray-200 overflow-hidden text-left hover:border-gray-300 hover:shadow-lg transition-all flex flex-col"
-                      >
-                        <div className="aspect-[3/4] bg-gray-100 relative">
-                          {product.image_url ? (
-                            <img
-                              src={product.image_url}
-                              alt={product.name}
-                              className="w-full h-full object-cover object-center"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">No image</div>
-                          )}
-                          {storefront && (
-                            <div className="absolute top-2 left-2 max-w-[90%]">
-                              <span className="inline-flex items-center rounded-full bg-black/80 text-white text-[10px] font-medium px-2 py-1">
-                                <span
-                                  className="relative h-6 w-6 rounded-full border border-white/70 overflow-hidden flex items-center justify-center text-[10px] font-semibold mr-1 flex-shrink-0"
-                                  style={{ backgroundColor: getVendorColor(storefront.name) }}
-                                >
-                                  {storefront.logo_url ? (
-                                    <img src={storefront.logo_url} alt="" className="w-full h-full object-cover" />
-                                  ) : (
-                                    getVendorInitials(storefront.name)
-                                  )}
-                                </span>
-                                <span className="truncate max-w-[80px]">{storefront.name}</span>
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="px-2.5 pt-2.5 pb-3">
-                          <h4 className="text-[13px] font-semibold text-gray-900 leading-snug line-clamp-2">{product.name}</h4>
-                          <p className="text-xs text-gray-700 mt-1">{formatPrice(product)}</p>
-                        </div>
-                      </a>
-                    );
-                  })}
-                </div>
-                <div className="mt-4">
-                  <Button variant="outline" className="rounded-full" onClick={() => navigate('/shops')}>
-                    See more products
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {productsInRender.length > 0 &&
-              (() => {
-                const hasAnySimilar = productsInRender.some((p) => {
-                  const s = similarByProductId[p.id];
-                  return s?.status === 'loading' || (s?.status === 'ready' && s.rows.length > 0);
-                });
-                if (!hasAnySimilar) return null;
-                return (
-                  <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
-                    <h2 className="text-xl font-semibold text-[#111111] mb-2">Explore Similar Options</h2>
-                    <p className="text-sm text-gray-600 mb-6">Based on products in your render</p>
-                    <div className="space-y-8">
-                      {productsInRender.map((product) => {
-                        const slot = similarByProductId[product.id];
-                        if (slot?.status === 'loading') {
-                          return (
-                            <div key={product.id}>
-                              <h3
-                                className="text-sm font-medium mb-3"
-                                style={{ color: 'hsl(var(--foreground))' }}
-                              >
-                                Similar to {product.name}
-                              </h3>
-                              <div className="flex gap-3 overflow-x-auto scroll-pills-hide-scrollbar pb-1 -mx-4 px-4 md:mx-0 md:px-0">
-                                {[0, 1, 2].map((sk) => (
-                                  <Skeleton
-                                    key={sk}
-                                    className="w-[150px] flex-shrink-0 aspect-[3/4] rounded-2xl"
-                                  />
-                                ))}
-                              </div>
-                              <div className="mt-3">
-                                <button
-                                  type="button"
-                                  className="text-sm font-medium border-0 bg-transparent p-0 cursor-pointer hover:underline text-[#111111]"
-                                  onClick={() => navigate('/shops')}
-                                >
-                                  See all →
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        }
-                        if (slot?.status === 'ready' && slot.rows.length > 0) {
-                          return (
-                            <div key={product.id}>
-                              <h3
-                                className="text-sm font-medium mb-3"
-                                style={{ color: 'hsl(var(--foreground))' }}
-                              >
-                                Similar to {product.name}
-                              </h3>
-                              <div className="flex gap-3 overflow-x-auto scroll-pills-hide-scrollbar pb-1 -mx-4 px-4 md:mx-0 md:px-0">
-                                {slot.rows.map(({ product: sp, storefront: sf }) => {
-                                  const miniDim = formatVendorDimensions(sp);
-                                  return (
-                                    <div
-                                      key={sp.id}
-                                      role="button"
-                                      tabIndex={0}
-                                      onClick={() => navigate(`/shops/products/${sp.slug}`)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter' || e.key === ' ') {
-                                          e.preventDefault();
-                                          navigate(`/shops/products/${sp.slug}`);
-                                        }
-                                      }}
-                                      className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow text-left cursor-pointer border border-[#e5e5e5] flex flex-col flex-shrink-0 w-[150px]"
-                                    >
-                                      <div className="aspect-[3/4] w-full bg-gray-100 relative overflow-hidden rounded-2xl flex-shrink-0">
-                                        {sp.image_url ? (
-                                          <img
-                                            src={sp.image_url}
-                                            alt={sp.name}
-                                            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-                                          />
-                                        ) : (
-                                          <div className="w-full h-full flex items-center justify-center text-[#999] text-[11px]">
-                                            No image
-                                          </div>
-                                        )}
-                                        <div className="absolute top-1.5 left-1.5 z-[1]">
-                                          <Badge className="bg-gray-900 text-white text-[9px] font-medium border-0 shadow-sm px-1.5 py-0.5 rounded-full max-w-[120px] truncate">
-                                            Sold by{' '}
-                                            {sf?.name ? sf.name.split(' ').slice(0, 2).join(' ') : 'vendor'}
-                                          </Badge>
-                                        </div>
-                                      </div>
-                                      <div className="px-2 pt-2 pb-2.5">
-                                        <h4 className="text-[11px] font-semibold text-gray-900 leading-snug line-clamp-2">
-                                          {sp.name}
-                                        </h4>
-                                        <p className="text-[10px] text-gray-600 mt-0.5">{formatVendorPrice(sp)}</p>
-                                        {miniDim && (
-                                          <p className="text-[9px] text-gray-500 mt-0.5">{miniDim}</p>
-                                        )}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                              <div className="mt-3">
-                                <button
-                                  type="button"
-                                  className="text-sm font-medium border-0 bg-transparent p-0 cursor-pointer hover:underline text-[#111111]"
-                                  onClick={() => navigate('/shops')}
-                                >
-                                  See all →
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        }
-                        return null;
-                      })}
-                    </div>
-                  </div>
-                );
-              })()}
-
-            {/* Furniture makers — real carpenters */}
-            {carpenters.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
-                <h3 className="text-base font-semibold text-gray-900">Furniture makers</h3>
-                <p className="mt-1 text-sm text-gray-600">Active carpenter storefronts.</p>
-                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {carpenters.map((sf) => (
-                    <button
-                      key={sf.id}
-                      type="button"
-                      onClick={() => navigate(`/stores/${sf.slug}`)}
-                      className="rounded-xl border border-gray-200 p-4 text-left hover:border-gray-300 hover:shadow-md transition-all flex items-center gap-3"
-                    >
-                      <span
-                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 overflow-hidden"
-                        style={{ backgroundColor: getVendorColor(sf.name) }}
-                      >
-                        {sf.logo_url ? (
-                          <img src={sf.logo_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          getVendorInitials(sf.name)
-                        )}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="font-medium text-gray-900 truncate">{sf.name}</p>
-                        <p className="text-xs text-gray-500 truncate">{sf.location_display || sf.location || 'Nigeria'}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Decor sellers — real decor storefronts */}
-            {decorVendors.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
-                <h3 className="text-base font-semibold text-gray-900">Decor sellers</h3>
-                <p className="mt-1 text-sm text-gray-600">Active decor storefronts.</p>
-                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {decorVendors.map((sf) => (
-                    <button
-                      key={sf.id}
-                      type="button"
-                      onClick={() => navigate(`/stores/${sf.slug}`)}
-                      className="rounded-xl border border-gray-200 p-4 text-left hover:border-gray-300 hover:shadow-md transition-all flex items-center gap-3"
-                    >
-                      <span
-                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 overflow-hidden"
-                        style={{ backgroundColor: getVendorColor(sf.name) }}
-                      >
-                        {sf.logo_url ? (
-                          <img src={sf.logo_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          getVendorInitials(sf.name)
-                        )}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="font-medium text-gray-900 truncate">{sf.name}</p>
-                        <p className="text-xs text-gray-500 truncate">{sf.location_display || sf.location || 'Nigeria'}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {loadingData && (
-              <p className="text-center text-sm text-gray-500">Loading vendors and products…</p>
-            )}
-          </section>
-        )}
-
         {showWizardStickyNav && (
           <nav
             className="fixed bottom-0 left-0 right-0 z-50 flex min-h-[72px] items-stretch bg-white border-t border-[#E5E7EB] shadow-[0_-4px_12px_rgba(0,0,0,0.08)]"
@@ -1148,7 +582,7 @@ export default function AiRoomGenerator() {
                   <span className="inline-block w-[88px] shrink-0" aria-hidden />
                 )}
               </div>
-              <p className="min-w-0 flex-1 text-center text-[10px] font-medium text-gray-400">Step {step} of 5</p>
+              <p className="min-w-0 flex-1 text-center text-[10px] font-medium text-gray-400">Step {step} of 4</p>
               <div className="flex min-w-[140px] shrink-0 items-center justify-end">
                 <Button
                   type="button"
@@ -1161,32 +595,6 @@ export default function AiRoomGenerator() {
               </div>
             </div>
           </nav>
-        )}
-
-        {showResultStickyBar && (
-          <div
-            className={cn(
-              'fixed bottom-0 left-0 right-0 z-50 flex min-h-[72px] items-center bg-white border-t border-[#E5E7EB] shadow-[0_-4px_12px_rgba(0,0,0,0.08)] transition-transform duration-300 ease-out',
-              resultSheetEntered ? 'translate-y-0' : 'translate-y-full',
-            )}
-            style={{
-              paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
-              paddingLeft: 'max(1rem, env(safe-area-inset-left))',
-              paddingRight: 'max(1rem, env(safe-area-inset-right))',
-            }}
-            role="region"
-            aria-label="Generate another room"
-          >
-            <div className="container mx-auto w-full max-w-4xl px-4 md:px-6">
-              <Button
-                type="button"
-                className="w-full rounded-full bg-[#111] py-3 font-semibold text-white h-12 hover:bg-gray-900"
-                onClick={resetFlow}
-              >
-                Generate another room
-              </Button>
-            </div>
-          </div>
         )}
         </>
         )}
