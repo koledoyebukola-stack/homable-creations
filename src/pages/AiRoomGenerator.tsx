@@ -5,12 +5,11 @@ import ImageUploader from '@/components/ImageUploader';
 import { cn } from '@/lib/utils';
 import { AI_ROOM_MOODS, AI_ROOM_MOOD_BY_ID } from '@/lib/ai-room-moods';
 import type { AiRoomMoodId } from '@/lib/ai-room-moods';
-import { Upload, CreditCard, Info, AlertCircle, Check, Shield } from 'lucide-react';
+import { Upload, Info, AlertCircle, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
-const PRICE_KOBO = 200_000; // ₦2,000
 /** Sample empty Nigerian room photos — user can tap one instead of uploading. */
 const SAMPLE_ROOM_PHOTOS: { id: string; label: string; url: string }[] = [
   {
@@ -51,9 +50,15 @@ const ROOM_TYPE_OPTIONS: { id: string; icon: string; label: string }[] = [
   { id: 'wall_styling', icon: '🖼', label: 'Wall styling' },
 ];
 
-function formatNgn(value: number): string {
-  return `₦${Number(value).toLocaleString('en-NG')}`;
-}
+/** Step 2: show subset only; full list stays in `ROOM_TYPE_OPTIONS` for easy re-enable. */
+const ROOM_TYPE_OPTIONS_STEP2 = ROOM_TYPE_OPTIONS.filter(
+  (rt) => rt.id === 'living_room' || rt.id === 'bedroom',
+);
+
+/** Step 3: show subset only; full moods stay in `AI_ROOM_MOODS`. */
+const AI_ROOM_MOODS_STEP3 = AI_ROOM_MOODS.filter(
+  (m) => m.id === 'warm_earthy' || m.id === 'minimal_lagos',
+);
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -86,6 +91,18 @@ export default function AiRoomGenerator() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (roomType && !ROOM_TYPE_OPTIONS_STEP2.some((r) => r.id === roomType)) {
+      setRoomType(null);
+    }
+  }, [roomType]);
+
+  useEffect(() => {
+    if (moodId && !AI_ROOM_MOODS_STEP3.some((m) => m.id === moodId)) {
+      setMoodId(null);
+    }
+  }, [moodId]);
 
   useEffect(() => {
     if (!paying || step !== 4) return;
@@ -225,7 +242,7 @@ export default function AiRoomGenerator() {
       : step === 2
         ? 'Next: Pick a mood'
         : step === 3
-          ? 'Next: Review'
+          ? 'Next: Review & generate'
           : 'Generate my room →';
 
   const handleStickyPrimary = () => {
@@ -368,7 +385,7 @@ export default function AiRoomGenerator() {
                 Pick the space you&apos;re styling so we can tailor the result.
               </p>
               <div className="mt-6 grid grid-cols-2 gap-3">
-                {ROOM_TYPE_OPTIONS.map((rt) => (
+                {ROOM_TYPE_OPTIONS_STEP2.map((rt) => (
                   <button
                     key={rt.id}
                     type="button"
@@ -400,7 +417,7 @@ export default function AiRoomGenerator() {
                 Choose the style direction for your AI-generated room.
               </p>
               <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {AI_ROOM_MOODS.map((m) => (
+                {AI_ROOM_MOODS_STEP3.map((m) => (
                   <button
                     key={m.id}
                     type="button"
@@ -439,7 +456,7 @@ export default function AiRoomGenerator() {
         )}
 
         {step === 4 && (
-          <section className="space-y-6" aria-label={paying ? 'Generating your room' : 'Review and pay'}>
+          <section className="space-y-6" aria-label={paying ? 'Generating your room' : 'Review and generate'}>
             <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
               {paying ? (
                 <>
@@ -488,12 +505,10 @@ export default function AiRoomGenerator() {
                 </>
               ) : (
                 <>
-                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    <CreditCard className="w-5 h-5" />
-                    Review & pay
-                  </h2>
+                  <h2 className="text-lg font-semibold text-gray-900">Review & generate</h2>
                   <p className="mt-2 text-gray-600 text-sm">
-                    Confirm your photo, room type, and mood, then pay ₦2,000 to generate your room.
+                    Confirm your photo, room type, and mood. You&apos;ve been invited as an early tester — this
+                    generation is on us.
                   </p>
                   <div className="mt-6 flex flex-col md:flex-row gap-6">
                     {roomPreviewUrl && (
@@ -517,14 +532,10 @@ export default function AiRoomGenerator() {
                           <p className="text-sm text-gray-600">{mood.subtitle}</p>
                         </div>
                       )}
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-2xl font-bold text-gray-900">{formatNgn(PRICE_KOBO / 100)}</span>
-                        <span className="text-gray-500 text-sm">per generation</span>
-                      </div>
                     </div>
                   </div>
                   <div className="mt-8">
-                    <h3 className="text-base font-semibold text-gray-900">What you get for ₦2,000</h3>
+                    <h3 className="text-base font-semibold text-gray-900">What you get</h3>
                     <ul className="mt-3 space-y-2 text-sm text-gray-700">
                       <li className="flex items-start gap-2">
                         <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
@@ -537,14 +548,6 @@ export default function AiRoomGenerator() {
                       <li className="flex items-start gap-2">
                         <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
                         <span>Every item is sourceable and available to buy today</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                        <span>Interior decorators charge ₦150,000–₦500,000 for a mood board. This is ₦2,000.</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Shield className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                        <span>Payment secured by Paystack — Nigeria&apos;s most trusted payment gateway</span>
                       </li>
                     </ul>
                     <p className="mt-4 text-xs text-gray-500">
