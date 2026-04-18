@@ -377,41 +377,45 @@ export default function RoomSharePage() {
 
           {afterImageModalOpen && (
             <div
-              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
+              className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-black/90"
               role="dialog"
               aria-modal="true"
               aria-label="Generated room full screen"
-              style={{
-                minHeight: '100dvh',
-                paddingTop: 'max(1rem, env(safe-area-inset-top))',
-                paddingRight: 'max(1rem, env(safe-area-inset-right))',
-                paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
-                paddingLeft: 'max(1rem, env(safe-area-inset-left))',
-              }}
+              style={{ minHeight: '100dvh' }}
             >
-              <button
-                type="button"
+              <div
+                role="button"
+                tabIndex={0}
+                className="relative h-[85vh] w-screen cursor-pointer"
                 onClick={() => setAfterImageModalOpen(false)}
-                className="absolute z-[101] flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
-                style={{
-                  top: 'max(0.75rem, env(safe-area-inset-top))',
-                  right: 'max(0.75rem, env(safe-area-inset-right))',
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setAfterImageModalOpen(false);
+                  }
                 }}
-                aria-label="Close full screen image"
-              >
-                <X className="h-7 w-7" strokeWidth={2.5} />
-              </button>
-              <button
-                type="button"
-                className="max-h-[min(85dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] w-full max-w-4xl overflow-hidden rounded-lg"
-                onClick={() => setAfterImageModalOpen(false)}
               >
                 <img
                   src={generatedImageUrl || PLACEHOLDER_AI_IMAGE}
                   alt="AI-generated room full size"
-                  className="max-h-[85dvh] w-full object-contain"
+                  className="pointer-events-none h-full w-full object-cover"
                 />
-              </button>
+                <button
+                  type="button"
+                  className="absolute z-10 flex h-12 w-12 min-h-[48px] min-w-[48px] items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/60"
+                  style={{
+                    top: 'max(0.75rem, env(safe-area-inset-top))',
+                    right: 'max(0.75rem, env(safe-area-inset-right))',
+                  }}
+                  aria-label="Close full screen image"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAfterImageModalOpen(false);
+                  }}
+                >
+                  <X className="h-7 w-7" strokeWidth={2.5} />
+                </button>
+              </div>
             </div>
           )}
 

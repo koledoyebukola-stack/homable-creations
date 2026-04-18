@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import ImageUploader from '@/components/ImageUploader';
 import { cn } from '@/lib/utils';
-import { AI_ROOM_MOODS, AI_ROOM_MOOD_BY_ID } from '@/lib/ai-room-moods';
+import { AI_ROOM_MOOD_BY_ID } from '@/lib/ai-room-moods';
 import type { AiRoomMoodId } from '@/lib/ai-room-moods';
 import { Upload, Info, AlertCircle, Check } from 'lucide-react';
 import { toast } from 'sonner';
@@ -60,10 +60,79 @@ const ROOM_TYPE_OPTIONS_STEP2 = ROOM_TYPE_OPTIONS.filter(
   (rt) => rt.id === 'living_room' || rt.id === 'bedroom',
 );
 
-/** Step 3: show subset only; full moods stay in `AI_ROOM_MOODS`. */
-const AI_ROOM_MOODS_STEP3 = AI_ROOM_MOODS.filter(
-  (m) => m.id === 'warm_earthy' || m.id === 'minimal_lagos',
-);
+/** Step 3: show subset only; display order is explicit (full moods stay in `AI_ROOM_MOODS`). */
+const AI_ROOM_MOODS_STEP3 = (['minimal_lagos', 'warm_earthy'] as const).map((id) => AI_ROOM_MOOD_BY_ID[id]);
+
+const LOADING_IMAGES = [
+  {
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/storefront-assets/Artificial%20Olive%20Tree%20Planter.jpeg',
+    label: 'Planters',
+  },
+  {
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/storefront-assets/Mediterranean%20Olive%20Planter.png',
+    label: 'Planters',
+  },
+  {
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/storefront-assets/Brushstroke%20Vase%20Planter.png',
+    label: 'Planters',
+  },
+  {
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/storefront-assets/Modern%20Artificial%20Floor%20Plant.jpeg',
+    label: 'Planters',
+  },
+  {
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/storefront-assets/KAWS%20style%20companion%20figurine%20set.png',
+    label: 'Accessories',
+  },
+  {
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/storefront-assets/Abstract%20flame%20sculpture%20decor%20piece.JPG',
+    label: 'Accessories',
+  },
+  {
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/storefront-assets/Minimalist%20ceramic%20loop%20vase%20set.JPG',
+    label: 'Accessories',
+  },
+  {
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/storefront-assets/Blush%20loop%20ceramic%20vase%20set.png',
+    label: 'Accessories',
+  },
+  {
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/storefront-assets/Modern%20sputnik%20globe%20chandelier.jpeg',
+    label: 'Lighting',
+  },
+  {
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/storefront-assets/Gold%20Crystal%20Table%20Lamp.png',
+    label: 'Lighting',
+  },
+  {
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/storefront-assets/Chrome%20globe%20cluster%20pendant%20chandelier.jpeg',
+    label: 'Lighting',
+  },
+  {
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/storefront-assets/Modern%20spiral%20ring%20chandelier.jpeg',
+    label: 'Lighting',
+  },
+  {
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/storefront-assets/Blue%20Stripe%20Woman%20Wall%20Art.png',
+    label: 'Artwork',
+  },
+  {
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/storefront-assets/African%20Market%20Scene.jpeg',
+    label: 'Artwork',
+  },
+  {
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/storefront-assets/Red%20Abstract%20Silhouette.png',
+    label: 'Artwork',
+  },
+  {
+    url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/storefront-assets/Elegant%20Back%20Portrait.jpeg',
+    label: 'Artwork',
+  },
+] as const;
+
+const LOADING_MOOD_BOARD_STEP = 4;
+const LOADING_MOOD_BOARD_INTERVAL_MS = 3000;
+const LOADING_MOOD_BOARD_FADE_MS = 300;
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -83,6 +152,8 @@ export default function AiRoomGenerator() {
   const [paying, setPaying] = useState(false);
   const [processingMessages, setProcessingMessages] = useState<string[]>([]);
   const [processingMsgIndex, setProcessingMsgIndex] = useState(0);
+  const [loadingMoodBoardStart, setLoadingMoodBoardStart] = useState(0);
+  const [loadingMoodBoardOpacity, setLoadingMoodBoardOpacity] = useState(1);
   // Require login before showing wizard
   useEffect(() => {
     let cancelled = false;
@@ -136,6 +207,28 @@ export default function AiRoomGenerator() {
     }, 4000);
     return () => clearInterval(id);
   }, [paying, step, moodId]);
+
+  useEffect(() => {
+    if (!paying || step !== 4) return;
+    setLoadingMoodBoardStart(0);
+    setLoadingMoodBoardOpacity(1);
+  }, [paying, step]);
+
+  useEffect(() => {
+    if (!paying || step !== 4) return;
+    let fadeTimeout: ReturnType<typeof window.setTimeout> | undefined;
+    const intervalId = window.setInterval(() => {
+      setLoadingMoodBoardOpacity(0);
+      fadeTimeout = window.setTimeout(() => {
+        setLoadingMoodBoardStart((s) => (s + LOADING_MOOD_BOARD_STEP) % LOADING_IMAGES.length);
+        setLoadingMoodBoardOpacity(1);
+      }, LOADING_MOOD_BOARD_FADE_MS);
+    }, LOADING_MOOD_BOARD_INTERVAL_MS);
+    return () => {
+      window.clearInterval(intervalId);
+      if (fadeTimeout !== undefined) window.clearTimeout(fadeTimeout);
+    };
+  }, [paying, step]);
 
   const mood = moodId ? AI_ROOM_MOOD_BY_ID[moodId] : null;
 
@@ -489,34 +582,24 @@ export default function AiRoomGenerator() {
                   </div>
 
                   <div
-                    className="mt-8 pointer-events-none cursor-default select-none"
+                    className="mt-8 grid grid-cols-2 gap-3 transition-opacity duration-300 ease-in-out pointer-events-none cursor-default select-none"
+                    style={{ opacity: loadingMoodBoardOpacity }}
                     aria-hidden
                   >
-                    <p className="text-xs text-gray-500 mb-3">Products going into your room</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      {Array.from({ length: 4 }).map((_, i) => (
-                        <div key={`processing-product-skeleton-${i}`} className="flex flex-col gap-1.5">
-                          <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-gray-200">
-                            <div
-                              className="absolute inset-y-0 left-0 w-[38%] rounded-full bg-gradient-to-r from-gray-300 via-gray-50 to-gray-300 opacity-90"
-                              style={{ animation: 'ai-room-progress-shimmer 2s linear infinite' }}
-                            />
-                          </div>
-                          <div className="relative h-3 w-4/5 overflow-hidden rounded-md bg-gray-200">
-                            <div
-                              className="absolute inset-y-0 left-0 w-[38%] rounded-full bg-gradient-to-r from-gray-300 via-gray-50 to-gray-300 opacity-90"
-                              style={{ animation: 'ai-room-progress-shimmer 2s linear infinite' }}
-                            />
-                          </div>
-                          <div className="relative h-2.5 w-1/2 overflow-hidden rounded-md bg-gray-200">
-                            <div
-                              className="absolute inset-y-0 left-0 w-[38%] rounded-full bg-gradient-to-r from-gray-300 via-gray-50 to-gray-300 opacity-90"
-                              style={{ animation: 'ai-room-progress-shimmer 2s linear infinite' }}
-                            />
+                    {Array.from({ length: 4 }, (_, i) => {
+                      const item = LOADING_IMAGES[(loadingMoodBoardStart + i) % LOADING_IMAGES.length];
+                      return (
+                        <div
+                          key={`${loadingMoodBoardStart}-${i}-${item.url}`}
+                          className="relative h-[140px] w-full overflow-hidden rounded-lg"
+                        >
+                          <img src={item.url} alt="" className="h-full w-full object-cover" />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                            <span className="text-center text-xs font-medium text-white">{item.label}</span>
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      );
+                    })}
                   </div>
                 </>
               ) : (
