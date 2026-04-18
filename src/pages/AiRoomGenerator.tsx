@@ -128,7 +128,18 @@ const LOADING_IMAGES = [
     url: 'https://jvbrrgqepuhabwddufby.supabase.co/storage/v1/object/public/storefront-assets/Elegant%20Back%20Portrait.jpeg',
     label: 'Artwork',
   },
-] as const;
+];
+
+function shuffleLoadingImages(items: { url: string; label: string }[]): { url: string; label: string }[] {
+  const a = items.map((x) => ({ ...x }));
+  for (let i = a.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = a[i]!;
+    a[i] = a[j]!;
+    a[j] = t;
+  }
+  return a;
+}
 
 const LOADING_MOOD_BOARD_STEP = 4;
 const LOADING_MOOD_BOARD_INTERVAL_MS = 3000;
@@ -154,6 +165,7 @@ export default function AiRoomGenerator() {
   const [processingMsgIndex, setProcessingMsgIndex] = useState(0);
   const [loadingMoodBoardStart, setLoadingMoodBoardStart] = useState(0);
   const [loadingMoodBoardOpacity, setLoadingMoodBoardOpacity] = useState(1);
+  const [loadingImagesShuffled, setLoadingImagesShuffled] = useState<{ url: string; label: string }[]>([]);
   // Require login before showing wizard
   useEffect(() => {
     let cancelled = false;
@@ -210,17 +222,13 @@ export default function AiRoomGenerator() {
 
   useEffect(() => {
     if (!paying || step !== 4) return;
-    setLoadingMoodBoardStart(0);
-    setLoadingMoodBoardOpacity(1);
-  }, [paying, step]);
-
-  useEffect(() => {
-    if (!paying || step !== 4) return;
+    const len = loadingImagesShuffled.length;
+    if (len === 0) return;
     let fadeTimeout: ReturnType<typeof window.setTimeout> | undefined;
     const intervalId = window.setInterval(() => {
       setLoadingMoodBoardOpacity(0);
       fadeTimeout = window.setTimeout(() => {
-        setLoadingMoodBoardStart((s) => (s + LOADING_MOOD_BOARD_STEP) % LOADING_IMAGES.length);
+        setLoadingMoodBoardStart((s) => (s + LOADING_MOOD_BOARD_STEP) % len);
         setLoadingMoodBoardOpacity(1);
       }, LOADING_MOOD_BOARD_FADE_MS);
     }, LOADING_MOOD_BOARD_INTERVAL_MS);
@@ -228,7 +236,7 @@ export default function AiRoomGenerator() {
       window.clearInterval(intervalId);
       if (fadeTimeout !== undefined) window.clearTimeout(fadeTimeout);
     };
-  }, [paying, step]);
+  }, [paying, step, loadingImagesShuffled.length]);
 
   const mood = moodId ? AI_ROOM_MOOD_BY_ID[moodId] : null;
 
@@ -270,6 +278,9 @@ export default function AiRoomGenerator() {
 
   const handlePayAndGenerate = async () => {
     if (!roomPreviewUrl || !moodId || !roomType || !user?.id) return;
+    setLoadingImagesShuffled(shuffleLoadingImages([...LOADING_IMAGES]));
+    setLoadingMoodBoardStart(0);
+    setLoadingMoodBoardOpacity(1);
     setPaying(true);
 
     try {
@@ -573,13 +584,16 @@ export default function AiRoomGenerator() {
                   <p className="mt-4 text-base text-gray-900 min-h-[3rem]">
                     {processingMessages[processingMsgIndex] ?? 'Starting…'}
                   </p>
-                  <p className="mt-2 text-sm text-gray-500">This usually takes 45–90 seconds</p>
+                  <p className="mt-2 text-sm text-gray-500">
+                    Please wait. This usually takes 45–90 seconds.
+                  </p>
                   <div className="mt-6 relative h-2 w-full overflow-hidden rounded-full bg-gray-200">
                     <div
                       className="absolute top-0 bottom-0 left-0 w-[38%] rounded-full bg-gradient-to-r from-gray-300 via-gray-50 to-gray-300 shadow-sm"
                       style={{ animation: 'ai-room-progress-shimmer 2s linear infinite' }}
                     />
                   </div>
+                  <p className="mt-3 text-xs text-gray-500">Similar products going into your render</p>
 
                   <div
                     className="mt-8 grid grid-cols-2 gap-3 transition-opacity duration-300 ease-in-out pointer-events-none cursor-default select-none"
@@ -587,7 +601,8 @@ export default function AiRoomGenerator() {
                     aria-hidden
                   >
                     {Array.from({ length: 4 }, (_, i) => {
-                      const item = LOADING_IMAGES[(loadingMoodBoardStart + i) % LOADING_IMAGES.length];
+                      const source = loadingImagesShuffled.length > 0 ? loadingImagesShuffled : [...LOADING_IMAGES];
+                      const item = source[(loadingMoodBoardStart + i) % source.length]!;
                       return (
                         <div
                           key={`${loadingMoodBoardStart}-${i}-${item.url}`}

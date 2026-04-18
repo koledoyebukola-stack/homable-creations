@@ -386,7 +386,7 @@ export default function RoomSharePage() {
               <div
                 role="button"
                 tabIndex={0}
-                className="relative h-[85vh] w-screen cursor-pointer"
+                className="relative w-full max-w-4xl cursor-pointer px-4"
                 onClick={() => setAfterImageModalOpen(false)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
@@ -395,26 +395,28 @@ export default function RoomSharePage() {
                   }
                 }}
               >
-                <img
-                  src={generatedImageUrl || PLACEHOLDER_AI_IMAGE}
-                  alt="AI-generated room full size"
-                  className="pointer-events-none h-full w-full object-cover"
-                />
-                <button
-                  type="button"
-                  className="absolute z-10 flex h-12 w-12 min-h-[48px] min-w-[48px] items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/60"
-                  style={{
-                    top: 'max(0.75rem, env(safe-area-inset-top))',
-                    right: 'max(0.75rem, env(safe-area-inset-right))',
-                  }}
-                  aria-label="Close full screen image"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setAfterImageModalOpen(false);
-                  }}
-                >
-                  <X className="h-7 w-7" strokeWidth={2.5} />
-                </button>
+                <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
+                  <img
+                    src={generatedImageUrl || PLACEHOLDER_AI_IMAGE}
+                    alt="AI-generated room full size"
+                    className="pointer-events-none h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    className="absolute z-10 flex h-12 w-12 min-h-[48px] min-w-[48px] items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/60"
+                    style={{
+                      top: 'max(0.75rem, env(safe-area-inset-top))',
+                      right: 'max(0.75rem, env(safe-area-inset-right))',
+                    }}
+                    aria-label="Close full screen image"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setAfterImageModalOpen(false);
+                    }}
+                  >
+                    <X className="h-7 w-7" strokeWidth={2.5} />
+                  </button>
+                </div>
               </div>
             </div>
           )}
