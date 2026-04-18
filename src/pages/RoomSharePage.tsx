@@ -325,7 +325,7 @@ export default function RoomSharePage() {
       <main
         className={cn(
           'flex-1 container mx-auto px-4 md:px-6 py-8 md:py-12 max-w-4xl space-y-10',
-          isOwner && 'pb-48 md:pb-52',
+          isOwner && 'pb-28 md:pb-32',
         )}
       >
         <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
@@ -352,7 +352,7 @@ export default function RoomSharePage() {
               <button
                 type="button"
                 onClick={() => setAfterImageModalOpen(true)}
-                className="block w-full rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] text-left ring-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
+                className="block h-[380px] w-full overflow-hidden rounded-xl bg-gray-100 text-left ring-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 md:h-[480px]"
               >
                 <img
                   src={generatedImageUrl || PLACEHOLDER_AI_IMAGE}
@@ -415,6 +415,22 @@ export default function RoomSharePage() {
             </div>
           )}
 
+          {isOwner && (
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button variant="outline" onClick={copyRoomLink} className="rounded-full">
+                <Share2 className="w-4 h-4 mr-2" />
+                Share my room
+              </Button>
+              <Button
+                type="button"
+                className="rounded-full border-0 bg-[#25D366] font-semibold text-white hover:bg-[#20BD5A]"
+                onClick={() => navigate('/history')}
+              >
+                <Bookmark className="w-4 h-4 mr-2" />
+                View in history
+              </Button>
+            </div>
+          )}
         </div>
 
         {productsInRender.length > 0 && (
@@ -668,42 +684,21 @@ export default function RoomSharePage() {
       {isOwner && (
         <div
           className={cn(
-            'fixed bottom-0 left-0 right-0 z-[60] flex min-h-[104px] flex-col justify-center bg-white border-t border-[#E5E7EB] transition-transform duration-300 ease-out',
+            'fixed bottom-0 left-0 right-0 z-50 flex min-h-[72px] items-center bg-white border-t border-[#E5E7EB] shadow-[0_-4px_12px_rgba(0,0,0,0.08)] transition-transform duration-300 ease-out',
             ownerSheetEntered ? 'translate-y-0' : 'translate-y-full',
           )}
           style={{
-            boxShadow: '0 -4px 20px rgba(0,0,0,0.12)',
-            paddingTop: '16px',
-            paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+            paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
             paddingLeft: 'max(1rem, env(safe-area-inset-left))',
             paddingRight: 'max(1rem, env(safe-area-inset-right))',
           }}
           role="region"
-          aria-label="Room actions"
+          aria-label="Generate another room"
         >
-          <div className="container mx-auto w-full max-w-4xl space-y-3 px-4 md:px-6">
-            <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-stretch">
-              <Button
-                type="button"
-                variant="outline"
-                className="h-12 flex-1 rounded-full border-gray-300"
-                onClick={copyRoomLink}
-              >
-                <Share2 className="mr-2 h-4 w-4" />
-                Share my room
-              </Button>
-              <Button
-                type="button"
-                className="h-12 flex-1 rounded-full border-0 bg-[#25D366] font-semibold text-white hover:bg-[#20BD5A]"
-                onClick={() => navigate('/history')}
-              >
-                <Bookmark className="mr-2 h-4 w-4" />
-                View in history
-              </Button>
-            </div>
+          <div className="container mx-auto w-full max-w-4xl px-4 md:px-6">
             <Button
               type="button"
-              className="h-12 w-full rounded-full bg-[#111] py-3 font-semibold text-white hover:bg-gray-900"
+              className="w-full rounded-full bg-[#111] py-3 font-semibold text-white h-12 hover:bg-gray-900"
               onClick={() => navigate('/ai-room-generator')}
             >
               Generate another room
