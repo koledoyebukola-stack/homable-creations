@@ -39,6 +39,11 @@ const SAMPLE_ROOM_PHOTOS: { id: string; label: string; url: string }[] = [
   },
 ];
 
+/** Step 1 sample templates: show subset only; full list stays in `SAMPLE_ROOM_PHOTOS`. */
+const SAMPLE_ROOM_PHOTOS_STEP1 = SAMPLE_ROOM_PHOTOS.filter(
+  (s) => s.id === 'living' || s.id === 'bedroom',
+);
+
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png'];
 
@@ -103,6 +108,17 @@ export default function AiRoomGenerator() {
       setMoodId(null);
     }
   }, [moodId]);
+
+  useEffect(() => {
+    if (
+      roomSource === 'sample' &&
+      roomPreviewUrl &&
+      !SAMPLE_ROOM_PHOTOS_STEP1.some((s) => s.url === roomPreviewUrl)
+    ) {
+      setRoomPreviewUrl(null);
+      setRoomSource(null);
+    }
+  }, [roomSource, roomPreviewUrl]);
 
   useEffect(() => {
     if (!paying || step !== 4) return;
@@ -316,8 +332,8 @@ export default function AiRoomGenerator() {
                 <div className="flex items-start gap-3">
                   <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-blue-900">
-                    <span className="font-medium">Homable works best with home and event decor photos.</span> Non-decor
-                    images may not be analyzed.
+                    Take a photo of your living room or bedroom. Empty works best. Natural light and a wide angle give
+                    the most stunning results.
                   </p>
                 </div>
               </div>
@@ -350,8 +366,8 @@ export default function AiRoomGenerator() {
               <div className="mt-6">
                 <p className="text-sm font-medium text-gray-700">Don&apos;t have a photo?</p>
                 <p className="text-xs text-gray-500 mt-0.5">Tap a sample room to use instead.</p>
-                <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                  {SAMPLE_ROOM_PHOTOS.map((sample) => (
+                <div className="mt-3 grid grid-cols-2 gap-3 sm:max-w-xl">
+                  {SAMPLE_ROOM_PHOTOS_STEP1.map((sample) => (
                     <button
                       key={sample.id}
                       type="button"
@@ -370,7 +386,7 @@ export default function AiRoomGenerator() {
                   ))}
                 </div>
                 <p className="mt-2 text-xs text-gray-500">
-                  Living room · Bedroom · Home office · Dining room · Empty wall
+                  {SAMPLE_ROOM_PHOTOS_STEP1.map((s) => s.label).join(' · ')}
                 </p>
               </div>
             </div>
